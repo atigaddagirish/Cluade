@@ -1,322 +1,483 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trapezoidal Lipped HAT — IS 801 Calculator</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAT Purlin — IS 801 Calculator</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1e3a5f">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="HAT IS 801">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:#f5f4f0;padding:1.5rem}
-h1{font-size:18px;font-weight:500;margin-bottom:2px}
-.sub{font-size:12px;color:#666;margin-bottom:1.2rem}
-h2{font-size:14px;font-weight:500;margin-bottom:10px}
-.top-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;margin-bottom:12px;align-items:start}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.card{background:#fff;border:0.5px solid #d8d6cc;border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
-.field{margin-bottom:10px}
-.field label{display:block;font-size:12px;color:#666;margin-bottom:4px}
-.field input,.field select{width:100%;padding:7px 10px;font-size:13px;border:0.5px solid #bbb;border-radius:8px;background:#f5f4f0;color:#1a1a1a}
+:root{
+  --navy:#1e3a5f;--bg:#f5f4f0;--card:#fff;--border:#d8d6cc;
+  --pass-bg:#EAF3DE;--pass-fg:#3B6D11;
+  --fail-bg:#FCEBEB;--fail-fg:#A32D2D;
+  --warn-bg:#FAEEDA;--warn-fg:#854F0B;
+  --blue-bg:#E6F1FB;--blue-fg:#185FA5;
+  --purple-bg:#F0E6FB;--purple-fg:#5A1F8A;
+}
+body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:var(--bg);min-height:100vh}
+
+/* ── HEADER ── */
+.app-header{
+  background:var(--navy);color:#fff;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0.75rem 1.25rem;position:sticky;top:0;z-index:50;
+}
+.app-header h1{font-size:15px;font-weight:600;letter-spacing:-0.2px}
+.app-header .sub{font-size:11px;color:#94b8d6;margin-top:1px}
+.lib-btn{background:rgba(255,255,255,.12);border:0.5px solid rgba(255,255,255,.3);
+  color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;
+  display:flex;align-items:center;gap:5px;white-space:nowrap}
+.lib-btn:hover{background:rgba(255,255,255,.2)}
+
+/* ── MAIN GRID ── */
+.app-wrap{padding:1rem 1.25rem;max-width:1400px;margin:0 auto}
+.app-grid{display:grid;grid-template-columns:1fr 1.25fr;gap:14px;align-items:start}
+@media(max-width:820px){.app-grid{grid-template-columns:1fr}}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card-title .clause{font-size:10px;font-weight:500;background:var(--blue-bg);color:var(--blue-fg);border-radius:5px;padding:2px 7px;letter-spacing:0}
+
+/* ── FORM FIELDS ── */
+.field{margin-bottom:9px}
+.field label{display:block;font-size:11px;color:#666;margin-bottom:3px}
+.field input,.field select{width:100%;padding:6px 9px;font-size:13px;border:0.5px solid #bbb;border-radius:7px;background:var(--bg);color:#1a1a1a}
 .field input:focus,.field select:focus{outline:none;border-color:#888}
-.btn{width:100%;padding:10px;font-size:14px;font-weight:500;cursor:pointer;border:0.5px solid #bbb;border-radius:8px;background:#f5f4f0;color:#1a1a1a;margin-top:2px}
-.btn:hover{background:#e8e6e0}.btn:active{transform:scale(0.98)}
-.btn-sm{padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid #bbb;border-radius:7px;background:#f5f4f0;color:#1a1a1a;white-space:nowrap}
-.btn-sm:hover{background:#e8e6e0}.btn-sm.danger{border-color:#f0a0a0;color:#a32d2d}.btn-sm.danger:hover{background:#fcebeb}
-.prop-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
-.metric{background:#f5f4f0;border-radius:8px;padding:10px 12px}
-.metric .lbl{font-size:11px;color:#666;margin-bottom:3px}
-.metric .val{font-size:15px;font-weight:500}
-.check-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid #e8e6e0;flex-wrap:wrap}
-.check-row:last-child{border-bottom:none}
-.cn{flex:0 0 230px;font-size:12px;color:#555}
-.bw{flex:1;min-width:60px;height:10px;background:#e8e6e0;border-radius:20px;overflow:hidden}
-.bf{height:100%;border-radius:20px}
-.uv{flex:0 0 46px;font-size:13px;font-weight:500;text-align:right}
-.st{flex:0 0 64px;font-size:11px;font-weight:500;text-align:center;padding:2px 6px;border-radius:6px}
-.pass{background:#EAF3DE;color:#3B6D11}.fail{background:#FCEBEB;color:#A32D2D}.warn{background:#FAEEDA;color:#854F0B}
-.rf{flex:0 0 160px;font-size:11px;color:#999}
-.irow{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.chip{font-size:12px;color:#666;background:#f5f4f0;border-radius:8px;padding:4px 10px}
-.chip span{font-weight:500;color:#1a1a1a}
-.badge{display:inline-block;font-size:11px;background:#E6F1FB;color:#185FA5;border-radius:6px;padding:3px 8px;margin-left:8px;font-weight:500}
-.ltb-badge{display:inline-block;font-size:11px;background:#F0E6FB;color:#5A1F8A;border-radius:6px;padding:3px 8px;margin-left:4px;font-weight:500}
-.lmode{display:flex;background:#f5f4f0;border-radius:8px;padding:3px;gap:3px;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.hint{font-size:11px;color:#999;margin-top:6px;line-height:1.5}
+.subh{font-size:11px;font-weight:600;color:var(--blue-fg);margin:10px 0 6px}
+
+/* ── PRESET ROW ── */
+.preset-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.preset-row select{flex:1;min-width:120px;padding:5px 8px;font-size:12px;border:0.5px solid #bbb;border-radius:7px;background:var(--bg)}
+.preset-row input{width:110px;padding:5px 8px;font-size:12px;border:0.5px solid #bbb;border-radius:7px;background:var(--bg)}
+.btn-xs{padding:5px 10px;font-size:11px;font-weight:500;border:0.5px solid #bbb;border-radius:7px;background:var(--bg);cursor:pointer;white-space:nowrap}
+.btn-xs:hover{background:#e8e6e0}
+.btn-xs.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-xs.primary:hover{background:#162e4e}
+
+/* ── LOAD MODE TOGGLE ── */
+.lmode{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:3px;margin-bottom:12px}
 .lmb{flex:1;padding:7px;font-size:12px;font-weight:500;border:none;border-radius:6px;cursor:pointer;background:transparent;color:#666}
 .lmb.on{background:#fff;color:#1a1a1a;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.subh{font-size:11px;font-weight:600;color:#185FA5;margin:10px 0 6px}
-#results{display:none}
-.stitle{font-size:11px;font-weight:500;color:#888;margin:12px 0 4px;text-transform:uppercase;letter-spacing:0.5px}
-.hint{font-size:11px;color:#999;margin-top:6px;line-height:1.5}
-.note{font-size:11px;border-radius:8px;padding:8px 12px;margin-top:4px;line-height:1.7}
-.bnote{color:#185FA5;background:#E6F1FB}
-.ltbnote{color:#5A1F8A;background:#F0E6FB}
+
+/* ── DIAGRAM CARD ── */
+.dgcard{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:0.75rem;margin-bottom:12px}
+#hat-svg{width:100%;height:auto}
+.slbl{font-size:12px;color:var(--blue-fg);font-weight:600;text-align:center;margin-top:4px}
+.dlbl{font-size:11px;color:#888;text-align:center}
+
+/* ── CALCULATE BUTTON ── */
+.calc-btn{width:100%;padding:13px;font-size:15px;font-weight:600;cursor:pointer;
+  border:none;border-radius:10px;background:var(--navy);color:#fff;margin-top:4px;
+  letter-spacing:0.2px;transition:background .15s}
+.calc-btn:hover{background:#162e4e}
+.calc-btn:active{transform:scale(0.99)}
+
+/* ── VERDICT BANNER ── */
+.verdict{border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.verdict.pass{background:var(--pass-bg);color:var(--pass-fg)}
+.verdict.fail{background:var(--fail-bg);color:var(--fail-fg)}
+.verdict.marginal{background:var(--warn-bg);color:var(--warn-fg)}
+.verdict-label{font-size:20px;font-weight:700;letter-spacing:0.5px}
+.verdict-detail{font-size:12px;font-weight:500;opacity:0.85}
+.verdict-actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn-action{padding:6px 12px;font-size:11px;font-weight:500;border-radius:7px;cursor:pointer;
+  border:0.5px solid currentColor;background:transparent;color:inherit;white-space:nowrap}
+.btn-action:hover{background:rgba(0,0,0,.06)}
+
+/* ── SECTION CHIPS ── */
+.prop-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{background:var(--bg);border-radius:7px;padding:6px 10px;font-size:11px}
+.chip .lbl{color:#888;margin-bottom:1px}
+.chip .val{font-size:13px;font-weight:600;color:#1a1a1a}
+.chip .u{font-size:10px;color:#aaa}
+
+/* ── CHECK ROWS ── */
+.stitle{font-size:10px;font-weight:700;color:#888;margin:14px 0 5px;text-transform:uppercase;letter-spacing:0.6px;display:flex;align-items:center;gap:6px}
+.stitle .cl{background:var(--blue-bg);color:var(--blue-fg);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600;letter-spacing:0;text-transform:none}
+.check-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #f0ede8;flex-wrap:wrap}
+.check-row:last-child{border-bottom:none}
+.cn{flex:0 0 200px;font-size:12px;color:#555}
+.cn small{display:block;font-size:10px;color:#aaa;margin-top:1px}
+.bw{flex:1;min-width:50px;height:8px;background:#ebe8e2;border-radius:20px;overflow:hidden}
+.bf{height:100%;border-radius:20px;transition:width .3s}
+.uv{flex:0 0 44px;font-size:13px;font-weight:600;text-align:right}
+.st{flex:0 0 66px;font-size:10px;font-weight:700;text-align:center;padding:3px 6px;border-radius:5px}
+.pass{background:var(--pass-bg);color:var(--pass-fg)}
+.fail{background:var(--fail-bg);color:var(--fail-fg)}
+.warn{background:var(--warn-bg);color:var(--warn-fg)}
+.rf{flex:0 0 130px;font-size:10px;color:#bbb}
+@media(max-width:600px){.cn{flex:0 0 140px}.rf{display:none}}
+
+/* ── NOTES (details) ── */
+.note-detail{margin-top:8px}
+.note-detail summary{font-size:11px;color:var(--blue-fg);cursor:pointer;padding:6px 0;user-select:none}
+.note-body{font-size:11px;border-radius:8px;padding:8px 12px;margin-top:4px;line-height:1.7;color:var(--blue-fg);background:var(--blue-bg)}
+.note-body.ltb{color:var(--purple-fg);background:var(--purple-bg)}
+
+/* ── FIX BOX ── */
 .fix-box{border:0.5px solid #F0997B;border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px;background:#fff}
 .fix-ttl{font-size:13px;font-weight:500;margin-bottom:10px;color:#993C1D}
 .fi{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:0.5px solid #fce8e0;font-size:12px}
 .fi:last-child{border-bottom:none}
-.ftag{flex:0 0 auto;background:#FCEBEB;color:#A32D2D;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:500;margin-top:2px;white-space:nowrap}
-.ftxt{color:#444;line-height:1.7}.ftxt em{font-style:normal;font-weight:500;color:#1a1a1a}
-.dgcard{background:#fff;border:0.5px solid #d8d6cc;border-radius:12px;padding:0.75rem;display:flex;flex-direction:column;gap:6px}
-#hat-svg{width:100%;height:auto}
-.slbl{font-size:13px;color:#185FA5;font-weight:600;text-align:center}
-.dlbl{font-size:11px;color:#888;text-align:center}
-/* Tab navigation */
-.tab-bar{display:flex;background:#f5f4f0;border-radius:10px;padding:3px;gap:3px;margin-bottom:1.2rem}
-.tab-btn{flex:1;padding:9px;font-size:13px;font-weight:500;border:none;border-radius:8px;cursor:pointer;background:transparent;color:#666;transition:all 0.15s}
-.tab-btn.on{background:#fff;color:#1a1a1a;box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.tab-pane{display:none}
-.tab-pane.on{display:block}
-/* Preset row */
-.preset-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.preset-row label{font-size:12px;color:#666;white-space:nowrap}
-.preset-row select{flex:1;min-width:120px;padding:6px 10px;font-size:12px;border:0.5px solid #bbb;border-radius:7px;background:#f5f4f0;color:#1a1a1a}
-/* Library tables */
-.lib-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}
-.lib-card{background:#fff;border:0.5px solid #d8d6cc;border-radius:12px;padding:1rem 1.25rem}
-.lib-card h3{font-size:13px;font-weight:500;margin-bottom:10px}
-.lib-table{width:100%;border-collapse:collapse;font-size:12px}
-.lib-table th{text-align:left;font-size:11px;color:#888;font-weight:500;padding:5px 6px;border-bottom:0.5px solid #e8e6e0}
-.lib-table td{padding:6px 6px;border-bottom:0.5px solid #f0ede8;vertical-align:middle}
-.lib-table tr:last-child td{border-bottom:none}
-.lib-table tr:hover td{background:#faf9f7}
-/* Log */
-.log-toolbar{display:flex;gap:8px;margin-bottom:12px}
+.ftag{flex:0 0 auto;background:var(--fail-bg);color:var(--fail-fg);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:600;margin-top:1px;white-space:nowrap}
+.ftxt{color:#444;line-height:1.7}.ftxt em{font-style:normal;font-weight:600;color:#1a1a1a}
+
+/* ── METRIC GRID ── */
+.prop-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:8px}
+.metric{background:var(--bg);border-radius:8px;padding:8px 10px}
+.metric .lbl{font-size:10px;color:#888;margin-bottom:2px}
+.metric .val{font-size:14px;font-weight:600}
+@media(max-width:600px){.prop-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ── LOG STRIP ── */
+.log-strip{margin-top:8px}
+.log-header{display:flex;align-items:center;gap:8px;background:var(--card);border:0.5px solid var(--border);
+  border-radius:10px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:500;user-select:none}
+.log-header #log-count{color:var(--blue-fg);font-size:12px}
+.log-header-btns{margin-left:auto;display:flex;gap:6px}
+.btn-sm{padding:5px 10px;font-size:11px;font-weight:500;border:0.5px solid #bbb;border-radius:6px;background:var(--bg);cursor:pointer}
+.btn-sm:hover{background:#e8e6e0}
+.btn-sm.danger{color:var(--fail-fg);border-color:var(--fail-fg)}
+.log-table-wrap{margin-top:6px;overflow-x:auto;background:var(--card);border:0.5px solid var(--border);border-radius:10px}
 .log-table{width:100%;border-collapse:collapse;font-size:12px}
-.log-table th{text-align:left;font-size:11px;color:#888;font-weight:500;padding:6px 8px;border-bottom:0.5px solid #e8e6e0}
-.log-table td{padding:7px 8px;border-bottom:0.5px solid #f0ede8}
-.log-row-pass td{background:#f7fbf2}
-.log-row-marginal td{background:#fffbf3}
-.log-row-fail td{background:#fdf5f5}
-.log-pass{color:#3B6D11;font-weight:500}
-.log-marginal{color:#854F0B;font-weight:500}
-.log-fail{color:#A32D2D;font-weight:500}
-@media(max-width:900px){.lib-grid{grid-template-columns:1fr}}
-@media(max-width:760px){.top-grid{grid-template-columns:1fr}.prop-grid{grid-template-columns:repeat(2,1fr)}.cn{flex:0 0 140px}.rf{display:none}}
+.log-table th{padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.4px;border-bottom:0.5px solid var(--border)}
+.log-table td{padding:7px 10px;border-bottom:0.5px solid #f0ede8}
+.log-table tr:last-child td{border-bottom:none}
+.log-row-pass td{background:#fafff6}
+.log-row-fail td{background:#fff8f8}
+.log-row-marginal td{background:#fffdf5}
+.log-pass{color:var(--pass-fg);font-weight:700}
+.log-fail{color:var(--fail-fg);font-weight:700}
+.log-marginal{color:var(--warn-fg);font-weight:700}
+.badge{display:inline-block;font-size:10px;background:var(--blue-bg);color:var(--blue-fg);border-radius:5px;padding:2px 7px;font-weight:600}
+.ltb-badge{display:inline-block;font-size:10px;background:var(--purple-bg);color:var(--purple-fg);border-radius:5px;padding:2px 7px;font-weight:600;margin-left:4px}
+
+/* ── DRAWER ── */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+.drawer{display:none;position:fixed;right:0;top:0;height:100vh;width:360px;
+  background:#fff;z-index:100;box-shadow:-4px 0 24px rgba(0,0,0,.18);
+  overflow-y:auto;transform:translateX(100%);transition:transform .22s ease}
+.drawer.open{display:block;transform:translateX(0)}
+.drawer-overlay.open{display:block}
+.drawer-hd{display:flex;align-items:center;justify-content:space-between;
+  padding:1rem 1.25rem;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:#fff;z-index:1}
+.drawer-hd h2{font-size:15px;font-weight:600}
+.drawer-close{background:none;border:none;font-size:20px;cursor:pointer;color:#666;padding:0 4px}
+.drawer-body{padding:1rem 1.25rem}
+.drawer-tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:3px;margin-bottom:12px}
+.dtb{flex:1;padding:6px;font-size:12px;font-weight:500;border:none;border-radius:6px;cursor:pointer;background:transparent;color:#666}
+.dtb.on{background:#fff;color:#1a1a1a;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.lib-table{width:100%;border-collapse:collapse;font-size:12px}
+.lib-table th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.4px;border-bottom:0.5px solid var(--border)}
+.lib-table td{padding:6px 8px;border-bottom:0.5px solid #f0ede8}
+.lib-table tr:last-child td{border-bottom:none}
+.lib-table .del{color:var(--fail-fg);background:none;border:none;cursor:pointer;font-size:12px;padding:2px 4px}
+.lib-table .load{color:var(--blue-fg);background:none;border:none;cursor:pointer;font-size:12px;padding:2px 4px;font-weight:500}
+.drawer-footer{padding:1rem 1.25rem;border-top:0.5px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+.file-import{display:none}
+
+/* ── PRINT ── */
+@media print{
+  .app-header .lib-btn,.col-inputs,.log-strip,
+  .drawer,.drawer-overlay,.verdict-actions,.btn-action{display:none!important}
+  .app-grid{display:block}
+  .col-results{display:block!important}
+  .app-wrap{padding:0}
+  body{background:#fff;font-size:12px}
+  .print-header{display:block!important}
+  .card{break-inside:avoid;border:0.5px solid #ccc}
+}
+.print-header{display:none;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #333}
+.print-header h2{font-size:16px;font-weight:700}
+.print-header p{font-size:11px;color:#555;margin-top:3px}
+@media screen{#results{display:none}}
 </style>
 </head>
 <body>
-<h1>Trapezoidal Lipped HAT &mdash; IS 801 Design Calculator</h1>
-<p class="sub">Cold-formed steel &middot; inclined webs + outward feet + lips &middot; IS 801:1975 &middot; multi-project library</p>
 
-<!-- Tab bar -->
-<div class="tab-bar">
-  <button class="tab-btn on" id="tab-check" onclick="switchTab('check')">Check</button>
-  <button class="tab-btn" id="tab-library" onclick="switchTab('library')">Library</button>
-  <button class="tab-btn" id="tab-log" onclick="switchTab('log')">Log <span id="log-count" style="font-size:10px;color:#999"></span></button>
-</div>
+<!-- ═══ HEADER ═══ -->
+<header class="app-header">
+  <div>
+    <h1>HAT Purlin &mdash; IS 801:1975</h1>
+    <div class="sub">Cold-formed trapezoidal lipped top-hat &middot; Working stress method</div>
+  </div>
+  <button class="lib-btn" onclick="openDrawer()">&#9776; Library</button>
+</header>
 
-<!-- ═══════════════ TAB 1: CHECK ═══════════════ -->
-<div class="tab-pane on" id="pane-check">
-<div class="top-grid">
-<div>
-  <h2>Section geometry</h2>
+<!-- ═══ MAIN ═══ -->
+<div class="app-wrap">
+<div class="app-grid">
+
+<!-- ════════════ LEFT: INPUTS ════════════ -->
+<div class="col-inputs">
+
+  <!-- Section geometry -->
   <div class="card">
-    <!-- Section preset row -->
+    <div class="card-title">Section Geometry</div>
     <div class="preset-row">
-      <label>Section preset</label>
-      <select id="sec-preset-sel" onchange=""></select>
-      <button class="btn-sm" onclick="loadSectionPreset()">Load</button>
-      <button class="btn-sm" onclick="saveSectionPreset()">Save As</button>
+      <select id="sec-preset-sel"><option value="">— saved sections —</option></select>
+      <button class="btn-xs primary" onclick="loadSectionPreset()">Load</button>
+      <input id="sec-savename" placeholder="name to save…">
+      <button class="btn-xs" onclick="saveSectionPreset()">&#128190; Save</button>
     </div>
     <div class="g2">
       <div class="field"><label>Top flange B&#x2081; (mm)</label><input id="B1" type="number" value="40" oninput="drawDiagram()"></div>
       <div class="field"><label>Overall height H (mm)</label><input id="H" type="number" value="70" oninput="drawDiagram()"></div>
-      <div class="field"><label>HAT (web) angle &theta; from horizontal (&deg;)</label><input id="th" type="number" value="75" step="0.5" oninput="drawDiagram()"></div>
-      <div class="field"><label>Bottom foot F each side (mm)</label><input id="F" type="number" value="22" oninput="drawDiagram()"></div>
+      <div class="field"><label>Web angle &theta; from horiz (&deg;)</label><input id="th" type="number" value="75" step="0.5" oninput="drawDiagram()"></div>
+      <div class="field"><label>Foot F each side (mm)</label><input id="F" type="number" value="22" oninput="drawDiagram()"></div>
       <div class="field"><label>Lip size (mm)</label><input id="Lp" type="number" value="10" oninput="drawDiagram()"></div>
-      <div class="field"><label>Lip angle from horizontal (&deg;)</label><input id="beta" type="number" value="45" step="0.5" oninput="drawDiagram()"></div>
+      <div class="field"><label>Lip angle &beta; from horiz (&deg;)</label><input id="beta" type="number" value="45" step="0.5" oninput="drawDiagram()"></div>
       <div class="field"><label>Thickness t (mm)</label><input id="t" type="number" value="0.90" step="0.05" oninput="drawDiagram()"></div>
       <div class="field"><label>Material grade</label>
         <select id="grade">
+          <option value="550" selected>G550 &mdash; Fy = 550 MPa</option>
           <option value="345">E350 &mdash; Fy = 345 MPa</option>
-          <option value="550" selected>E550 / G550 &mdash; Fy = 550 MPa</option>
-          <option value="250">E250 &mdash; Fy = 250 MPa</option>
           <option value="300">E300 &mdash; Fy = 300 MPa</option>
+          <option value="250">E250 &mdash; Fy = 250 MPa</option>
         </select>
       </div>
     </div>
-    <p class="hint">Feet point outward; lip turns <strong>up</strong> at the foot end (interior foot&ndash;lip angle = 180&minus;&beta; = 135&deg; for &beta;=45&deg;). Segment lengths are taken as flat widths. Bottom width is computed and shown below.</p>
+    <p class="hint">Feet outward &middot; lip turns UP &middot; web angle governs (bottom width is derived)</p>
+    <div class="dgcard" style="margin-top:10px;margin-bottom:0">
+      <svg id="hat-svg" viewBox="0 0 360 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;max-height:180px"></svg>
+      <div class="dlbl" id="dlbl"></div>
+    </div>
   </div>
 
-  <h2>Span &amp; serviceability</h2>
+  <!-- Span & LTB -->
   <div class="card">
-    <!-- Project preset row -->
+    <div class="card-title">Span &amp; Serviceability</div>
     <div class="preset-row">
-      <label>Project preset</label>
-      <select id="proj-preset-sel" onchange=""></select>
-      <button class="btn-sm" onclick="loadProjectPreset()">Load</button>
-      <button class="btn-sm" onclick="saveProjectPreset()">Save As</button>
+      <select id="proj-preset-sel"><option value="">— saved projects —</option></select>
+      <button class="btn-xs primary" onclick="loadProjectPreset()">Load</button>
+      <input id="proj-savename" placeholder="name to save…">
+      <button class="btn-xs" onclick="saveProjectPreset()">&#128190; Save</button>
     </div>
     <div class="g3">
       <div class="field"><label>Span L (m)</label><input id="L" type="number" value="3.1" step="0.1"></div>
       <div class="field"><label>End bearing N (mm)</label><input id="N" type="number" value="50"></div>
-      <div class="field"><label>Defl. limit</label>
+      <div class="field"><label>Deflection limit</label>
         <select id="defLim"><option value="180">L/180</option><option value="150">L/150</option><option value="120">L/120 (wind)</option><option value="200">L/200</option><option value="240">L/240</option></select>
       </div>
-    </div>
-  </div>
-
-  <h2>LTB inputs <span style="font-size:11px;color:#888;font-weight:400">(IS 801 Cl.6.2)</span></h2>
-  <div class="card">
-    <div class="g2">
-      <div class="field"><label>Unbraced length L&#x1D47; (mm)</label><input id="Lb" type="number" value="3100" step="50"></div>
+      <div class="field"><label>Unbraced L&#x1D47; (mm)</label><input id="Lb" type="number" value="3100" step="50"></div>
       <div class="field"><label>Moment gradient C&#x1D47;</label><input id="Cb" type="number" value="1.0" step="0.05" min="1" max="2.3"></div>
     </div>
-    <p class="hint">Under uplift the compression flange is the bottom (feet+lips). If feet are bolted only at end rafters, L&#x1D47; = span. Add intermediate brace &rarr; reduce L&#x1D47;.</p>
+    <p class="hint">Under uplift the compression flange is the bottom feet+lips. L&#x1D47; = span if feet bolted only at ends.</p>
   </div>
 
-  <h2>Load input</h2>
+  <!-- Loads -->
   <div class="card">
+    <div class="card-title">Loading <span class="clause">IS 801 WSM — service loads only</span></div>
     <div class="lmode">
       <button class="lmb" id="lmb-udl" onclick="setLoadMode('udl')">Direct UDL</button>
-      <button class="lmb on" id="lmb-staad" onclick="setLoadMode('staad')">STAAD forces</button>
+      <button class="lmb on" id="lmb-staad" onclick="setLoadMode('staad')">STAAD Forces</button>
     </div>
 
     <div id="panel-udl" style="display:none">
       <div class="g2">
-        <div class="field"><label>w_uplift net (kN/m) &mdash; strong axis</label><input id="w_up" type="number" value="0.981" step="0.001"></div>
-        <div class="field"><label>w_gravity (kN/m) &mdash; strong axis</label><input id="w_grav" type="number" value="0.147" step="0.001"></div>
-        <div class="field"><label>w_weak (kN/m) &mdash; weak axis (0 if N/A)</label><input id="w_weak" type="number" value="0" step="0.001"></div>
+        <div class="field"><label>w_uplift net (kN/m) — strong axis</label><input id="w_up" type="number" value="0.981" step="0.001"></div>
+        <div class="field"><label>w_gravity (kN/m) — strong axis</label><input id="w_grav" type="number" value="0.147" step="0.001"></div>
+        <div class="field"><label>w_weak (kN/m) — weak axis</label><input id="w_weak" type="number" value="0" step="0.001"></div>
       </div>
-      <p class="hint">Net line loads on the purlin; moments computed as wL&sup2;/8 (simply supported). +&frac13; for DL+WL applied internally.</p>
+      <p class="hint">Moments computed as wL&sup2;/8 (simply supported). +&frac13; for DL+WL applied automatically.</p>
     </div>
 
     <div id="panel-staad">
       <div class="g2">
-        <div class="field"><label>Moment unit</label><select id="munit"><option value="1e6" selected>kN&middot;m</option><option value="1">N&middot;mm</option><option value="1e3">N&middot;m / kN&middot;mm</option><option value="98066.5">kgf&middot;m</option><option value="980.665">kgf&middot;cm</option></select></div>
-        <div class="field"><label>Force unit</label><select id="funit"><option value="1000" selected>kN</option><option value="1">N</option><option value="9.80665">kgf</option></select></div>
+        <div class="field"><label>Moment unit</label>
+          <select id="munit"><option value="1e6" selected>kN&middot;m</option><option value="1">N&middot;mm</option><option value="1e3">N&middot;m / kN&middot;mm</option><option value="98066.5">kgf&middot;m</option><option value="980.665">kgf&middot;cm</option></select>
+        </div>
+        <div class="field"><label>Force unit</label>
+          <select id="funit"><option value="1000" selected>kN</option><option value="1">N</option><option value="9.80665">kgf</option></select>
+        </div>
       </div>
-
-      <div class="subh">Uplift / wind combination (governing)</div>
+      <div class="subh">&#8593; Uplift / wind combination (governing)</div>
       <div class="g3">
         <div class="field"><label>Mz (major)</label><input id="s_Mz_up" type="number" value="" step="any" placeholder="e.g. 1.18"></div>
-        <div class="field"><label>My (minor, concurrent)</label><input id="s_My_up" type="number" value="0" step="any"></div>
+        <div class="field"><label>My (minor)</label><input id="s_My_up" type="number" value="0" step="any"></div>
         <div class="field"><label>Fx (axial, +tens)</label><input id="s_Fx_up" type="number" value="0" step="any"></div>
       </div>
-      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;margin:2px 0 8px"><input type="checkbox" id="s_wind" checked style="width:auto"> wind/seismic combo &rarr; apply +&frac13; allowable (Cl.6.1.1)</label>
-
-      <div class="subh">Gravity combination (DL / DL+LL)</div>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;margin:2px 0 10px">
+        <input type="checkbox" id="s_wind" checked style="width:auto"> Wind/seismic combo &rarr; +&frac13; allowable (Cl.6.1.1)
+      </label>
+      <div class="subh">&#8595; Gravity combination (DL / DL+LL)</div>
       <div class="g3">
         <div class="field"><label>Mz (major)</label><input id="s_Mz_gr" type="number" value="0" step="any"></div>
         <div class="field"><label>My (minor)</label><input id="s_My_gr" type="number" value="0" step="any"></div>
         <div class="field"><label>Fx (axial, +tens)</label><input id="s_Fx_gr" type="number" value="0" step="any"></div>
       </div>
-
-      <div class="subh">Shear, torsion &amp; deflection</div>
+      <div class="subh">Shear &middot; Torsion &middot; Deflection</div>
       <div class="g3">
         <div class="field"><label>Fy (major shear)</label><input id="s_Fy" type="number" value="" step="any" placeholder="e.g. 1.5"></div>
         <div class="field"><label>Mx (torsion)</label><input id="s_Mx" type="number" value="0" step="any"></div>
-        <div class="field"><label>&delta;_max (mm, from STAAD)</label><input id="s_def" type="number" value="" step="any" placeholder="local resultant"></div>
+        <div class="field"><label>&delta;_max (mm, STAAD)</label><input id="s_def" type="number" value="" step="any" placeholder="blank = auto"></div>
       </div>
-      <p class="hint">Enter <strong>service/working</strong> forces (IS 801 is WSM) at the governing section. Sign of Fx: + tension, &minus; compression. If &delta;_max is blank, deflection is computed from the gravity/uplift UDL instead. Mx&ne;0 and Fx(compression) trigger extra checks/flags.</p>
+      <p class="hint">Service/working forces at governing section. STAAD axis map: MZ = strong (Ixx), MY = weak, FY = major shear, MX = torsion. Fx compression triggers Cl.6.7 flag.</p>
     </div>
   </div>
 
-  <button class="btn" onclick="calculate()">Calculate &nearr;</button>
+  <button class="calc-btn" onclick="calculate()">Calculate IS 801 Checks &rarr;</button>
 </div>
 
-<div>
-  <h2>Cross-section &mdash; live preview</h2>
-  <div class="dgcard">
-    <svg id="hat-svg" viewBox="0 0 360 300" xmlns="http://www.w3.org/2000/svg"></svg>
-    <div class="slbl" id="slbl">Trapezoidal lipped HAT</div>
-    <div class="dlbl" id="dlbl"></div>
+<!-- ════════════ RIGHT: RESULTS ════════════ -->
+<div class="col-results" id="results">
+
+  <!-- Print header (hidden on screen) -->
+  <div class="print-header">
+    <h2>IS 801:1975 Design Check &mdash; Trapezoidal Lipped HAT Purlin</h2>
+    <p id="print-meta"></p>
   </div>
-</div>
-</div>
 
-<div id="results">
-  <h2>Section properties <span class="badge" id="case-badge">Uplift (direct UDL)</span><span class="ltb-badge" id="ltb-badge">Lb</span></h2>
+  <!-- Verdict banner -->
+  <div id="verdict-banner" class="verdict pass">
+    <div>
+      <div class="verdict-label" id="verdict-label">PASS</div>
+      <div class="verdict-detail" id="verdict-detail">All checks within limits</div>
+    </div>
+    <div class="verdict-actions">
+      <button class="btn-action" onclick="addToLog()">&#128203; Log</button>
+      <button class="btn-action" onclick="window.print()">&#128438; Print</button>
+      <button class="btn-action" onclick="exportCatalog()">&#8595; Export catalog</button>
+    </div>
+  </div>
+
+  <!-- Section properties -->
   <div class="card">
-    <div class="irow" id="info-row"></div>
+    <div class="card-title">
+      Section Properties
+      <span class="badge" id="case-badge">Uplift</span>
+      <span class="ltb-badge" id="ltb-badge">Lb</span>
+    </div>
+    <div class="prop-chips" id="prop-chips"></div>
     <div class="prop-grid" id="sec-props"></div>
-    <div class="note bnote" id="biaxial-note"></div>
-    <div class="note ltbnote" id="ltb-note"></div>
   </div>
 
-  <div id="fix-summary" style="display:none">
-    <div class="fix-box"><div class="fix-ttl">&#9888; Failed / marginal checks &mdash; suggested remedies</div><div id="fix-items"></div></div>
-  </div>
-
-  <h2>IS 801 design checks</h2>
+  <!-- IS 801 checks -->
   <div class="card">
-    <div class="stitle">Slenderness &amp; effective width (compression elements under uplift)</div><div id="ck-wt"></div>
-    <div class="stitle" style="margin-top:12px">Edge stiffener (lip) adequacy</div><div id="ck-lip"></div>
-    <div class="stitle" style="margin-top:12px">Flexure</div><div id="ck-flex"></div>
-    <div class="stitle" style="margin-top:12px">LTB &mdash; Cl.6.2 (compression-flange method)</div><div id="ck-ltb"></div>
-    <div class="stitle" style="margin-top:12px">Shear &amp; web crippling</div><div id="ck-shear"></div>
-    <div class="stitle" style="margin-top:12px">Serviceability</div><div id="ck-defl"></div>
+    <div class="card-title">IS 801:1975 Design Checks</div>
+
+    <div class="stitle">Compression Elements <span class="cl">Cl.5.2 — Effective Width</span></div>
+    <div id="ck-wt"></div>
+
+    <div class="stitle" style="margin-top:2px">Edge Stiffener <span class="cl">Cl.5.2.2.1</span></div>
+    <div id="ck-lip"></div>
+
+    <div class="stitle" style="margin-top:2px">Flexure <span class="cl">Cl.6.1</span></div>
+    <div id="ck-flex"></div>
+
+    <div class="stitle" style="margin-top:2px">Lateral-Torsional Buckling <span class="cl">Cl.6.2 — compression-flange method</span></div>
+    <div id="ck-ltb"></div>
+
+    <div class="stitle" style="margin-top:2px">Shear &amp; Web Crippling <span class="cl">Cl.7 / Cl.8.1</span></div>
+    <div id="ck-shear"></div>
+
+    <div class="stitle" style="margin-top:2px">Serviceability</div>
+    <div id="ck-defl"></div>
+
+    <details class="note-detail" style="margin-top:10px">
+      <summary>Effective section &amp; fibre detail</summary>
+      <div class="note-body" id="biaxial-note"></div>
+    </details>
+    <details class="note-detail">
+      <summary>LTB detail (Cl.6.2)</summary>
+      <div class="note-body ltb" id="ltb-note"></div>
+    </details>
   </div>
 
-  <h2>Loading summary</h2>
-  <div class="card"><div class="g3" id="load-sum"></div></div>
-</div>
-</div><!-- /pane-check -->
-
-<!-- ═══════════════ TAB 2: LIBRARY ═══════════════ -->
-<div class="tab-pane" id="pane-library">
-  <div class="lib-grid">
-    <!-- Saved Sections -->
-    <div class="lib-card">
-      <h3>Saved Sections</h3>
-      <div id="lib-sections-wrap">
-        <table class="lib-table">
-          <thead><tr>
-            <th>Name</th><th>B1</th><th>H</th><th>&theta;</th><th>F</th><th>Lp</th><th>&beta;</th><th>t</th><th>Grade</th><th></th>
-          </tr></thead>
-          <tbody id="lib-sections-body"></tbody>
-        </table>
-      </div>
-    </div>
-    <!-- Saved Projects -->
-    <div class="lib-card">
-      <h3>Saved Projects</h3>
-      <div id="lib-projects-wrap">
-        <table class="lib-table">
-          <thead><tr>
-            <th>Name</th><th>Span</th><th>Lb</th><th>Mode</th><th></th>
-          </tr></thead>
-          <tbody id="lib-projects-body"></tbody>
-        </table>
-      </div>
+  <!-- Fix box -->
+  <div id="fix-summary" style="display:none">
+    <div class="fix-box">
+      <div class="fix-ttl">&#9888; Failed / marginal checks &mdash; suggested remedies</div>
+      <div id="fix-items"></div>
     </div>
   </div>
-</div><!-- /pane-library -->
 
-<!-- ═══════════════ TAB 3: LOG ═══════════════ -->
-<div class="tab-pane" id="pane-log">
-  <div class="log-toolbar">
-    <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
-    <button class="btn-sm danger" onclick="clearLog()">Clear Log</button>
+  <!-- Loading summary -->
+  <div class="card">
+    <div class="card-title">Loading Summary</div>
+    <div class="g3" id="load-sum"></div>
   </div>
-  <div class="card" style="padding:0;overflow:hidden">
+
+</div><!-- /col-results -->
+</div><!-- /app-grid -->
+
+<!-- ═══ SESSION LOG ═══ -->
+<div class="log-strip">
+  <div class="log-header" onclick="toggleLog()">
+    &#128203; Session Log <span id="log-count"></span>
+    <div class="log-header-btns" onclick="event.stopPropagation()">
+      <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
+      <button class="btn-sm danger" onclick="clearLog()">Clear</button>
+    </div>
+  </div>
+  <div id="log-table-wrap" style="display:none" class="log-table-wrap">
     <table class="log-table">
       <thead><tr>
         <th>#</th><th>Section</th><th>Project</th><th>Time</th>
-        <th>Mz_up (kNm)</th><th>Bending%</th><th>Shear%</th><th>LTB%</th><th>Defl%</th><th>Overall</th>
+        <th>Mz&#8593; kNm</th><th>Bending%</th><th>Shear%</th><th>LTB%</th><th>Defl%</th><th>Overall</th>
       </tr></thead>
       <tbody id="log-body">
-        <tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px;font-size:12px">No calculations yet — run Calculate to start the log.</td></tr>
+        <tr><td colspan="10" style="text-align:center;color:#aaa;padding:18px;font-size:12px">No calculations yet.</td></tr>
       </tbody>
     </table>
   </div>
-</div><!-- /pane-log -->
+</div>
+</div><!-- /app-wrap -->
+
+<!-- ═══ LIBRARY DRAWER ═══ -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-hd">
+    <h2>&#128218; Library</h2>
+    <button class="drawer-close" onclick="closeDrawer()">&#10005;</button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-tabs">
+      <button class="dtb on" id="dtb-sec" onclick="switchDrawerTab('sec')">Sections</button>
+      <button class="dtb" id="dtb-proj" onclick="switchDrawerTab('proj')">Projects</button>
+    </div>
+    <div id="dpanel-sec">
+      <div style="overflow-x:auto">
+        <table class="lib-table"><thead><tr>
+          <th>Name</th><th>B1</th><th>H</th><th>&theta;</th><th>t</th><th>Grade</th><th></th>
+        </tr></thead>
+        <tbody id="lib-sec-body"></tbody></table>
+      </div>
+    </div>
+    <div id="dpanel-proj" style="display:none">
+      <div style="overflow-x:auto">
+        <table class="lib-table"><thead><tr>
+          <th>Name</th><th>Span (m)</th><th>Lb (mm)</th><th>Mode</th><th></th>
+        </tr></thead>
+        <tbody id="lib-proj-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn-xs" onclick="exportCatalog()">&#8595; Export catalog JSON</button>
+    <label class="btn-xs" style="cursor:pointer">&#8593; Import catalog JSON<input class="file-import" type="file" accept=".json" onchange="importCatalog(this)"></label>
+  </div>
+</div>
 
 <script>
-// ── SECTION ENGINE (thin-walled polyline, exact) ────────────────────────────
+// ── SECTION ENGINE (thin-walled polyline, exact — do not modify) ─────────────
 function geom(){
   const B1=+v('B1'),H=+v('H'),th=+v('th'),F=+v('F'),Lp=+v('Lp'),beta=+v('beta'),t=+v('t');
   const half=B1/2, run=H/Math.tan(th*Math.PI/180);
   const wb=half+run, fe=wb+F;
-  const ldx=Lp*Math.cos(beta*Math.PI/180), ldy=Lp*Math.sin(beta*Math.PI/180);  // lip UP-and-out
+  const ldx=Lp*Math.cos(beta*Math.PI/180), ldy=Lp*Math.sin(beta*Math.PI/180);
   const lt=fe+ldx;
-  // full vertex path (left lip tip -> right lip tip)
   const V=[[-lt,ldy],[-fe,0],[-wb,0],[-half,H],[half,H],[wb,0],[fe,0],[lt,ldy]];
   return {B1,H,th,F,Lp,beta,t,half,run,wb,fe,lt,ldx,ldy,V};
 }
@@ -346,7 +507,6 @@ function computeProps(g){
   const Ztop=Ixx/ytop, Zbot=Ixx/ybot, Zweak=Iyy/g.lt;
   const totL=segs.reduce((a,s)=>a+s.L,0);
   const J=totL*t**3/3;
-  // Compression flange (feet+lips) about x=0 for LTB:  segs i = 0(lipL),1(footL),5(footR),6(lipR)
   let Acf=0,Iycf=0;
   for(const s of segs){ if([0,1,5,6].includes(s.i)){
     const a=s.L*t;
@@ -357,32 +517,36 @@ function computeProps(g){
   return {A,xc,yc,Ixx,Iyy,ytop,ybot,Ztop,Zbot,Zweak,J,Acf,Iycf,rycf};
 }
 
-// ── DIAGRAM ─────────────────────────────────────────────────────────────────
+// ── LTB allowable (IS 801 Cl.6.2) ───────────────────────────────────────────
+function fbLTB(Fe,Fy){
+  if(Fe>=2.78*Fy) return 0.6*Fy;
+  if(Fe>=0.56*Fy) return (10*Fy/9)*(1-Fy/(5.04*Fe));
+  return Fe/1.67;
+}
+
+// ── Effective width — AISI Winter λ-method ──────────────────────────────────
+function rho(w,tt,k,f,E){const lam=(1.052/Math.sqrt(k))*(w/tt)*Math.sqrt(f/E);return {lam,r:lam<=0.673?1:(1-0.22/lam)/lam};}
+
+// ── DIAGRAM ──────────────────────────────────────────────────────────────────
 function drawDiagram(){
   const g=geom(); const V=g.V;
-  const SW=360,SH=300,pad=54;
+  const SW=360,SH=260,pad=46;
   const xs=V.map(p=>p[0]), ys=V.map(p=>p[1]);
   const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
   const w=maxx-minx,h=maxy-miny;
   const sc=Math.min((SW-2*pad)/w,(SH-2*pad)/h);
-  const ox=(SW-w*sc)/2 - minx*sc;
-  const oy=pad + maxy*sc;             // SVG y: top; flip
+  const ox=(SW-w*sc)/2-minx*sc, oy=pad+maxy*sc;
   const X=x=>ox+x*sc, Y=y=>oy-y*sc;
   const tpx=Math.max(g.t*sc,3);
-  // grid
   let grid='';
   for(let gx=0;gx<=SW;gx+=18)for(let gy=0;gy<=SH;gy+=18)grid+=`<circle cx="${gx}" cy="${gy}" r="0.7" fill="#e8e6e0"/>`;
-  // polyline
   const pts=V.map(p=>`${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ');
   const line=`<polyline points="${pts}" fill="none" stroke="#1e3a5f" stroke-width="${tpx.toFixed(1)}" stroke-linejoin="round" stroke-linecap="round"/>`;
-  // centroid + NA
   const p=computeProps(g);
   const na=`<line x1="${X(minx-3).toFixed(1)}" y1="${Y(p.yc).toFixed(1)}" x2="${X(maxx+3).toFixed(1)}" y2="${Y(p.yc).toFixed(1)}" stroke="#E24B4A" stroke-width="1" stroke-dasharray="6,3"/>
 <circle cx="${X(0).toFixed(1)}" cy="${Y(p.yc).toFixed(1)}" r="3" fill="#E24B4A"/>
 <text x="${X(maxx+3)+4}" y="${Y(p.yc)+3}" font-size="9" fill="#E24B4A" font-family="Arial" font-weight="600">NA</text>`;
-  // symmetry axis
   const sym=`<line x1="${X(0).toFixed(1)}" y1="${Y(maxy+4).toFixed(1)}" x2="${X(0).toFixed(1)}" y2="${Y(miny-4).toFixed(1)}" stroke="#94A3B8" stroke-width="0.7" stroke-dasharray="6,4"/>`;
-  // dimension helpers
   const DC="#185FA5";
   function dimH(x1,x2,yPix,lbl){const a=5;return `<line x1="${X(x1)}" y1="${yPix}" x2="${X(x2)}" y2="${yPix}" stroke="${DC}" stroke-width="1.1"/>
 <polygon points="${X(x1)+a},${yPix-3} ${X(x1)},${yPix} ${X(x1)+a},${yPix+3}" fill="${DC}"/>
@@ -395,25 +559,16 @@ function drawDiagram(){
 <rect x="${xPix-20}" y="${(Y(yTop)+Y(yBot))/2-7}" width="40" height="14" rx="3" fill="white"/>
 <text x="${xPix}" y="${(Y(yTop)+Y(yBot))/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700" transform="rotate(-90 ${xPix} ${(Y(yTop)+Y(yBot))/2})">${lbl}</text>`;}
   const dims=
-    dimH(-g.half,g.half,Y(g.H)-18,`B₁=${g.B1}`)+
-    dimV(g.H,0,X(minx)-20,`H=${g.H}`)+
-    dimH(g.wb,g.fe,Y(0)+20,`F=${g.F}`)+
-    `<text x="${X(g.lt)+2}" y="${Y(g.ldy)+12}" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">lip ${g.Lp}@${g.beta}°</text>`+
-    `<text x="${X(g.half+g.run*0.5)-2}" y="${Y(g.H*0.5)}" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">${g.th}°</text>`;
+    dimH(-g.half,g.half,Y(g.H)-14,`B₁=${g.B1}`)+
+    dimV(g.H,0,X(minx)-18,`H=${g.H}`)+
+    dimH(g.wb,g.fe,Y(0)+18,`F=${g.F}`)+
+    `<text x="${X(g.lt)+2}" y="${Y(g.ldy)+11}" font-size="9" fill="${DC}" font-family="Arial" font-weight="700">lip ${g.Lp}@${g.beta}°</text>`+
+    `<text x="${X(g.half+g.run*0.5)-2}" y="${Y(g.H*0.5)}" font-size="9" fill="${DC}" font-family="Arial" font-weight="700">${g.th}°</text>`;
   document.getElementById('hat-svg').innerHTML=grid+sym+line+na+dims;
-  document.getElementById('dlbl').textContent=`Bottom width (lip tip) = ${(2*g.lt).toFixed(1)} mm · web base = ${(2*g.wb).toFixed(1)} mm · height = ${g.H} mm`;
+  document.getElementById('dlbl').textContent=`Bottom ${(2*g.lt).toFixed(1)} mm · web base ${(2*g.wb).toFixed(1)} mm · H=${g.H} mm`;
 }
 
-// ── LTB allowable (IS 801 Cl.6.2 transition) ────────────────────────────────
-function fbLTB(Fe,Fy){
-  if(Fe>=2.78*Fy) return 0.6*Fy;
-  if(Fe>=0.56*Fy) return (10*Fy/9)*(1-Fy/(5.04*Fe));
-  return Fe/1.67;
-}
-
-// ── effective width (AISI Winter) ───────────────────────────────────────────
-function rho(w,tt,k,f,E){const lam=(1.052/Math.sqrt(k))*(w/tt)*Math.sqrt(f/E);return {lam,r:lam<=0.673?1:(1-0.22/lam)/lam};}
-
+// ── LOAD MODE ────────────────────────────────────────────────────────────────
 let loadMode='staad';
 function setLoadMode(m){
   loadMode=m;
@@ -425,286 +580,274 @@ function setLoadMode(m){
 
 // ── SESSION LOG ──────────────────────────────────────────────────────────────
 const sessionLog=[];
+let logVisible=false;
 
-function pushLog(entry){
-  sessionLog.push(entry);
+function toggleLog(){
+  logVisible=!logVisible;
+  document.getElementById('log-table-wrap').style.display=logVisible?'block':'none';
+}
+
+function addToLog(){
+  if(!lastResult){alert('Run Calculate first.');return;}
+  const e=lastResult;
+  sessionLog.push({...e, n:sessionLog.length+1});
   renderLog();
-  document.getElementById('log-count').textContent='('+sessionLog.length+')';
+  const cnt=sessionLog.length;
+  document.getElementById('log-count').textContent=`(${cnt} run${cnt===1?'':'s'})`;
+  if(!logVisible){logVisible=true;document.getElementById('log-table-wrap').style.display='block';}
 }
 
 function renderLog(){
   const tbody=document.getElementById('log-body');
   if(sessionLog.length===0){
-    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px;font-size:12px">No calculations yet — run Calculate to start the log.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:18px;font-size:12px">No entries yet.</td></tr>';
     return;
   }
   tbody.innerHTML=sessionLog.map(e=>{
     const cls=e.overall==='PASS'?'log-row-pass':e.overall==='MARGINAL'?'log-row-marginal':'log-row-fail';
     const ocls=e.overall==='PASS'?'log-pass':e.overall==='MARGINAL'?'log-marginal':'log-fail';
-    const fx=(x)=>isNaN(x)?'—':(x*100).toFixed(0)+'%';
+    const pct=x=>isNaN(x)?'—':(x*100).toFixed(0)+'%';
     return `<tr class="${cls}">
       <td>${e.n}</td><td>${e.section}</td><td>${e.project}</td><td>${e.timestamp}</td>
-      <td>${e.Mz_up}</td>
-      <td>${fx(e.UR.bend)}</td><td>${fx(e.UR.shear)}</td><td>${fx(e.UR.ltb)}</td><td>${fx(e.UR.defl)}</td>
-      <td class="${ocls}">${e.overall}</td>
-    </tr>`;
+      <td>${e.Mz_up}</td><td>${pct(e.UR.bend)}</td><td>${pct(e.UR.shear)}</td>
+      <td>${pct(e.UR.ltb)}</td><td>${pct(e.UR.defl)}</td>
+      <td class="${ocls}">${e.overall}</td></tr>`;
   }).join('');
 }
 
 function clearLog(){
-  if(sessionLog.length===0)return;
+  if(!sessionLog.length)return;
   if(!confirm('Clear all log entries?'))return;
-  sessionLog.length=0;
-  renderLog();
+  sessionLog.length=0; renderLog();
   document.getElementById('log-count').textContent='';
 }
 
 function exportCSV(){
-  if(sessionLog.length===0){alert('No log entries to export.');return;}
-  const fx=(x)=>isNaN(x)?'':(x*100).toFixed(0);
+  if(!sessionLog.length){alert('No entries to export.');return;}
+  const pct=x=>isNaN(x)?'':(x*100).toFixed(0);
   const rows=['#,Section,Project,Time,Mz_up(kNm),Bending%,Shear%,LTB%,Defl%,Overall'];
-  for(const e of sessionLog){
-    rows.push([e.n,`"${e.section}"`,`"${e.project}"`,e.timestamp,e.Mz_up,fx(e.UR.bend),fx(e.UR.shear),fx(e.UR.ltb),fx(e.UR.defl),e.overall].join(','));
-  }
-  const blob=new Blob([rows.join('\n')],{type:'text/csv'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  for(const e of sessionLog)
+    rows.push([e.n,`"${e.section}"`,`"${e.project}"`,e.timestamp,e.Mz_up,pct(e.UR.bend),pct(e.UR.shear),pct(e.UR.ltb),pct(e.UR.defl),e.overall].join(','));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
   a.download='hat_purlin_log.csv'; a.click();
 }
 
-// ── TAB SWITCHING ────────────────────────────────────────────────────────────
-function switchTab(name){
-  ['check','library','log'].forEach(t=>{
-    document.getElementById('tab-'+t).classList.toggle('on',t===name);
-    document.getElementById('pane-'+t).classList.toggle('on',t===name);
+// ── DRAWER ───────────────────────────────────────────────────────────────────
+function openDrawer(){
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
+  renderDrawerSections(); renderDrawerProjects();
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+function switchDrawerTab(tab){
+  ['sec','proj'].forEach(t=>{
+    document.getElementById('dtb-'+t).classList.toggle('on',t===tab);
+    document.getElementById('dpanel-'+t).style.display=t===tab?'block':'none';
   });
-  if(name==='library') renderLibrary();
+}
+function renderDrawerSections(){
+  const secs=loadAllSections();
+  const keys=sortedKeys(secs);
+  const tb=document.getElementById('lib-sec-body');
+  if(!keys.length){tb.innerHTML='<tr><td colspan="7" style="color:#aaa;padding:12px;font-size:12px;text-align:center">No saved sections yet.</td></tr>';return;}
+  tb.innerHTML=keys.map(k=>{
+    const s=secs[k];
+    return `<tr>
+      <td><strong>${k}</strong></td><td>${s.B1}</td><td>${s.H}</td><td>${s.th}</td><td>${s.t}</td><td>${s.grade}</td>
+      <td>
+        <button class="load" onclick="loadSectionByName('${k}')">Load</button>
+        <button class="del" onclick="deleteSectionByName('${k}')">&#10005;</button>
+      </td></tr>`;
+  }).join('');
+}
+function renderDrawerProjects(){
+  const projs=loadAllProjects();
+  const keys=sortedKeys(projs);
+  const tb=document.getElementById('lib-proj-body');
+  if(!keys.length){tb.innerHTML='<tr><td colspan="5" style="color:#aaa;padding:12px;font-size:12px;text-align:center">No saved projects yet.</td></tr>';return;}
+  tb.innerHTML=keys.map(k=>{
+    const p=projs[k];
+    return `<tr>
+      <td><strong>${k}</strong></td><td>${p.L}</td><td>${p.Lb||3100}</td><td>${p.loadMode||'udl'}</td>
+      <td>
+        <button class="load" onclick="loadProjectByName('${k}')">Load</button>
+        <button class="del" onclick="deleteProjectByName('${k}')">&#10005;</button>
+      </td></tr>`;
+  }).join('');
+}
+function loadSectionByName(name){
+  document.getElementById('sec-preset-sel').value=name;
+  loadSectionPreset();
+  closeDrawer();
+}
+function deleteSectionByName(name){
+  if(!confirm(`Delete section "${name}"?`))return;
+  const secs=loadAllSections();
+  delete secs[name]; saveAllSections(secs);
+  refreshSectionDropdown(); renderDrawerSections();
+}
+function loadProjectByName(name){
+  document.getElementById('proj-preset-sel').value=name;
+  loadProjectPreset();
+  closeDrawer();
+}
+function deleteProjectByName(name){
+  if(!confirm(`Delete project "${name}"?`))return;
+  const projs=loadAllProjects();
+  delete projs[name]; saveAllProjects(projs);
+  refreshProjectDropdown(); renderDrawerProjects();
 }
 
-// ── PERSISTENCE (localStorage) ───────────────────────────────────────────────
+// ── PERSISTENCE ──────────────────────────────────────────────────────────────
 const LS_SEC='hat_sections', LS_PROJ='hat_projects';
-
-function loadAllSections(){
-  try{return JSON.parse(localStorage.getItem(LS_SEC)||'{}')}catch(e){return {};}
-}
+function loadAllSections(){try{return JSON.parse(localStorage.getItem(LS_SEC)||'{}')}catch(e){return {};}}
 function saveAllSections(obj){localStorage.setItem(LS_SEC,JSON.stringify(obj));}
-function loadAllProjects(){
-  try{return JSON.parse(localStorage.getItem(LS_PROJ)||'{}')}catch(e){return {};}
-}
+function loadAllProjects(){try{return JSON.parse(localStorage.getItem(LS_PROJ)||'{}')}catch(e){return {};}}
 function saveAllProjects(obj){localStorage.setItem(LS_PROJ,JSON.stringify(obj));}
 
-// Seed defaults on first load
 function seedDefaults(){
   const secs=loadAllSections();
-  if(Object.keys(secs).length===0){
+  if(!Object.keys(secs).length){
     secs['HAT-40-70-t09']={B1:40,H:70,th:75,F:22,Lp:10,beta:45,t:0.90,grade:'550'};
     saveAllSections(secs);
   }
   const projs=loadAllProjects();
-  if(Object.keys(projs).length===0){
+  if(!Object.keys(projs).length){
     projs['Solar-3.1m']={L:3.1,N:50,defLim:'180',Lb:3100,Cb:1.0,loadMode:'udl',w_up:0.981,w_grav:0.147,w_weak:0};
     saveAllProjects(projs);
   }
 }
-
 function sortedKeys(obj){return Object.keys(obj).sort((a,b)=>a.localeCompare(b));}
 
 function refreshSectionDropdown(){
   const sel=document.getElementById('sec-preset-sel');
-  const cur=sel.value;
-  const secs=loadAllSections();
-  sel.innerHTML='<option value="">— select —</option>'+sortedKeys(secs).map(k=>`<option value="${k}">${k}</option>`).join('');
-  if(cur&&secs[cur]) sel.value=cur;
+  const cur=sel.value; const secs=loadAllSections();
+  sel.innerHTML='<option value="">— saved sections —</option>'+sortedKeys(secs).map(k=>`<option value="${k}">${k}</option>`).join('');
+  if(cur&&secs[cur])sel.value=cur;
 }
 function refreshProjectDropdown(){
   const sel=document.getElementById('proj-preset-sel');
-  const cur=sel.value;
-  const projs=loadAllProjects();
-  sel.innerHTML='<option value="">— select —</option>'+sortedKeys(projs).map(k=>`<option value="${k}">${k}</option>`).join('');
-  if(cur&&projs[cur]) sel.value=cur;
+  const cur=sel.value; const projs=loadAllProjects();
+  sel.innerHTML='<option value="">— saved projects —</option>'+sortedKeys(projs).map(k=>`<option value="${k}">${k}</option>`).join('');
+  if(cur&&projs[cur])sel.value=cur;
 }
 
-// Track which preset is "active" for the log name
 let activeSectionName='Custom', activeProjectName='Custom';
 
 function loadSectionPreset(){
-  const name=document.getElementById('sec-preset-sel').value;
-  if(!name) return;
-  const secs=loadAllSections();
-  const s=secs[name]; if(!s) return;
-  const fields=['B1','H','th','F','Lp','beta','t'];
-  fields.forEach(f=>{document.getElementById(f).value=s[f];});
-  // grade select
+  const name=document.getElementById('sec-preset-sel').value; if(!name)return;
+  const s=loadAllSections()[name]; if(!s)return;
+  ['B1','H','th','F','Lp','beta','t'].forEach(f=>{document.getElementById(f).value=s[f];});
   document.getElementById('grade').value=String(s.grade);
-  activeSectionName=name;
-  drawDiagram();
+  document.getElementById('sec-savename').value=name;
+  activeSectionName=name; drawDiagram();
 }
-
 function saveSectionPreset(){
-  const name=prompt('Save section as:','');
-  if(!name||!name.trim()) return;
-  const nm=name.trim();
+  let name=document.getElementById('sec-savename').value.trim();
+  if(!name)name=prompt('Section name:'); if(!name)return;
   const secs=loadAllSections();
-  if(secs[nm]&&!confirm(`Section "${nm}" already exists. Overwrite?`)) return;
-  const g=geom();
-  secs[nm]={B1:g.B1,H:g.H,th:g.th,F:g.F,Lp:g.Lp,beta:g.beta,t:g.t,grade:v('grade')};
-  saveAllSections(secs);
-  refreshSectionDropdown();
-  document.getElementById('sec-preset-sel').value=nm;
-  activeSectionName=nm;
-  renderLibrary();
+  if(secs[name]&&!confirm(`Overwrite "${name}"?`))return;
+  secs[name]={B1:+v('B1'),H:+v('H'),th:+v('th'),F:+v('F'),Lp:+v('Lp'),beta:+v('beta'),t:+v('t'),grade:v('grade')};
+  saveAllSections(secs); refreshSectionDropdown();
+  document.getElementById('sec-preset-sel').value=name;
+  document.getElementById('sec-savename').value=name;
+  activeSectionName=name;
 }
-
 function loadProjectPreset(){
-  const name=document.getElementById('proj-preset-sel').value;
-  if(!name) return;
-  const projs=loadAllProjects();
-  const p=projs[name]; if(!p) return;
-  document.getElementById('L').value=p.L;
-  document.getElementById('N').value=p.N;
-  document.getElementById('defLim').value=p.defLim||'180';
-  document.getElementById('Lb').value=p.Lb;
-  document.getElementById('Cb').value=p.Cb;
-  setLoadMode(p.loadMode||'udl');
-  if(p.loadMode==='udl'||!p.loadMode){
-    document.getElementById('w_up').value=p.w_up||0;
-    document.getElementById('w_grav').value=p.w_grav||0;
-    document.getElementById('w_weak').value=p.w_weak||0;
-  } else {
-    if(p.s_Mz_up!==undefined) document.getElementById('s_Mz_up').value=p.s_Mz_up;
-    if(p.s_My_up!==undefined) document.getElementById('s_My_up').value=p.s_My_up;
-    if(p.s_Fx_up!==undefined) document.getElementById('s_Fx_up').value=p.s_Fx_up;
-    if(p.s_Mz_gr!==undefined) document.getElementById('s_Mz_gr').value=p.s_Mz_gr;
-    if(p.s_My_gr!==undefined) document.getElementById('s_My_gr').value=p.s_My_gr;
-    if(p.s_Fx_gr!==undefined) document.getElementById('s_Fx_gr').value=p.s_Fx_gr;
-    if(p.s_Fy!==undefined) document.getElementById('s_Fy').value=p.s_Fy;
-    if(p.s_Mx!==undefined) document.getElementById('s_Mx').value=p.s_Mx;
-    if(p.s_def!==undefined) document.getElementById('s_def').value=p.s_def;
-    if(p.munit!==undefined) document.getElementById('munit').value=p.munit;
-    if(p.funit!==undefined) document.getElementById('funit').value=p.funit;
-    if(p.s_wind!==undefined) document.getElementById('s_wind').checked=!!p.s_wind;
+  const name=document.getElementById('proj-preset-sel').value; if(!name)return;
+  const p=loadAllProjects()[name]; if(!p)return;
+  const nf=f=>{ const el=document.getElementById(f); if(el&&p[f]!==undefined)el.value=p[f]; };
+  ['L','N','defLim','Lb','Cb'].forEach(nf);
+  const lm=p.loadMode||'udl'; setLoadMode(lm);
+  if(lm==='udl'){ ['w_up','w_grav','w_weak'].forEach(nf); }
+  else {
+    ['munit','funit','s_Mz_up','s_My_up','s_Fx_up','s_Mz_gr','s_My_gr','s_Fx_gr','s_Fy','s_Mx','s_def'].forEach(nf);
+    const sw=document.getElementById('s_wind');
+    if(sw)sw.checked=p.s_wind!==false;
   }
+  document.getElementById('proj-savename').value=name;
+  activeProjectName=name;
+}
+function saveProjectPreset(){
+  let name=document.getElementById('proj-savename').value.trim();
+  if(!name)name=prompt('Project name:'); if(!name)return;
+  const projs=loadAllProjects();
+  if(projs[name]&&!confirm(`Overwrite "${name}"?`))return;
+  const lm=loadMode;
+  const obj={L:+v('L'),N:+v('N'),defLim:v('defLim'),Lb:+v('Lb'),Cb:+v('Cb'),loadMode:lm};
+  if(lm==='udl'){obj.w_up=+v('w_up');obj.w_grav=+v('w_grav');obj.w_weak=+v('w_weak');}
+  else{
+    ['munit','funit','s_Mz_up','s_My_up','s_Fx_up','s_Mz_gr','s_My_gr','s_Fx_gr','s_Fy','s_Mx','s_def'].forEach(f=>{obj[f]=v(f);});
+    obj.s_wind=document.getElementById('s_wind').checked;
+  }
+  projs[name]=obj; saveAllProjects(projs); refreshProjectDropdown();
+  document.getElementById('proj-preset-sel').value=name;
+  document.getElementById('proj-savename').value=name;
   activeProjectName=name;
 }
 
-function saveProjectPreset(){
-  const name=prompt('Save project as:','');
-  if(!name||!name.trim()) return;
-  const nm=name.trim();
-  const projs=loadAllProjects();
-  if(projs[nm]&&!confirm(`Project "${nm}" already exists. Overwrite?`)) return;
-  const obj={
-    L:+v('L'), N:+v('N'), defLim:v('defLim'), Lb:+v('Lb'), Cb:+v('Cb'), loadMode:loadMode,
-    w_up:+v('w_up'), w_grav:+v('w_grav'), w_weak:+v('w_weak'),
-    s_Mz_up:+v('s_Mz_up'), s_My_up:+v('s_My_up'), s_Fx_up:+v('s_Fx_up'),
-    s_Mz_gr:+v('s_Mz_gr'), s_My_gr:+v('s_My_gr'), s_Fx_gr:+v('s_Fx_gr'),
-    s_Fy:+v('s_Fy'), s_Mx:+v('s_Mx'), s_def:+v('s_def'),
-    munit:v('munit'), funit:v('funit'),
-    s_wind:document.getElementById('s_wind').checked
+// ── CATALOG IMPORT / EXPORT ──────────────────────────────────────────────────
+function exportCatalog(){
+  const data={version:1,sections:loadAllSections(),projects:loadAllProjects()};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='hat_catalog.json'; a.click();
+}
+function importCatalog(input){
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(d.sections){const s={...loadAllSections(),...d.sections};saveAllSections(s);}
+      if(d.projects){const p={...loadAllProjects(),...d.projects};saveAllProjects(p);}
+      refreshSectionDropdown(); refreshProjectDropdown();
+      renderDrawerSections(); renderDrawerProjects();
+      alert('Catalog imported successfully.');
+    }catch(err){alert('Invalid catalog JSON: '+err.message);}
   };
-  projs[nm]=obj;
-  saveAllProjects(projs);
-  refreshProjectDropdown();
-  document.getElementById('proj-preset-sel').value=nm;
-  activeProjectName=nm;
-  renderLibrary();
+  reader.readAsText(file);
+  input.value='';
 }
 
-// ── LIBRARY RENDER ───────────────────────────────────────────────────────────
-function renderLibrary(){
-  const secs=loadAllSections();
-  const secKeys=sortedKeys(secs);
-  const sbody=document.getElementById('lib-sections-body');
-  if(secKeys.length===0){
-    sbody.innerHTML='<tr><td colspan="10" style="color:#aaa;text-align:center;padding:12px">No saved sections</td></tr>';
-  } else {
-    sbody.innerHTML=secKeys.map(k=>{
-      const s=secs[k];
-      return `<tr>
-        <td><strong>${k}</strong></td>
-        <td>${s.B1}</td><td>${s.H}</td><td>${s.th}</td><td>${s.F}</td>
-        <td>${s.Lp}</td><td>${s.beta}</td><td>${s.t}</td><td>${s.grade}</td>
-        <td style="white-space:nowrap">
-          <button class="btn-sm" onclick="libLoadSection('${k}')">Load</button>
-          &nbsp;
-          <button class="btn-sm danger" onclick="libDelSection('${k}')">Delete</button>
-        </td>
-      </tr>`;
-    }).join('');
-  }
-
-  const projs=loadAllProjects();
-  const projKeys=sortedKeys(projs);
-  const pbody=document.getElementById('lib-projects-body');
-  if(projKeys.length===0){
-    pbody.innerHTML='<tr><td colspan="5" style="color:#aaa;text-align:center;padding:12px">No saved projects</td></tr>';
-  } else {
-    pbody.innerHTML=projKeys.map(k=>{
-      const p=projs[k];
-      return `<tr>
-        <td><strong>${k}</strong></td>
-        <td>${p.L} m</td><td>${p.Lb} mm</td><td>${p.loadMode||'udl'}</td>
-        <td style="white-space:nowrap">
-          <button class="btn-sm" onclick="libLoadProject('${k}')">Load</button>
-          &nbsp;
-          <button class="btn-sm danger" onclick="libDelProject('${k}')">Delete</button>
-        </td>
-      </tr>`;
-    }).join('');
-  }
+// ── RENDER HELPERS ───────────────────────────────────────────────────────────
+function sc(u){return u>=1?'fail':u>=0.9?'warn':'pass';}
+function sl(u){return u>=1?'FAIL':u>=0.9?'MARGINAL':'PASS';}
+function bc(u){return u>=1?'#E24B4A':u>=0.9?'#EF9F27':'#639922';}
+function row(name,ur,ref,note){
+  if(isNaN(ur)) return `<div class="check-row"><div class="cn">${name}${note?`<br><small>${note}</small>`:''}</div>
+    <div class="bw"></div><div class="uv" style="color:#aaa">&mdash;</div>
+    <div class="st warn">INPUT</div><div class="rf">${ref}</div></div>`;
+  const b=Math.min(ur*100,100).toFixed(1);
+  return `<div class="check-row"><div class="cn">${name}${note?`<br><small>${note}</small>`:''}</div>
+    <div class="bw"><div class="bf" style="width:${b}%;background:${bc(ur)}"></div></div>
+    <div class="uv" style="color:${bc(ur)}">${(ur*100).toFixed(0)}%</div>
+    <div class="st ${sc(ur)}">${sl(ur)}</div><div class="rf">${ref}</div></div>`;
 }
 
-function libLoadSection(name){
-  const secs=loadAllSections();
-  const s=secs[name]; if(!s) return;
-  ['B1','H','th','F','Lp','beta','t'].forEach(f=>document.getElementById(f).value=s[f]);
-  document.getElementById('grade').value=String(s.grade);
-  document.getElementById('sec-preset-sel').value=name;
-  activeSectionName=name;
-  drawDiagram();
-  switchTab('check');
-}
+// ── MAIN CALCULATE ───────────────────────────────────────────────────────────
+let lastResult=null;
 
-function libDelSection(name){
-  if(!confirm(`Delete section "${name}"?`)) return;
-  const secs=loadAllSections();
-  delete secs[name];
-  saveAllSections(secs);
-  refreshSectionDropdown();
-  renderLibrary();
-}
-
-function libLoadProject(name){
-  document.getElementById('proj-preset-sel').value=name;
-  loadProjectPreset();
-  switchTab('check');
-}
-
-function libDelProject(name){
-  if(!confirm(`Delete project "${name}"?`)) return;
-  const projs=loadAllProjects();
-  delete projs[name];
-  saveAllProjects(projs);
-  refreshProjectDropdown();
-  renderLibrary();
-}
-
-// ── MAIN CALCULATE ────────────────────────────────────────────────────────────
 function calculate(){
   const g=geom(); const p=computeProps(g);
   const t=g.t, E=200000, Fy=+v('grade');
   const L=+v('L')*1000, N=+v('N'), defDiv=+v('defLim'), Lb=+v('Lb'), Cb=+v('Cb');
-  // ---- force sourcing: STAAD output or Direct UDL ----
+
   let M_up,M_sg,M_weak,V,Fx_up_N,Fx_gr_N,Mx_Nmm,def_staad,windPlus;
   if(loadMode==='staad'){
     const mu=+v('munit'), fu=+v('funit');
-    M_up   = Math.abs(+v('s_Mz_up'))*mu/1e6;   // kNm
-    M_weak = Math.abs(+v('s_My_up'))*mu/1e6;   // kNm (uplift minor)
-    M_sg   = Math.abs(+v('s_Mz_gr'))*mu/1e6;   // kNm (gravity major)
-    Fx_up_N= (+v('s_Fx_up'))*fu;               // N (+tension)
-    Fx_gr_N= (+v('s_Fx_gr'))*fu;               // N
-    Mx_Nmm = Math.abs(+v('s_Mx'))*mu;          // N·mm
-    V      = Math.abs(+v('s_Fy'))*fu/1000;     // kN
-    def_staad = +v('s_def');                   // mm
+    M_up   = Math.abs(+v('s_Mz_up'))*mu/1e6;
+    M_weak = Math.abs(+v('s_My_up'))*mu/1e6;
+    M_sg   = Math.abs(+v('s_Mz_gr'))*mu/1e6;
+    Fx_up_N= (+v('s_Fx_up'))*fu;
+    Fx_gr_N= (+v('s_Fx_gr'))*fu;
+    Mx_Nmm = Math.abs(+v('s_Mx'))*mu;
+    V      = Math.abs(+v('s_Fy'))*fu/1000;
+    def_staad = +v('s_def');
     windPlus = document.getElementById('s_wind').checked;
   } else {
     const w_net=+v('w_up'), w_grav=+v('w_grav'), w_dpa=+v('w_weak');
@@ -713,16 +856,13 @@ function calculate(){
     Fx_up_N=0; Fx_gr_N=0; Mx_Nmm=0; def_staad=0; windPlus=true;
   }
 
-  // allowable bending (+1/3 only for wind/seismic combo, Cl.6.1.1)
   const Fb=0.6*Fy, Fb_wl=windPlus?Fb*4/3:Fb;
-  // uplift: compression at lip tip (Zbot). gravity: compression at top (Ztop).
-  const f_comp_up=M_up*1e6/p.Zbot;                 // compression (low fiber) — for eff.width & LTB
-  const f_top_up=M_up*1e6/p.Ztop;                  // tension (top fiber) under uplift
-  const f_strong_up=Math.max(f_comp_up,f_top_up);  // governing strong-axis fiber
+  const f_comp_up=M_up*1e6/p.Zbot;
+  const f_top_up=M_up*1e6/p.Ztop;
+  const f_strong_up=Math.max(f_comp_up,f_top_up);
   const f_top_grav=M_sg*1e6/p.Ztop;
   const f_weak=M_weak*1e6/p.Zweak;
 
-  // effective width of compression elements under uplift (feet k=4, lip k=0.43, web k=24)
   const fEW=Math.max(f_comp_up,1);
   const ew_foot=rho(g.F,t,4.0,fEW,E);
   const ew_lip =rho(g.Lp,t,0.43,fEW,E);
@@ -730,24 +870,21 @@ function calculate(){
   const ew_web =rho(wslant,t,24.0,fEW,E);
   const allEff = ew_foot.r>=0.999 && ew_lip.r>=0.999 && ew_web.r>=0.999;
 
-  // edge stiffener adequacy (Cl.5.2.2.1)
   const wt_f=g.F/t, Fy_ksi=Fy/6.895;
   const term=wt_f*wt_f-4000/Fy_ksi;
   const Imin=Math.max(term>0?1.83*t**4*Math.sqrt(term):0, 9.2*t**4);
   const Is=(g.Lp**3*t*Math.sin(g.beta*Math.PI/180)**2)/12;
 
-  // biaxial (uplift + weak)
   const r_s=f_strong_up/Fb_wl, r_w=f_weak/Fb_wl;
 
-  // axial (Cl.6.6/6.7) — only evaluated if Fx present
   const ry_full=Math.sqrt(p.Iyy/p.A);
   const Cc=Math.sqrt(2*Math.PI**2*E/Fy);
-  function Fa_allow(KLr){ // IS 801/AISI ASD column, Q=1 (elements fully effective at service)
+  function Fa_allow(KLr){
     if(KLr<=Cc) return (12/23)*Fy*(1-Fy*KLr*KLr/(4*Math.PI**2*E));
     return (12/23)*Math.PI**2*E/(KLr*KLr);
   }
   const KLr=Lb/ry_full, Fa=Fa_allow(KLr);
-  const fa_up=Fx_up_N/p.A, fa_gr=Fx_gr_N/p.A;   // MPa (+tension)
+  const fa_up=Fx_up_N/p.A, fa_gr=Fx_gr_N/p.A;
   let UR_axial=0, axialNote='', hasAxial=(Math.abs(Fx_up_N)>1e-6||Math.abs(Fx_gr_N)>1e-6);
   if(hasAxial){
     const tA_up=fa_up>=0?fa_up/(0.6*Fy):Math.abs(fa_up)/Fa;
@@ -757,35 +894,30 @@ function calculate(){
     const UR_gr=tA_gr+fbz_gr;
     UR_axial=Math.max(UR_up,UR_gr);
     const comp=(fa_up<0||fa_gr<0);
-    axialNote=`Fa=${Fa.toFixed(0)} MPa (KL/r=${KLr.toFixed(0)}); fa_up=${fa_up.toFixed(1)}, fa_gr=${fa_gr.toFixed(1)} MPa`+(comp?' — compression: full Cl.6.7 stability (Cm + amplification) advised':' — tension');
+    axialNote=`Fa=${Fa.toFixed(0)} MPa (KL/r=${KLr.toFixed(0)}); fa_up=${fa_up.toFixed(1)}, fa_gr=${fa_gr.toFixed(1)} MPa`+(comp?' — compression: Cl.6.7 stability check advised':' — tension');
   }
-  // torsion flag (Mx)
   let UR_tor=0, torNote='', hasTor=(Mx_Nmm>1e-6);
   if(hasTor){
-    const tau=Mx_Nmm*t/p.J;          // St-Venant max shear, thin open section
+    const tau=Mx_Nmm*t/p.J;
     UR_tor=tau/(0.4*Fy);
-    torNote=`τ=${tau.toFixed(0)} MPa vs 0.4Fy=${(0.4*Fy).toFixed(0)} — OPEN section weak in torsion; load through shear centre / restrain ends`;
+    torNote=`τ=${tau.toFixed(0)} MPa vs 0.4Fy=${(0.4*Fy).toFixed(0)} — open section; restrain against torsion`;
   }
 
-  // LTB (compression-flange method): Fe = Cb pi^2 E /(Lb/rycf)^2
   const Fe=Cb*Math.PI**2*E/((Lb/p.rycf)**2);
-  const Fb_ltb=Math.min(Fb, fbLTB(Fe,Fy));         // cap at 0.6Fy
+  const Fb_ltb=Math.min(Fb, fbLTB(Fe,Fy));
   const Fb_ltb_wl=Fb_ltb*4/3;
   const UR_ltb=f_comp_up/Fb_ltb_wl;
 
-  // shear (Cl.7) — Fv from web slant slenderness; Vcap on web vertical projection
   const wt_web=wslant/t, l1=2.89*Math.sqrt(E/Fy), l2=5.34*Math.sqrt(E/Fy);
   const Fv=wt_web<=l1?0.4*Fy:wt_web<=l2?0.664*Math.sqrt(Fy*E)/wt_web:0.905*E/wt_web**2;
-  const Vcap=2*Fv*g.H*t/1000;   // vertical projection H carries vertical shear
+  const Vcap=2*Fv*g.H*t/1000;
 
-  // web crippling (Cl.8.1 EOF) on slant web
   const R=2;
+  const w_net_val=loadMode==='udl'?+v('w_up'):0;
   const Pw=t**2*Fy*1.01*(1-0.325*Math.sqrt(R/t))*(1+0.083*Math.sqrt(N/t))*(1-0.068*Math.sqrt(Math.min(wt_web,200)));
   const Pwa=2*Pw/1000;
-  const w_net_val=loadMode==='udl'?+v('w_up'):0;
   const Preact=w_net_val>0?w_net_val*L/2/1000:0;
 
-  // deflection (resultant)
   let d_s=NaN,d_w=NaN,d_t;
   const d_a=L/defDiv;
   if(loadMode==='udl'){
@@ -801,66 +933,57 @@ function calculate(){
     ltb:UR_ltb, shear:V/Vcap, web:Preact>0?Preact/Pwa:0, defl:d_t/d_a
   };
 
-  // ── render ──
+  // ── VERDICT ──
+  const allURs=[UR.wt_foot,UR.wt_lip,UR.wt_web,UR.lip,UR.biaxial,UR.grav,UR.ltb,UR.shear,UR.defl]
+               .filter(x=>!isNaN(x));
+  const maxUR=Math.max(...allURs);
+  const overall=maxUR>=1?'FAIL':maxUR>=0.9?'MARGINAL':'PASS';
+  const govName=[[UR.defl,'Deflection'],[UR.biaxial,'Bending (uplift)'],[UR.grav,'Gravity bending'],
+    [UR.ltb,'LTB'],[UR.shear,'Shear'],[UR.lip,'Edge stiffener']].sort((a,b)=>b[0]-a[0])[0];
+  const banner=document.getElementById('verdict-banner');
+  banner.className='verdict '+(overall==='FAIL'?'fail':overall==='MARGINAL'?'marginal':'pass');
+  document.getElementById('verdict-label').textContent=overall;
+  document.getElementById('verdict-detail').textContent=
+    `Governing: ${govName[1]} ${(govName[0]*100).toFixed(0)}% — ${overall}`;
+
+  // Print meta
+  document.getElementById('print-meta').textContent=
+    `Section: B1=${g.B1} H=${g.H} θ=${g.th}° F=${g.F} Lp=${g.Lp} t=${g.t} mm, Fy=${Fy} MPa | `+
+    `Span=${(L/1000).toFixed(1)} m, Lb=${Lb} mm | Date: ${new Date().toLocaleDateString()}`;
+
+  // ── SECTION CHIPS ──
+  document.getElementById('prop-chips').innerHTML=[
+    {l:'A',v:p.A.toFixed(0),u:'mm²'},
+    {l:'ȳ',v:p.yc.toFixed(2),u:'mm'},
+    {l:'Ixx',v:(p.Ixx/1000).toFixed(0),u:'×10³ mm⁴'},
+    {l:'Iyy',v:(p.Iyy/1000).toFixed(0),u:'×10³ mm⁴'},
+    {l:'Ztop',v:p.Ztop.toFixed(0),u:'mm³'},
+    {l:'Zbot',v:p.Zbot.toFixed(0),u:'mm³'},
+    {l:'rycf',v:p.rycf.toFixed(1),u:'mm'},
+  ].map(m=>`<div class="chip"><div class="lbl">${m.l}</div><div class="val">${m.v} <span class="u">${m.u}</span></div></div>`).join('');
+
   document.getElementById('ltb-badge').textContent='Lb = '+Lb+' mm';
-  document.getElementById('info-row').innerHTML=`
-    <div class="chip">Span <span>${(L/1000).toFixed(1)} m</span></div>
-    <div class="chip">Fy <span>${Fy} MPa</span></div>
-    <div class="chip">&theta; <span>${g.th}°</span></div>
-    <div class="chip">Bottom width <span>${(2*g.lt).toFixed(0)} mm</span></div>
-    <div class="chip">Lb <span>${Lb} mm</span></div>`;
+  document.getElementById('case-badge').textContent=loadMode==='staad'?'STAAD forces':'Direct UDL';
 
   document.getElementById('sec-props').innerHTML=[
-    {l:'Area A',v:p.A.toFixed(0),u:'mm²'},
-    {l:'Centroid ỳ (from foot line)',v:p.yc.toFixed(2),u:'mm'},
-    {l:'Ixx (strong)',v:(p.Ixx/1000).toFixed(0),u:'×10³ mm⁴'},
-    {l:'Iyy (weak)',v:(p.Iyy/1000).toFixed(0),u:'×10³ mm⁴'},
-    {l:'Z_top (tension/uplift)',v:p.Ztop.toFixed(0),u:'mm³'},
-    {l:'Z_bot (comp/uplift)',v:p.Zbot.toFixed(0),u:'mm³'},
-    {l:'Z_weak',v:p.Zweak.toFixed(0),u:'mm³'},
+    {l:'self wt',v:(p.A/1e6*7850*9.81/1000).toFixed(4),u:'kN/m'},
     {l:'J (torsion)',v:p.J.toFixed(1),u:'mm⁴'},
-    {l:'r_y comp.flange',v:p.rycf.toFixed(1),u:'mm'},
     {l:'web slant',v:wslant.toFixed(1),u:'mm'},
     {l:'Fv allow',v:Fv.toFixed(0),u:'MPa'},
-    {l:'self wt',v:(p.A/1e6*7850*9.81/1000).toFixed(4),u:'kN/m'},
-  ].map(m=>`<div class="metric"><div class="lbl">${m.l}</div><div class="val">${m.v} <span style="font-size:11px;color:#888">${m.u}</span></div></div>`).join('');
+  ].map(m=>`<div class="metric"><div class="lbl">${m.l}</div><div class="val">${m.v} <span style="font-size:10px;color:#aaa">${m.u}</span></div></div>`).join('');
 
+  // ── NOTES ──
   document.getElementById('biaxial-note').innerHTML=
-    `<strong>Effective section:</strong> `+(allEff?'all compression elements FULLY EFFECTIVE at service stress &rarr; gross section governs (Z not reduced).':'&#9888; an element exceeds &lambda;=0.673 &mdash; bending UR shown uses GROSS Z; a full effective-section iteration is required.')+
-    ` &nbsp;|&nbsp; uplift fibres: comp(low)=${f_comp_up.toFixed(0)}, tens(top)=${f_top_up.toFixed(0)} MPa &rarr; governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb(+⅓)=${Fb_wl.toFixed(0)} MPa`;
-
+    `<strong>Effective section:</strong> `+(allEff?'All compression elements FULLY EFFECTIVE at service stress → gross section governs.':
+    '⚠ An element exceeds λ=0.673 — bending UR uses GROSS Z; full effective-section iteration required.')+
+    ` Uplift fibres: comp(foot)=${f_comp_up.toFixed(0)} MPa, tens(top)=${f_top_up.toFixed(0)} MPa → governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb(+⅓)=${Fb_wl.toFixed(0)} MPa`;
   document.getElementById('ltb-note').innerHTML=
-    `<strong>LTB (Cl.6.2, compression-flange method):</strong> r_y(feet+lips)=${p.rycf.toFixed(1)} mm, L&#x1D47;/r_y=${(Lb/p.rycf).toFixed(0)} &rarr; Fe=${Fe.toFixed(0)} MPa `+
-    `(2.78Fy=${(2.78*Fy).toFixed(0)}). Fb_LTB=${Fb_ltb.toFixed(0)}&times;⁴⁄₃=${Fb_ltb_wl.toFixed(0)} MPa. `+
-    `<strong>${Fb_ltb>=Fb?'LTB does NOT govern ✓ (wide outward feet give large r_y)':'LTB REDUCES capacity'}</strong>`;
+    `<strong>LTB (Cl.6.2, compression-flange method):</strong> r_y(feet+lips)=${p.rycf.toFixed(1)} mm, Lb/r_y=${(Lb/p.rycf).toFixed(0)} → Fe=${Fe.toFixed(0)} MPa (2.78Fy=${(2.78*Fy).toFixed(0)} MPa). `+
+    `Fb_LTB=${Fb_ltb.toFixed(0)}×⁴⁄₃=${Fb_ltb_wl.toFixed(0)} MPa. `+
+    `<strong>${Fb_ltb>=Fb?'LTB does NOT govern ✓ (wide outward feet → large r_y)':'LTB REDUCES capacity'}</strong>`;
 
+  // ── CHECK ROWS ──
   const fx=(x,n)=>isNaN(x)?'—':x.toFixed(n);
-  const ls = (loadMode==='staad') ? [
-      {l:'Mz uplift',v:fx(M_up,4),u:'kNm'},{l:'Mz gravity',v:fx(M_sg,4),u:'kNm'},
-      {l:'My (minor)',v:fx(M_weak,4),u:'kNm'},{l:'Fx axial',v:fx(Fx_up_N/1000,3),u:'kN'},
-      {l:'Fy shear',v:fx(V,3),u:'kN'},{l:'Mx torsion',v:fx(Mx_Nmm/1e6,4),u:'kNm'},
-      {l:'δ (STAAD)',v:fx(d_t,2),u:'mm'},{l:'δ_allow',v:fx(d_a,2),u:'mm'},
-    ] : [
-      {l:'w_net uplift',v:fx(+v('w_up'),3),u:'kN/m'},{l:'w_gravity',v:fx(+v('w_grav'),3),u:'kN/m'},
-      {l:'w_weak',v:fx(+v('w_weak'),3),u:'kN/m'},{l:'M_uplift',v:fx(M_up,4),u:'kNm'},
-      {l:'M_gravity',v:fx(M_sg,4),u:'kNm'},{l:'V_max',v:fx(V,3),u:'kN'},
-      {l:'δ_resultant',v:fx(d_t,2),u:'mm'},{l:'δ_allow',v:fx(d_a,2),u:'mm'},
-    ];
-  document.getElementById('load-sum').innerHTML=ls.map(m=>`<div class="metric"><div class="lbl">${m.l}</div><div class="val">${m.v} <span style="font-size:11px;color:#888">${m.u}</span></div></div>`).join('');
-
-  function sc(u){return u>=1?'fail':u>=0.9?'warn':'pass';}
-  function sl(u){return u>=1?'FAIL':u>=0.9?'MARGINAL':'PASS';}
-  function bc(u){return u>=1?'#E24B4A':u>=0.9?'#EF9F27':'#639922';}
-  function row(name,ur,ref,note){
-    if(isNaN(ur)) return `<div class="check-row"><div class="cn">${name}${note?`<br><span style="font-size:10px;color:#aaa">${note}</span>`:''}</div>
-      <div class="bw"></div><div class="uv" style="color:#aaa">&mdash;</div>
-      <div class="st warn">INPUT</div><div class="rf">${ref}</div></div>`;
-    const b=Math.min(ur*100,100).toFixed(1);
-    return`<div class="check-row"><div class="cn">${name}${note?`<br><span style="font-size:10px;color:#aaa">${note}</span>`:''}</div>
-      <div class="bw"><div class="bf" style="width:${b}%;background:${bc(ur)}"></div></div>
-      <div class="uv" style="color:${bc(ur)}">${(ur*100).toFixed(0)}%</div>
-      <div class="st ${sc(ur)}">${sl(ur)}</div><div class="rf">${ref}</div></div>`;}
-
   document.getElementById('ck-wt').innerHTML=
     row('Foot (stiffened, k=4)',UR.wt_foot,'IS 801 Cl.5.2',`w/t=${(g.F/t).toFixed(1)}, λ=${ew_foot.lam.toFixed(3)}, ρ=${ew_foot.r.toFixed(3)}`)+
     row('Lip (unstiffened, k=0.43)',UR.wt_lip,'IS 801 Cl.5.2',`w/t=${(g.Lp/t).toFixed(1)}, λ=${ew_lip.lam.toFixed(3)}, ρ=${ew_lip.r.toFixed(3)}`)+
@@ -871,7 +994,7 @@ function calculate(){
 
   document.getElementById('ck-flex').innerHTML=
     row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`)+
-    row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)}`)+
+    row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)} MPa`)+
     (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.1',axialNote):'');
 
   document.getElementById('ck-ltb').innerHTML=
@@ -883,42 +1006,51 @@ function calculate(){
     (hasTor?row('Torsion (St-Venant)',UR.tor,'IS 801 Cl.6.6',torNote):'');
 
   document.getElementById('ck-defl').innerHTML=
-    row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD (or use Direct UDL mode)`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`);
+    row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`);
 
+  // ── FIX BOX ──
   const I_req=p.Ixx*UR.defl;
   const fixes=[];
-  if(UR.wt_foot>=1||UR.wt_lip>=1||UR.wt_web>=1)fixes.push({tag:'Eff. width',text:`A compression element is slender (λ&gt;0.673). Increase t, or run a full effective-section calc.`});
-  if(UR.lip>=1)fixes.push({tag:'Lip',text:`Lip too small: increase lip length so Is &ge; ${Imin.toFixed(1)} mm⁴ (need ≥ <em>${(Math.cbrt(Imin*12/(t*Math.sin(g.beta*Math.PI/180)**2))).toFixed(1)} mm</em>) or steepen lip angle.`});
+  if(UR.wt_foot>=1||UR.wt_lip>=1||UR.wt_web>=1)fixes.push({tag:'Eff. width',text:`Slender element (λ>0.673). Increase t, or run full effective-section iteration.`});
+  if(UR.lip>=1)fixes.push({tag:'Lip',text:`Is < Imin. Need lip ≥ <em>${(Math.cbrt(Imin*12/(t*Math.sin(g.beta*Math.PI/180)**2))).toFixed(1)} mm</em> or steepen β.`});
   if(UR.biaxial>=1)fixes.push({tag:'Bending',text:`Increase H (Ixx∝H²·³) or t.`});
-  if(UR.grav>=1)fixes.push({tag:'Gravity bend',text:`Increase Z_top: raise H or t.`});
-  if(UR.ltb>=1)fixes.push({tag:'LTB',text:`Reduce Lᵇ (add mid-span brace) or increase foot/lip (raises r_y of compression flange).`});
+  if(UR.grav>=1)fixes.push({tag:'Gravity bend',text:`Increase Ztop: raise H or t.`});
+  if(UR.ltb>=1)fixes.push({tag:'LTB',text:`Reduce Lb (add mid-span brace) or increase foot/lip (raises rycf).`});
   if(UR.shear>=1)fixes.push({tag:'Shear',text:`Increase t or H; or reduce span.`});
-  if(UR.web>=1)fixes.push({tag:'Web crippling',text:`Likely N/A under uplift if feet bolted (check connection for ${Preact.toFixed(2)} kN). For bearing cases: increase N or add stiffener.`});
-  if(UR.defl>=1)fixes.push({tag:'Deflection',text:`Need Ixx ×${UR.defl.toFixed(2)} (≥ <em>${(I_req/1000).toFixed(0)}×10³ mm⁴</em>). Routes: t (δ∝1/t), H (δ∝1/H³), or span (δ∝L⁴, add mid-support &rarr; L≈<em>${(L*Math.pow(1/UR.defl,0.25)/1000).toFixed(2)} m</em>).`});
+  if(UR.web>=1)fixes.push({tag:'Web crippling',text:`Likely N/A under uplift if feet bolted. For bearing: increase N or add stiffener.`});
+  if(UR.defl>=1)fixes.push({tag:'Deflection',text:`Need Ixx ×${UR.defl.toFixed(2)} (≥ <em>${(I_req/1000).toFixed(0)}×10³ mm⁴</em>). Routes: t (δ∝1/t), H (δ∝1/H³), mid-support → L≈<em>${(L*Math.pow(1/UR.defl,0.25)/1000).toFixed(2)} m</em> (δ∝L⁴, cheapest).`});
   const fw=document.getElementById('fix-summary');
   if(fixes.length){document.getElementById('fix-items').innerHTML=fixes.map(f=>`<div class="fi"><div class="ftag">${f.tag}</div><div class="ftxt">${f.text}</div></div>`).join('');fw.style.display='block';}
   else fw.style.display='none';
 
+  // ── LOADING SUMMARY ──
+  const fxl=(x,n)=>isNaN(x)?'—':x.toFixed(n);
+  const ls=loadMode==='staad'?[
+    {l:'Mz uplift',v:fxl(M_up,4),u:'kNm'},{l:'Mz gravity',v:fxl(M_sg,4),u:'kNm'},
+    {l:'My (minor)',v:fxl(M_weak,4),u:'kNm'},{l:'Fx axial',v:fxl(Fx_up_N/1000,3),u:'kN'},
+    {l:'Fy shear',v:fxl(V,3),u:'kN'},{l:'Mx torsion',v:fxl(Mx_Nmm/1e6,4),u:'kNm'},
+    {l:'δ (STAAD)',v:fxl(d_t,2),u:'mm'},{l:'δ_allow',v:fxl(d_a,2),u:'mm'},
+  ]:[
+    {l:'w_net uplift',v:fxl(+v('w_up'),3),u:'kN/m'},{l:'w_gravity',v:fxl(+v('w_grav'),3),u:'kN/m'},
+    {l:'w_weak',v:fxl(+v('w_weak'),3),u:'kN/m'},{l:'M_uplift',v:fxl(M_up,4),u:'kNm'},
+    {l:'M_gravity',v:fxl(M_sg,4),u:'kNm'},{l:'V_max',v:fxl(V,3),u:'kN'},
+    {l:'δ_resultant',v:fxl(d_t,2),u:'mm'},{l:'δ_allow',v:fxl(d_a,2),u:'mm'},
+  ];
+  document.getElementById('load-sum').innerHTML=ls.map(m=>`<div class="metric"><div class="lbl">${m.l}</div><div class="val">${m.v} <span style="font-size:10px;color:#aaa">${m.u}</span></div></div>`).join('');
+
+  // ── SHOW RESULTS ──
   document.getElementById('results').style.display='block';
   drawDiagram();
 
-  // ── LOG ENTRY ──────────────────────────────────────────────────────────────
-  const allURs=[UR.biaxial, UR.grav, UR.ltb, UR.shear, UR.defl, UR.lip,
-                UR.wt_foot, UR.wt_lip, UR.wt_web];
-  const validURs=allURs.filter(u=>!isNaN(u));
-  let overall='PASS';
-  if(validURs.some(u=>u>=1)) overall='FAIL';
-  else if(validURs.some(u=>u>=0.9)) overall='MARGINAL';
-
-  pushLog({
-    n: sessionLog.length+1,
-    section: activeSectionName,
-    project: activeProjectName,
+  // ── STORE for Log ──
+  lastResult={
+    section: document.getElementById('sec-savename').value.trim()||activeSectionName||'Custom',
+    project: document.getElementById('proj-savename').value.trim()||activeProjectName||'Custom',
     timestamp: new Date().toLocaleTimeString(),
     Mz_up: M_up.toFixed(4),
-    UR: {bend:UR.biaxial, shear:UR.shear, ltb:UR.ltb, defl:UR.defl},
-    overall: overall
-  });
+    UR:{bend:UR.biaxial, shear:UR.shear, ltb:UR.ltb, defl:UR.defl},
+    overall
+  };
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
@@ -927,10 +1059,9 @@ refreshSectionDropdown();
 refreshProjectDropdown();
 drawDiagram();
 
-// ── PWA: register service worker for offline use ─────────────────────────────
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW registration failed',e));
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW:',e));
   });
 }
 </script>
