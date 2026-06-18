@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1e3a5f"/>
+  <!-- trapezoidal lipped HAT section, opening down, feet outward, lips up -->
+  <polyline points="70,300 150,300 200,170 312,170 362,300 442,300 442,250 392,250 350,200 162,200 120,250 70,250"
+            fill="none" stroke="#f5f4f0" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/>
+  <text x="256" y="430" text-anchor="middle" font-family="system-ui,Arial,sans-serif"
+        font-size="76" font-weight="600" fill="#9ec1e8">IS&#8201;801</text>
+</svg>

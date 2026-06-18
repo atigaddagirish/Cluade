@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trapezoidal Lipped HAT — IS 801 Calculator</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1e3a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="HAT IS 801">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:#f5f4f0;padding:1.5rem}
@@ -919,6 +926,13 @@ seedDefaults();
 refreshSectionDropdown();
 refreshProjectDropdown();
 drawDiagram();
+
+// ── PWA: register service worker for offline use ─────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW registration failed',e));
+  });
+}
 </script>
 </body>
 </html>

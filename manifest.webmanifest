@@ -1,0 +1,19 @@
+{
+  "name": "HAT Purlin — IS 801 Calculator",
+  "short_name": "HAT IS 801",
+  "description": "Cold-formed trapezoidal lipped top-hat purlin design checks to IS 801:1975 (WSM). Enter section size and STAAD forces, get clause-by-clause IS 801 verdicts.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f4f0",
+  "theme_color": "#1e3a5f",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
