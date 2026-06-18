@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trapezoidal Lipped HAT — IS 801 Calculator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:#f5f4f0;padding:1.5rem}
+h1{font-size:18px;font-weight:500;margin-bottom:2px}
+.sub{font-size:12px;color:#666;margin-bottom:1.2rem}
+h2{font-size:14px;font-weight:500;margin-bottom:10px}
+.top-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;margin-bottom:12px;align-items:start}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.card{background:#fff;border:0.5px solid #d8d6cc;border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:12px;color:#666;margin-bottom:4px}
+.field input,.field select{width:100%;padding:7px 10px;font-size:13px;border:0.5px solid #bbb;border-radius:8px;background:#f5f4f0;color:#1a1a1a}
+.field input:focus,.field select:focus{outline:none;border-color:#888}
+.btn{width:100%;padding:10px;font-size:14px;font-weight:500;cursor:pointer;border:0.5px solid #bbb;border-radius:8px;background:#f5f4f0;color:#1a1a1a;margin-top:2px}
+.btn:hover{background:#e8e6e0}.btn:active{transform:scale(0.98)}
+.prop-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
+.metric{background:#f5f4f0;border-radius:8px;padding:10px 12px}
+.metric .lbl{font-size:11px;color:#666;margin-bottom:3px}
+.metric .val{font-size:15px;font-weight:500}
+.check-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid #e8e6e0;flex-wrap:wrap}
+.check-row:last-child{border-bottom:none}
+.cn{flex:0 0 230px;font-size:12px;color:#555}
+.bw{flex:1;min-width:60px;height:10px;background:#e8e6e0;border-radius:20px;overflow:hidden}
+.bf{height:100%;border-radius:20px}
+.uv{flex:0 0 46px;font-size:13px;font-weight:500;text-align:right}
+.st{flex:0 0 64px;font-size:11px;font-weight:500;text-align:center;padding:2px 6px;border-radius:6px}
+.pass{background:#EAF3DE;color:#3B6D11}.fail{background:#FCEBEB;color:#A32D2D}.warn{background:#FAEEDA;color:#854F0B}
+.rf{flex:0 0 160px;font-size:11px;color:#999}
+.irow{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.chip{font-size:12px;color:#666;background:#f5f4f0;border-radius:8px;padding:4px 10px}
+.chip span{font-weight:500;color:#1a1a1a}
+.badge{display:inline-block;font-size:11px;background:#E6F1FB;color:#185FA5;border-radius:6px;padding:3px 8px;margin-left:8px;font-weight:500}
+.ltb-badge{display:inline-block;font-size:11px;background:#F0E6FB;color:#5A1F8A;border-radius:6px;padding:3px 8px;margin-left:4px;font-weight:500}
+.lmode{display:flex;background:#f5f4f0;border-radius:8px;padding:3px;gap:3px;margin-bottom:12px}
+.lmb{flex:1;padding:7px;font-size:12px;font-weight:500;border:none;border-radius:6px;cursor:pointer;background:transparent;color:#666}
+.lmb.on{background:#fff;color:#1a1a1a;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.subh{font-size:11px;font-weight:600;color:#185FA5;margin:10px 0 6px}
+#results{display:none}
+.stitle{font-size:11px;font-weight:500;color:#888;margin:12px 0 4px;text-transform:uppercase;letter-spacing:0.5px}
+.hint{font-size:11px;color:#999;margin-top:6px;line-height:1.5}
+.note{font-size:11px;border-radius:8px;padding:8px 12px;margin-top:4px;line-height:1.7}
+.bnote{color:#185FA5;background:#E6F1FB}
+.ltbnote{color:#5A1F8A;background:#F0E6FB}
+.fix-box{border:0.5px solid #F0997B;border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px;background:#fff}
+.fix-ttl{font-size:13px;font-weight:500;margin-bottom:10px;color:#993C1D}
+.fi{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:0.5px solid #fce8e0;font-size:12px}
+.fi:last-child{border-bottom:none}
+.ftag{flex:0 0 auto;background:#FCEBEB;color:#A32D2D;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:500;margin-top:2px;white-space:nowrap}
+.ftxt{color:#444;line-height:1.7}.ftxt em{font-style:normal;font-weight:500;color:#1a1a1a}
+.dgcard{background:#fff;border:0.5px solid #d8d6cc;border-radius:12px;padding:0.75rem;display:flex;flex-direction:column;gap:6px}
+#hat-svg{width:100%;height:auto}
+.slbl{font-size:13px;color:#185FA5;font-weight:600;text-align:center}
+.dlbl{font-size:11px;color:#888;text-align:center}
+@media(max-width:760px){.top-grid{grid-template-columns:1fr}.prop-grid{grid-template-columns:repeat(2,1fr)}.cn{flex:0 0 140px}.rf{display:none}}
+</style>
+</head>
+<body>
+<h1>Trapezoidal Lipped HAT &mdash; IS 801 Design Calculator</h1>
+<p class="sub">Cold-formed steel &middot; inclined webs + outward feet + lips &middot; IS 801:1975 &middot; uplift (direct UDL)</p>
+
+<div class="top-grid">
+<div>
+  <h2>Section geometry</h2>
+  <div class="card">
+    <div class="g2">
+      <div class="field"><label>Top flange B&#x2081; (mm)</label><input id="B1" type="number" value="40" oninput="drawDiagram()"></div>
+      <div class="field"><label>Overall height H (mm)</label><input id="H" type="number" value="70" oninput="drawDiagram()"></div>
+      <div class="field"><label>HAT (web) angle &theta; from horizontal (&deg;)</label><input id="th" type="number" value="75" step="0.5" oninput="drawDiagram()"></div>
+      <div class="field"><label>Bottom foot F each side (mm)</label><input id="F" type="number" value="22" oninput="drawDiagram()"></div>
+      <div class="field"><label>Lip size (mm)</label><input id="Lp" type="number" value="10" oninput="drawDiagram()"></div>
+      <div class="field"><label>Lip angle from horizontal (&deg;)</label><input id="beta" type="number" value="45" step="0.5" oninput="drawDiagram()"></div>
+      <div class="field"><label>Thickness t (mm)</label><input id="t" type="number" value="0.90" step="0.05" oninput="drawDiagram()"></div>
+      <div class="field"><label>Material grade</label>
+        <select id="grade">
+          <option value="345">E350 &mdash; Fy = 345 MPa</option>
+          <option value="550" selected>E550 / G550 &mdash; Fy = 550 MPa</option>
+          <option value="250">E250 &mdash; Fy = 250 MPa</option>
+          <option value="300">E300 &mdash; Fy = 300 MPa</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint">Feet point outward; lip turns <strong>up</strong> at the foot end (interior foot&ndash;lip angle = 180&minus;&beta; = 135&deg; for &beta;=45&deg;). Segment lengths are taken as flat widths. Bottom width is computed and shown below.</p>
+  </div>
+
+  <h2>Span &amp; serviceability</h2>
+  <div class="card">
+    <div class="g3">
+      <div class="field"><label>Span L (m)</label><input id="L" type="number" value="3.1" step="0.1"></div>
+      <div class="field"><label>End bearing N (mm)</label><input id="N" type="number" value="50"></div>
+      <div class="field"><label>Defl. limit</label>
+        <select id="defLim"><option value="180">L/180</option><option value="150">L/150</option><option value="120">L/120 (wind)</option><option value="200">L/200</option><option value="240">L/240</option></select>
+      </div>
+    </div>
+  </div>
+
+  <h2>LTB inputs <span style="font-size:11px;color:#888;font-weight:400">(IS 801 Cl.6.2)</span></h2>
+  <div class="card">
+    <div class="g2">
+      <div class="field"><label>Unbraced length L&#x1D47; (mm)</label><input id="Lb" type="number" value="3100" step="50"></div>
+      <div class="field"><label>Moment gradient C&#x1D47;</label><input id="Cb" type="number" value="1.0" step="0.05" min="1" max="2.3"></div>
+    </div>
+    <p class="hint">Under uplift the compression flange is the bottom (feet+lips). If feet are bolted only at end rafters, L&#x1D47; = span. Add intermediate brace &rarr; reduce L&#x1D47;.</p>
+  </div>
+
+  <h2>Load input</h2>
+  <div class="card">
+    <div class="lmode">
+      <button class="lmb" id="lmb-udl" onclick="setLoadMode('udl')">Direct UDL</button>
+      <button class="lmb on" id="lmb-staad" onclick="setLoadMode('staad')">STAAD forces</button>
+    </div>
+
+    <div id="panel-udl" style="display:none">
+      <div class="g2">
+        <div class="field"><label>w_uplift net (kN/m) &mdash; strong axis</label><input id="w_up" type="number" value="0.981" step="0.001"></div>
+        <div class="field"><label>w_gravity (kN/m) &mdash; strong axis</label><input id="w_grav" type="number" value="0.147" step="0.001"></div>
+        <div class="field"><label>w_weak (kN/m) &mdash; weak axis (0 if N/A)</label><input id="w_weak" type="number" value="0" step="0.001"></div>
+      </div>
+      <p class="hint">Net line loads on the purlin; moments computed as wL&sup2;/8 (simply supported). +&frac13; for DL+WL applied internally.</p>
+    </div>
+
+    <div id="panel-staad">
+      <div class="g2">
+        <div class="field"><label>Moment unit</label><select id="munit"><option value="1e6" selected>kN&middot;m</option><option value="1">N&middot;mm</option><option value="1e3">N&middot;m / kN&middot;mm</option><option value="98066.5">kgf&middot;m</option><option value="980.665">kgf&middot;cm</option></select></div>
+        <div class="field"><label>Force unit</label><select id="funit"><option value="1000" selected>kN</option><option value="1">N</option><option value="9.80665">kgf</option></select></div>
+      </div>
+
+      <div class="subh">Uplift / wind combination (governing)</div>
+      <div class="g3">
+        <div class="field"><label>Mz (major)</label><input id="s_Mz_up" type="number" value="" step="any" placeholder="e.g. 1.18"></div>
+        <div class="field"><label>My (minor, concurrent)</label><input id="s_My_up" type="number" value="0" step="any"></div>
+        <div class="field"><label>Fx (axial, +tens)</label><input id="s_Fx_up" type="number" value="0" step="any"></div>
+      </div>
+      <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;margin:2px 0 8px"><input type="checkbox" id="s_wind" checked style="width:auto"> wind/seismic combo &rarr; apply +&frac13; allowable (Cl.6.1.1)</label>
+
+      <div class="subh">Gravity combination (DL / DL+LL)</div>
+      <div class="g3">
+        <div class="field"><label>Mz (major)</label><input id="s_Mz_gr" type="number" value="0" step="any"></div>
+        <div class="field"><label>My (minor)</label><input id="s_My_gr" type="number" value="0" step="any"></div>
+        <div class="field"><label>Fx (axial, +tens)</label><input id="s_Fx_gr" type="number" value="0" step="any"></div>
+      </div>
+
+      <div class="subh">Shear, torsion &amp; deflection</div>
+      <div class="g3">
+        <div class="field"><label>Fy (major shear)</label><input id="s_Fy" type="number" value="" step="any" placeholder="e.g. 1.5"></div>
+        <div class="field"><label>Mx (torsion)</label><input id="s_Mx" type="number" value="0" step="any"></div>
+        <div class="field"><label>&delta;_max (mm, from STAAD)</label><input id="s_def" type="number" value="" step="any" placeholder="local resultant"></div>
+      </div>
+      <p class="hint">Enter <strong>service/working</strong> forces (IS 801 is WSM) at the governing section. Sign of Fx: + tension, &minus; compression. If &delta;_max is blank, deflection is computed from the gravity/uplift UDL instead. Mx&ne;0 and Fx(compression) trigger extra checks/flags.</p>
+    </div>
+  </div>
+
+  <button class="btn" onclick="calculate()">Calculate &nearr;</button>
+</div>
+
+<div>
+  <h2>Cross-section &mdash; live preview</h2>
+  <div class="dgcard">
+    <svg id="hat-svg" viewBox="0 0 360 300" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="slbl" id="slbl">Trapezoidal lipped HAT</div>
+    <div class="dlbl" id="dlbl"></div>
+  </div>
+</div>
+</div>
+
+<div id="results">
+  <h2>Section properties <span class="badge" id="case-badge">Uplift (direct UDL)</span><span class="ltb-badge" id="ltb-badge">Lb</span></h2>
+  <div class="card">
+    <div class="irow" id="info-row"></div>
+    <div class="prop-grid" id="sec-props"></div>
+    <div class="note bnote" id="biaxial-note"></div>
+    <div class="note ltbnote" id="ltb-note"></div>
+  </div>
+
+  <div id="fix-summary" style="display:none">
+    <div class="fix-box"><div class="fix-ttl">&#9888; Failed / marginal checks &mdash; suggested remedies</div><div id="fix-items"></div></div>
+  </div>
+
+  <h2>IS 801 design checks</h2>
+  <div class="card">
+    <div class="stitle">Slenderness &amp; effective width (compression elements under uplift)</div><div id="ck-wt"></div>
+    <div class="stitle" style="margin-top:12px">Edge stiffener (lip) adequacy</div><div id="ck-lip"></div>
+    <div class="stitle" style="margin-top:12px">Flexure</div><div id="ck-flex"></div>
+    <div class="stitle" style="margin-top:12px">LTB &mdash; Cl.6.2 (compression-flange method)</div><div id="ck-ltb"></div>
+    <div class="stitle" style="margin-top:12px">Shear &amp; web crippling</div><div id="ck-shear"></div>
+    <div class="stitle" style="margin-top:12px">Serviceability</div><div id="ck-defl"></div>
+  </div>
+
+  <h2>Loading summary</h2>
+  <div class="card"><div class="g3" id="load-sum"></div></div>
+</div>
+
+<script>
+// ── SECTION ENGINE (thin-walled polyline, exact) ────────────────────────────
+function geom(){
+  const B1=+v('B1'),H=+v('H'),th=+v('th'),F=+v('F'),Lp=+v('Lp'),beta=+v('beta'),t=+v('t');
+  const half=B1/2, run=H/Math.tan(th*Math.PI/180);
+  const wb=half+run, fe=wb+F;
+  const ldx=Lp*Math.cos(beta*Math.PI/180), ldy=Lp*Math.sin(beta*Math.PI/180);  // lip UP-and-out
+  const lt=fe+ldx;
+  // full vertex path (left lip tip -> right lip tip)
+  const V=[[-lt,ldy],[-fe,0],[-wb,0],[-half,H],[half,H],[wb,0],[fe,0],[lt,ldy]];
+  return {B1,H,th,F,Lp,beta,t,half,run,wb,fe,lt,ldx,ldy,V};
+}
+function v(id){return document.getElementById(id).value;}
+
+function computeProps(g){
+  const t=g.t, V=g.V;
+  let A=0,sx=0,sy=0; const segs=[];
+  for(let i=0;i<V.length-1;i++){
+    const x1=V[i][0],y1=V[i][1],x2=V[i+1][0],y2=V[i+1][1];
+    const L=Math.hypot(x2-x1,y2-y1); if(L<1e-9)continue;
+    const xm=(x1+x2)/2,ym=(y1+y2)/2,phi=Math.atan2(y2-y1,x2-x1);
+    segs.push({L,xm,ym,phi,i}); A+=L*t; sx+=L*t*xm; sy+=L*t*ym;
+  }
+  const xc=sx/A, yc=sy/A;
+  let Ixx=0,Iyy=0;
+  for(const s of segs){
+    const a=s.L*t;
+    const Ixl=(t*s.L**3/12)*Math.sin(s.phi)**2+(s.L*t**3/12)*Math.cos(s.phi)**2;
+    const Iyl=(t*s.L**3/12)*Math.cos(s.phi)**2+(s.L*t**3/12)*Math.sin(s.phi)**2;
+    Ixx+=Ixl+a*(s.ym-yc)**2;
+    Iyy+=Iyl+a*(s.xm-xc)**2;
+  }
+  let ymin=Infinity,ymax=-Infinity;
+  for(const q of V){ if(q[1]<ymin)ymin=q[1]; if(q[1]>ymax)ymax=q[1]; }
+  const ytop=ymax-yc, ybot=yc-ymin;
+  const Ztop=Ixx/ytop, Zbot=Ixx/ybot, Zweak=Iyy/g.lt;
+  const totL=segs.reduce((a,s)=>a+s.L,0);
+  const J=totL*t**3/3;
+  // Compression flange (feet+lips) about x=0 for LTB:  segs i = 0(lipL),1(footL),5(footR),6(lipR)
+  let Acf=0,Iycf=0;
+  for(const s of segs){ if([0,1,5,6].includes(s.i)){
+    const a=s.L*t;
+    const Iyl=(t*s.L**3/12)*Math.cos(s.phi)**2+(s.L*t**3/12)*Math.sin(s.phi)**2;
+    Acf+=a; Iycf+=Iyl+a*s.xm*s.xm;
+  }}
+  const rycf=Math.sqrt(Iycf/Acf);
+  return {A,xc,yc,Ixx,Iyy,ytop,ybot,Ztop,Zbot,Zweak,J,Acf,Iycf,rycf};
+}
+
+// ── DIAGRAM ─────────────────────────────────────────────────────────────────
+function drawDiagram(){
+  const g=geom(); const V=g.V;
+  const SW=360,SH=300,pad=54;
+  const xs=V.map(p=>p[0]), ys=V.map(p=>p[1]);
+  const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+  const w=maxx-minx,h=maxy-miny;
+  const sc=Math.min((SW-2*pad)/w,(SH-2*pad)/h);
+  const ox=(SW-w*sc)/2 - minx*sc;
+  const oy=pad + maxy*sc;             // SVG y: top; flip
+  const X=x=>ox+x*sc, Y=y=>oy-y*sc;
+  const tpx=Math.max(g.t*sc,3);
+  // grid
+  let grid='';
+  for(let gx=0;gx<=SW;gx+=18)for(let gy=0;gy<=SH;gy+=18)grid+=`<circle cx="${gx}" cy="${gy}" r="0.7" fill="#e8e6e0"/>`;
+  // polyline
+  const pts=V.map(p=>`${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ');
+  const line=`<polyline points="${pts}" fill="none" stroke="#1e3a5f" stroke-width="${tpx.toFixed(1)}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // centroid + NA
+  const p=computeProps(g);
+  const na=`<line x1="${X(minx-3).toFixed(1)}" y1="${Y(p.yc).toFixed(1)}" x2="${X(maxx+3).toFixed(1)}" y2="${Y(p.yc).toFixed(1)}" stroke="#E24B4A" stroke-width="1" stroke-dasharray="6,3"/>
+<circle cx="${X(0).toFixed(1)}" cy="${Y(p.yc).toFixed(1)}" r="3" fill="#E24B4A"/>
+<text x="${X(maxx+3)+4}" y="${Y(p.yc)+3}" font-size="9" fill="#E24B4A" font-family="Arial" font-weight="600">NA</text>`;
+  // symmetry axis
+  const sym=`<line x1="${X(0).toFixed(1)}" y1="${Y(maxy+4).toFixed(1)}" x2="${X(0).toFixed(1)}" y2="${Y(miny-4).toFixed(1)}" stroke="#94A3B8" stroke-width="0.7" stroke-dasharray="6,4"/>`;
+  // dimension helpers
+  const DC="#185FA5";
+  function dimH(x1,x2,yPix,lbl){const a=5;return `<line x1="${X(x1)}" y1="${yPix}" x2="${X(x2)}" y2="${yPix}" stroke="${DC}" stroke-width="1.1"/>
+<polygon points="${X(x1)+a},${yPix-3} ${X(x1)},${yPix} ${X(x1)+a},${yPix+3}" fill="${DC}"/>
+<polygon points="${X(x2)-a},${yPix-3} ${X(x2)},${yPix} ${X(x2)-a},${yPix+3}" fill="${DC}"/>
+<rect x="${(X(x1)+X(x2))/2-20}" y="${yPix-8}" width="40" height="14" rx="3" fill="white"/>
+<text x="${(X(x1)+X(x2))/2}" y="${yPix+1}" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">${lbl}</text>`;}
+  function dimV(yTop,yBot,xPix,lbl){const a=5;return `<line x1="${xPix}" y1="${Y(yTop)}" x2="${xPix}" y2="${Y(yBot)}" stroke="${DC}" stroke-width="1.1"/>
+<polygon points="${xPix-3},${Y(yTop)+a} ${xPix},${Y(yTop)} ${xPix+3},${Y(yTop)+a}" fill="${DC}"/>
+<polygon points="${xPix-3},${Y(yBot)-a} ${xPix},${Y(yBot)} ${xPix+3},${Y(yBot)-a}" fill="${DC}"/>
+<rect x="${xPix-20}" y="${(Y(yTop)+Y(yBot))/2-7}" width="40" height="14" rx="3" fill="white"/>
+<text x="${xPix}" y="${(Y(yTop)+Y(yBot))/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700" transform="rotate(-90 ${xPix} ${(Y(yTop)+Y(yBot))/2})">${lbl}</text>`;}
+  const dims=
+    dimH(-g.half,g.half,Y(g.H)-18,`B\u2081=${g.B1}`)+
+    dimV(g.H,0,X(minx)-20,`H=${g.H}`)+
+    dimH(g.wb,g.fe,Y(0)+20,`F=${g.F}`)+
+    `<text x="${X(g.lt)+2}" y="${Y(g.ldy)+12}" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">lip ${g.Lp}@${g.beta}\u00b0</text>`+
+    `<text x="${X(g.half+g.run*0.5)-2}" y="${Y(g.H*0.5)}" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">${g.th}\u00b0</text>`;
+  document.getElementById('hat-svg').innerHTML=grid+sym+line+na+dims;
+  document.getElementById('dlbl').textContent=`Bottom width (lip tip) = ${(2*g.lt).toFixed(1)} mm \u00b7 web base = ${(2*g.wb).toFixed(1)} mm \u00b7 height = ${g.H} mm`;
+}
+
+// ── LTB allowable (IS 801 Cl.6.2 transition) ────────────────────────────────
+function fbLTB(Fe,Fy){
+  if(Fe>=2.78*Fy) return 0.6*Fy;
+  if(Fe>=0.56*Fy) return (10*Fy/9)*(1-Fy/(5.04*Fe));
+  return Fe/1.67;
+}
+
+// ── effective width (AISI Winter) ───────────────────────────────────────────
+function rho(w,tt,k,f,E){const lam=(1.052/Math.sqrt(k))*(w/tt)*Math.sqrt(f/E);return {lam,r:lam<=0.673?1:(1-0.22/lam)/lam};}
+
+let loadMode='staad';
+function setLoadMode(m){
+  loadMode=m;
+  document.getElementById('panel-udl').style.display=m==='udl'?'block':'none';
+  document.getElementById('panel-staad').style.display=m==='staad'?'block':'none';
+  document.getElementById('lmb-udl').className='lmb'+(m==='udl'?' on':'');
+  document.getElementById('lmb-staad').className='lmb'+(m==='staad'?' on':'');
+}
+
+// ── MAIN ────────────────────────────────────────────────────────────────────
+function calculate(){
+  const g=geom(); const p=computeProps(g);
+  const t=g.t, E=200000, Fy=+v('grade');
+  const L=+v('L')*1000, N=+v('N'), defDiv=+v('defLim'), Lb=+v('Lb'), Cb=+v('Cb');
+  // ---- force sourcing: STAAD output or Direct UDL ----
+  let M_up,M_sg,M_weak,V,Fx_up_N,Fx_gr_N,Mx_Nmm,def_staad,windPlus;
+  if(loadMode==='staad'){
+    const mu=+v('munit'), fu=+v('funit');
+    M_up   = Math.abs(+v('s_Mz_up'))*mu/1e6;   // kNm
+    M_weak = Math.abs(+v('s_My_up'))*mu/1e6;   // kNm (uplift minor)
+    M_sg   = Math.abs(+v('s_Mz_gr'))*mu/1e6;   // kNm (gravity major)
+    Fx_up_N= (+v('s_Fx_up'))*fu;               // N (+tension)
+    Fx_gr_N= (+v('s_Fx_gr'))*fu;               // N
+    Mx_Nmm = Math.abs(+v('s_Mx'))*mu;          // N·mm
+    V      = Math.abs(+v('s_Fy'))*fu/1000;     // kN
+    def_staad = +v('s_def');                   // mm
+    windPlus = document.getElementById('s_wind').checked;
+  } else {
+    const w_net=+v('w_up'), w_grav=+v('w_grav'), w_dpa=+v('w_weak');
+    M_up=w_net*L**2/8/1e6; M_sg=w_grav*L**2/8/1e6; M_weak=w_dpa*L**2/8/1e6;
+    V=Math.max(Math.abs(w_net),w_grav)*L/2/1000;
+    Fx_up_N=0; Fx_gr_N=0; Mx_Nmm=0; def_staad=0; windPlus=true;
+  }
+
+  // allowable bending (+1/3 only for wind/seismic combo, Cl.6.1.1)
+  const Fb=0.6*Fy, Fb_wl=windPlus?Fb*4/3:Fb;
+  // uplift: compression at lip tip (Zbot). gravity: compression at top (Ztop).
+  const f_comp_up=M_up*1e6/p.Zbot;                 // compression (low fiber) — for eff.width & LTB
+  const f_top_up=M_up*1e6/p.Ztop;                  // tension (top fiber) under uplift
+  const f_strong_up=Math.max(f_comp_up,f_top_up);  // governing strong-axis fiber
+  const f_top_grav=M_sg*1e6/p.Ztop;
+  const f_weak=M_weak*1e6/p.Zweak;
+
+  // effective width of compression elements under uplift (feet k=4, lip k=0.43, web k=24)
+  const fEW=Math.max(f_comp_up,1);
+  const ew_foot=rho(g.F,t,4.0,fEW,E);
+  const ew_lip =rho(g.Lp,t,0.43,fEW,E);
+  const wslant=Math.hypot(g.run,g.H);
+  const ew_web =rho(wslant,t,24.0,fEW,E);
+  const allEff = ew_foot.r>=0.999 && ew_lip.r>=0.999 && ew_web.r>=0.999;
+
+  // edge stiffener adequacy (Cl.5.2.2.1)
+  const wt_f=g.F/t, Fy_ksi=Fy/6.895;
+  const term=wt_f*wt_f-4000/Fy_ksi;
+  const Imin=Math.max(term>0?1.83*t**4*Math.sqrt(term):0, 9.2*t**4);
+  const Is=(g.Lp**3*t*Math.sin(g.beta*Math.PI/180)**2)/12;
+
+  // biaxial (uplift + weak)
+  const r_s=f_strong_up/Fb_wl, r_w=f_weak/Fb_wl;
+
+  // axial (Cl.6.6/6.7) — only evaluated if Fx present
+  const ry_full=Math.sqrt(p.Iyy/p.A);
+  const Cc=Math.sqrt(2*Math.PI**2*E/Fy);
+  function Fa_allow(KLr){ // IS 801/AISI ASD column, Q=1 (elements fully effective at service)
+    if(KLr<=Cc) return (12/23)*Fy*(1-Fy*KLr*KLr/(4*Math.PI**2*E));
+    return (12/23)*Math.PI**2*E/(KLr*KLr);
+  }
+  const KLr=Lb/ry_full, Fa=Fa_allow(KLr);
+  const fa_up=Fx_up_N/p.A, fa_gr=Fx_gr_N/p.A;   // MPa (+tension)
+  let UR_axial=0, axialNote='', hasAxial=(Math.abs(Fx_up_N)>1e-6||Math.abs(Fx_gr_N)>1e-6);
+  if(hasAxial){
+    const tA_up=fa_up>=0?fa_up/(0.6*Fy):Math.abs(fa_up)/Fa;
+    const UR_up=tA_up+r_s+r_w;
+    const fbz_gr=(M_sg*1e6/p.Ztop)/Fb;
+    const tA_gr=fa_gr>=0?fa_gr/(0.6*Fy):Math.abs(fa_gr)/Fa;
+    const UR_gr=tA_gr+fbz_gr;
+    UR_axial=Math.max(UR_up,UR_gr);
+    const comp=(fa_up<0||fa_gr<0);
+    axialNote=`Fa=${Fa.toFixed(0)} MPa (KL/r=${KLr.toFixed(0)}); fa_up=${fa_up.toFixed(1)}, fa_gr=${fa_gr.toFixed(1)} MPa`+(comp?' \u2014 compression: full Cl.6.7 stability (Cm + amplification) advised':' \u2014 tension');
+  }
+  // torsion flag (Mx)
+  let UR_tor=0, torNote='', hasTor=(Mx_Nmm>1e-6);
+  if(hasTor){
+    const tau=Mx_Nmm*t/p.J;          // St-Venant max shear, thin open section
+    UR_tor=tau/(0.4*Fy);
+    torNote=`\u03c4=${tau.toFixed(0)} MPa vs 0.4Fy=${(0.4*Fy).toFixed(0)} \u2014 OPEN section weak in torsion; load through shear centre / restrain ends`;
+  }
+
+  // LTB (compression-flange method): Fe = Cb pi^2 E /(Lb/rycf)^2
+  const Fe=Cb*Math.PI**2*E/((Lb/p.rycf)**2);
+  const Fb_ltb=Math.min(Fb, fbLTB(Fe,Fy));         // cap at 0.6Fy
+  const Fb_ltb_wl=Fb_ltb*4/3;
+  const UR_ltb=f_comp_up/Fb_ltb_wl;
+
+  // shear (Cl.7) — Fv from web slant slenderness; Vcap on web vertical projection
+  const wt_web=wslant/t, l1=2.89*Math.sqrt(E/Fy), l2=5.34*Math.sqrt(E/Fy);
+  const Fv=wt_web<=l1?0.4*Fy:wt_web<=l2?0.664*Math.sqrt(Fy*E)/wt_web:0.905*E/wt_web**2;
+  const Vcap=2*Fv*g.H*t/1000;   // vertical projection H carries vertical shear
+
+  // web crippling (Cl.8.1 EOF) on slant web
+  const R=2;
+  const Pw=t**2*Fy*1.01*(1-0.325*Math.sqrt(R/t))*(1+0.083*Math.sqrt(N/t))*(1-0.068*Math.sqrt(Math.min(wt_web,200)));
+  const Pwa=2*Pw/1000;
+  const Preact=w_net>0?w_net*L/2/1000:0;
+
+  // deflection (resultant)
+  let d_s=NaN,d_w=NaN,d_t;
+  const d_a=L/defDiv;
+  if(loadMode==='udl'){
+    const wn=+v('w_up'), ww=+v('w_weak');
+    d_s=Math.abs(5*wn*L**4/(384*E*p.Ixx));
+    d_w=5*ww*L**4/(384*E*p.Iyy);
+    d_t=Math.sqrt(d_s*d_s+d_w*d_w);
+  } else { d_t = def_staad>0 ? def_staad : NaN; }
+
+  const UR={
+    wt_foot:ew_foot.lam/0.673, wt_lip:ew_lip.lam/0.673, wt_web:ew_web.lam/0.673,
+    lip:Imin/Is, biaxial:r_s+r_w, grav:f_top_grav/Fb, axial:UR_axial, tor:UR_tor,
+    ltb:UR_ltb, shear:V/Vcap, web:Preact>0?Preact/Pwa:0, defl:d_t/d_a
+  };
+
+  // ── render ──
+  document.getElementById('ltb-badge').textContent='Lb = '+Lb+' mm';
+  document.getElementById('info-row').innerHTML=`
+    <div class="chip">Span <span>${(L/1000).toFixed(1)} m</span></div>
+    <div class="chip">Fy <span>${Fy} MPa</span></div>
+    <div class="chip">&theta; <span>${g.th}\u00b0</span></div>
+    <div class="chip">Bottom width <span>${(2*g.lt).toFixed(0)} mm</span></div>
+    <div class="chip">Lb <span>${Lb} mm</span></div>`;
+
+  document.getElementById('sec-props').innerHTML=[
+    {l:'Area A',v:p.A.toFixed(0),u:'mm\u00b2'},
+    {l:'Centroid \u1ef3 (from foot line)',v:p.yc.toFixed(2),u:'mm'},
+    {l:'Ixx (strong)',v:(p.Ixx/1000).toFixed(0),u:'\u00d710\u00b3 mm\u2074'},
+    {l:'Iyy (weak)',v:(p.Iyy/1000).toFixed(0),u:'\u00d710\u00b3 mm\u2074'},
+    {l:'Z_top (tension/uplift)',v:p.Ztop.toFixed(0),u:'mm\u00b3'},
+    {l:'Z_bot (comp/uplift)',v:p.Zbot.toFixed(0),u:'mm\u00b3'},
+    {l:'Z_weak',v:p.Zweak.toFixed(0),u:'mm\u00b3'},
+    {l:'J (torsion)',v:p.J.toFixed(1),u:'mm\u2074'},
+    {l:'r_y comp.flange',v:p.rycf.toFixed(1),u:'mm'},
+    {l:'web slant',v:wslant.toFixed(1),u:'mm'},
+    {l:'Fv allow',v:Fv.toFixed(0),u:'MPa'},
+    {l:'self wt',v:(p.A/1e6*7850*9.81/1000).toFixed(4),u:'kN/m'},
+  ].map(m=>`<div class="metric"><div class="lbl">${m.l}</div><div class="val">${m.v} <span style="font-size:11px;color:#888">${m.u}</span></div></div>`).join('');
+
+  document.getElementById('biaxial-note').innerHTML=
+    `<strong>Effective section:</strong> `+(allEff?'all compression elements FULLY EFFECTIVE at service stress &rarr; gross section governs (Z not reduced).':'&#9888; an element exceeds &lambda;=0.673 &mdash; bending UR shown uses GROSS Z; a full effective-section iteration is required.')+
+    ` &nbsp;|&nbsp; uplift fibres: comp(low)=${f_comp_up.toFixed(0)}, tens(top)=${f_top_up.toFixed(0)} MPa &rarr; governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb(+\u2153)=${Fb_wl.toFixed(0)} MPa`;
+
+  document.getElementById('ltb-note').innerHTML=
+    `<strong>LTB (Cl.6.2, compression-flange method):</strong> r_y(feet+lips)=${p.rycf.toFixed(1)} mm, L&#x1D47;/r_y=${(Lb/p.rycf).toFixed(0)} &rarr; Fe=${Fe.toFixed(0)} MPa `+
+    `(2.78Fy=${(2.78*Fy).toFixed(0)}). Fb_LTB=${Fb_ltb.toFixed(0)}&times;\u2074\u2044\u2083=${Fb_ltb_wl.toFixed(0)} MPa. `+
+    `<strong>${Fb_ltb>=Fb?'LTB does NOT govern \u2713 (wide outward feet give large r_y)':'LTB REDUCES capacity'}</strong>`;
+
+  const fx=(x,n)=>isNaN(x)?'\u2014':x.toFixed(n);
+  const ls = (loadMode==='staad') ? [
+      {l:'Mz uplift',v:fx(M_up,4),u:'kNm'},{l:'Mz gravity',v:fx(M_sg,4),u:'kNm'},
+      {l:'My (minor)',v:fx(M_weak,4),u:'kNm'},{l:'Fx axial',v:fx(Fx_up_N/1000,3),u:'kN'},
+      {l:'Fy shear',v:fx(V,3),u:'kN'},{l:'Mx torsion',v:fx(Mx_Nmm/1e6,4),u:'kNm'},
+      {l:'\u03b4 (STAAD)',v:fx(d_t,2),u:'mm'},{l:'\u03b4_allow',v:fx(d_a,2),u:'mm'},
+    ] : [
+      {l:'w_net uplift',v:fx(+v('w_up'),3),u:'kN/m'},{l:'w_gravity',v:fx(+v('w_grav'),3),u:'kN/m'},
+      {l:'w_weak',v:fx(+v('w_weak'),3),u:'kN/m'},{l:'M_uplift',v:fx(M_up,4),u:'kNm'},
+      {l:'M_gravity',v:fx(M_sg,4),u:'kNm'},{l:'V_max',v:fx(V,3),u:'kN'},
+      {l:'\u03b4_resultant',v:fx(d_t,2),u:'mm'},{l:'\u03b4_allow',v:fx(d_a,2),u:'mm'},
+    ];
+  document.getElementById('load-sum').innerHTML=ls.map(m=>`<div class="metric"><div class="lbl">${m.l}</div><div class="val">${m.v} <span style="font-size:11px;color:#888">${m.u}</span></div></div>`).join('');
+
+  function sc(u){return u>=1?'fail':u>=0.9?'warn':'pass';}
+  function sl(u){return u>=1?'FAIL':u>=0.9?'MARGINAL':'PASS';}
+  function bc(u){return u>=1?'#E24B4A':u>=0.9?'#EF9F27':'#639922';}
+  function row(name,ur,ref,note){
+    if(isNaN(ur)) return `<div class="check-row"><div class="cn">${name}${note?`<br><span style="font-size:10px;color:#aaa">${note}</span>`:''}</div>
+      <div class="bw"></div><div class="uv" style="color:#aaa">&mdash;</div>
+      <div class="st warn">INPUT</div><div class="rf">${ref}</div></div>`;
+    const b=Math.min(ur*100,100).toFixed(1);
+    return`<div class="check-row"><div class="cn">${name}${note?`<br><span style="font-size:10px;color:#aaa">${note}</span>`:''}</div>
+      <div class="bw"><div class="bf" style="width:${b}%;background:${bc(ur)}"></div></div>
+      <div class="uv" style="color:${bc(ur)}">${(ur*100).toFixed(0)}%</div>
+      <div class="st ${sc(ur)}">${sl(ur)}</div><div class="rf">${ref}</div></div>`;}
+
+  document.getElementById('ck-wt').innerHTML=
+    row('Foot (stiffened, k=4)',UR.wt_foot,'IS 801 Cl.5.2',`w/t=${(g.F/t).toFixed(1)}, \u03bb=${ew_foot.lam.toFixed(3)}, \u03c1=${ew_foot.r.toFixed(3)}`)+
+    row('Lip (unstiffened, k=0.43)',UR.wt_lip,'IS 801 Cl.5.2',`w/t=${(g.Lp/t).toFixed(1)}, \u03bb=${ew_lip.lam.toFixed(3)}, \u03c1=${ew_lip.r.toFixed(3)}`)+
+    row('Web (gradient, k=24)',UR.wt_web,'IS 801 Cl.5.2',`w/t=${(wslant/t).toFixed(1)}, \u03bb=${ew_web.lam.toFixed(3)}, \u03c1=${ew_web.r.toFixed(3)}`);
+
+  document.getElementById('ck-lip').innerHTML=
+    row('Lip provides min stiffener I',UR.lip,'IS 801 Cl.5.2.2.1',`Is=${Is.toFixed(1)} mm\u2074 vs Imin=${Imin.toFixed(1)} mm\u2074`);
+
+  document.getElementById('ck-flex').innerHTML=
+    row('Biaxial \u2014 uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`)+
+    row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)}`)+
+    (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.1',axialNote):'');
+
+  document.getElementById('ck-ltb').innerHTML=
+    row('LTB \u2014 uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.2',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+\u2153)=${Fb_ltb_wl.toFixed(0)} MPa`);
+
+  document.getElementById('ck-shear').innerHTML=
+    row('Shear (2 webs)',UR.shear,'IS 801 Cl.7',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`)+
+    row('Web crippling EOF',UR.web,'IS 801 Cl.8.1',`R=${Preact.toFixed(3)} kN, Pc=${Pwa.toFixed(3)} kN`)+
+    (hasTor?row('Torsion (St-Venant)',UR.tor,'IS 801 Cl.6.6',torNote):'');
+
+  document.getElementById('ck-defl').innerHTML=
+    row(`Resultant \u03b4 (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter \u03b4_max from STAAD (or use Direct UDL mode)`:`\u03b4=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`);
+
+  const I_req=p.Ixx*UR.defl;
+  const fixes=[];
+  if(UR.wt_foot>=1||UR.wt_lip>=1||UR.wt_web>=1)fixes.push({tag:'Eff. width',text:`A compression element is slender (\u03bb&gt;0.673). Increase t, or run a full effective-section calc.`});
+  if(UR.lip>=1)fixes.push({tag:'Lip',text:`Lip too small: increase lip length so Is &ge; ${Imin.toFixed(1)} mm\u2074 (need \u2265 <em>${(Math.cbrt(Imin*12/(t*Math.sin(g.beta*Math.PI/180)**2))).toFixed(1)} mm</em>) or steepen lip angle.`});
+  if(UR.biaxial>=1)fixes.push({tag:'Bending',text:`Increase H (Ixx\u221dH\u00b2\u00b7\u00b3) or t.`});
+  if(UR.grav>=1)fixes.push({tag:'Gravity bend',text:`Increase Z_top: raise H or t.`});
+  if(UR.ltb>=1)fixes.push({tag:'LTB',text:`Reduce L\u1D47 (add mid-span brace) or increase foot/lip (raises r_y of compression flange).`});
+  if(UR.shear>=1)fixes.push({tag:'Shear',text:`Increase t or H; or reduce span.`});
+  if(UR.web>=1)fixes.push({tag:'Web crippling',text:`Likely N/A under uplift if feet bolted (check connection for ${Preact.toFixed(2)} kN). For bearing cases: increase N or add stiffener.`});
+  if(UR.defl>=1)fixes.push({tag:'Deflection',text:`Need Ixx \u00d7${UR.defl.toFixed(2)} (\u2265 <em>${(I_req/1000).toFixed(0)}\u00d710\u00b3 mm\u2074</em>). Routes: t (\u03b4\u221d1/t), H (\u03b4\u221d1/H\u00b3), or span (\u03b4\u221dL\u2074, add mid-support &rarr; L\u2248<em>${(L*Math.pow(1/UR.defl,0.25)/1000).toFixed(2)} m</em>).`});
+  const fw=document.getElementById('fix-summary');
+  if(fixes.length){document.getElementById('fix-items').innerHTML=fixes.map(f=>`<div class="fi"><div class="ftag">${f.tag}</div><div class="ftxt">${f.text}</div></div>`).join('');fw.style.display='block';}
+  else fw.style.display='none';
+
+  document.getElementById('results').style.display='block';
+  drawDiagram();
+}
+drawDiagram();
+</script>
+</body>
+</html>
