@@ -19,6 +19,8 @@ h2{font-size:14px;font-weight:500;margin-bottom:10px}
 .field input:focus,.field select:focus{outline:none;border-color:#888}
 .btn{width:100%;padding:10px;font-size:14px;font-weight:500;cursor:pointer;border:0.5px solid #bbb;border-radius:8px;background:#f5f4f0;color:#1a1a1a;margin-top:2px}
 .btn:hover{background:#e8e6e0}.btn:active{transform:scale(0.98)}
+.btn-sm{padding:5px 12px;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid #bbb;border-radius:7px;background:#f5f4f0;color:#1a1a1a;white-space:nowrap}
+.btn-sm:hover{background:#e8e6e0}.btn-sm.danger{border-color:#f0a0a0;color:#a32d2d}.btn-sm.danger:hover{background:#fcebeb}
 .prop-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}
 .metric{background:#f5f4f0;border-radius:8px;padding:10px 12px}
 .metric .lbl{font-size:11px;color:#666;margin-bottom:3px}
@@ -57,17 +59,64 @@ h2{font-size:14px;font-weight:500;margin-bottom:10px}
 #hat-svg{width:100%;height:auto}
 .slbl{font-size:13px;color:#185FA5;font-weight:600;text-align:center}
 .dlbl{font-size:11px;color:#888;text-align:center}
+/* Tab navigation */
+.tab-bar{display:flex;background:#f5f4f0;border-radius:10px;padding:3px;gap:3px;margin-bottom:1.2rem}
+.tab-btn{flex:1;padding:9px;font-size:13px;font-weight:500;border:none;border-radius:8px;cursor:pointer;background:transparent;color:#666;transition:all 0.15s}
+.tab-btn.on{background:#fff;color:#1a1a1a;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.tab-pane{display:none}
+.tab-pane.on{display:block}
+/* Preset row */
+.preset-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.preset-row label{font-size:12px;color:#666;white-space:nowrap}
+.preset-row select{flex:1;min-width:120px;padding:6px 10px;font-size:12px;border:0.5px solid #bbb;border-radius:7px;background:#f5f4f0;color:#1a1a1a}
+/* Library tables */
+.lib-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px}
+.lib-card{background:#fff;border:0.5px solid #d8d6cc;border-radius:12px;padding:1rem 1.25rem}
+.lib-card h3{font-size:13px;font-weight:500;margin-bottom:10px}
+.lib-table{width:100%;border-collapse:collapse;font-size:12px}
+.lib-table th{text-align:left;font-size:11px;color:#888;font-weight:500;padding:5px 6px;border-bottom:0.5px solid #e8e6e0}
+.lib-table td{padding:6px 6px;border-bottom:0.5px solid #f0ede8;vertical-align:middle}
+.lib-table tr:last-child td{border-bottom:none}
+.lib-table tr:hover td{background:#faf9f7}
+/* Log */
+.log-toolbar{display:flex;gap:8px;margin-bottom:12px}
+.log-table{width:100%;border-collapse:collapse;font-size:12px}
+.log-table th{text-align:left;font-size:11px;color:#888;font-weight:500;padding:6px 8px;border-bottom:0.5px solid #e8e6e0}
+.log-table td{padding:7px 8px;border-bottom:0.5px solid #f0ede8}
+.log-row-pass td{background:#f7fbf2}
+.log-row-marginal td{background:#fffbf3}
+.log-row-fail td{background:#fdf5f5}
+.log-pass{color:#3B6D11;font-weight:500}
+.log-marginal{color:#854F0B;font-weight:500}
+.log-fail{color:#A32D2D;font-weight:500}
+@media(max-width:900px){.lib-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.top-grid{grid-template-columns:1fr}.prop-grid{grid-template-columns:repeat(2,1fr)}.cn{flex:0 0 140px}.rf{display:none}}
 </style>
 </head>
 <body>
 <h1>Trapezoidal Lipped HAT &mdash; IS 801 Design Calculator</h1>
-<p class="sub">Cold-formed steel &middot; inclined webs + outward feet + lips &middot; IS 801:1975 &middot; uplift (direct UDL)</p>
+<p class="sub">Cold-formed steel &middot; inclined webs + outward feet + lips &middot; IS 801:1975 &middot; multi-project library</p>
 
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn on" id="tab-check" onclick="switchTab('check')">Check</button>
+  <button class="tab-btn" id="tab-library" onclick="switchTab('library')">Library</button>
+  <button class="tab-btn" id="tab-log" onclick="switchTab('log')">Log <span id="log-count" style="font-size:10px;color:#999"></span></button>
+</div>
+
+<!-- ═══════════════ TAB 1: CHECK ═══════════════ -->
+<div class="tab-pane on" id="pane-check">
 <div class="top-grid">
 <div>
   <h2>Section geometry</h2>
   <div class="card">
+    <!-- Section preset row -->
+    <div class="preset-row">
+      <label>Section preset</label>
+      <select id="sec-preset-sel" onchange=""></select>
+      <button class="btn-sm" onclick="loadSectionPreset()">Load</button>
+      <button class="btn-sm" onclick="saveSectionPreset()">Save As</button>
+    </div>
     <div class="g2">
       <div class="field"><label>Top flange B&#x2081; (mm)</label><input id="B1" type="number" value="40" oninput="drawDiagram()"></div>
       <div class="field"><label>Overall height H (mm)</label><input id="H" type="number" value="70" oninput="drawDiagram()"></div>
@@ -90,6 +139,13 @@ h2{font-size:14px;font-weight:500;margin-bottom:10px}
 
   <h2>Span &amp; serviceability</h2>
   <div class="card">
+    <!-- Project preset row -->
+    <div class="preset-row">
+      <label>Project preset</label>
+      <select id="proj-preset-sel" onchange=""></select>
+      <button class="btn-sm" onclick="loadProjectPreset()">Load</button>
+      <button class="btn-sm" onclick="saveProjectPreset()">Save As</button>
+    </div>
     <div class="g3">
       <div class="field"><label>Span L (m)</label><input id="L" type="number" value="3.1" step="0.1"></div>
       <div class="field"><label>End bearing N (mm)</label><input id="N" type="number" value="50"></div>
@@ -194,6 +250,56 @@ h2{font-size:14px;font-weight:500;margin-bottom:10px}
   <h2>Loading summary</h2>
   <div class="card"><div class="g3" id="load-sum"></div></div>
 </div>
+</div><!-- /pane-check -->
+
+<!-- ═══════════════ TAB 2: LIBRARY ═══════════════ -->
+<div class="tab-pane" id="pane-library">
+  <div class="lib-grid">
+    <!-- Saved Sections -->
+    <div class="lib-card">
+      <h3>Saved Sections</h3>
+      <div id="lib-sections-wrap">
+        <table class="lib-table">
+          <thead><tr>
+            <th>Name</th><th>B1</th><th>H</th><th>&theta;</th><th>F</th><th>Lp</th><th>&beta;</th><th>t</th><th>Grade</th><th></th>
+          </tr></thead>
+          <tbody id="lib-sections-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Saved Projects -->
+    <div class="lib-card">
+      <h3>Saved Projects</h3>
+      <div id="lib-projects-wrap">
+        <table class="lib-table">
+          <thead><tr>
+            <th>Name</th><th>Span</th><th>Lb</th><th>Mode</th><th></th>
+          </tr></thead>
+          <tbody id="lib-projects-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div><!-- /pane-library -->
+
+<!-- ═══════════════ TAB 3: LOG ═══════════════ -->
+<div class="tab-pane" id="pane-log">
+  <div class="log-toolbar">
+    <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
+    <button class="btn-sm danger" onclick="clearLog()">Clear Log</button>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="log-table">
+      <thead><tr>
+        <th>#</th><th>Section</th><th>Project</th><th>Time</th>
+        <th>Mz_up (kNm)</th><th>Bending%</th><th>Shear%</th><th>LTB%</th><th>Defl%</th><th>Overall</th>
+      </tr></thead>
+      <tbody id="log-body">
+        <tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px;font-size:12px">No calculations yet — run Calculate to start the log.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div><!-- /pane-log -->
 
 <script>
 // ── SECTION ENGINE (thin-walled polyline, exact) ────────────────────────────
@@ -282,13 +388,13 @@ function drawDiagram(){
 <rect x="${xPix-20}" y="${(Y(yTop)+Y(yBot))/2-7}" width="40" height="14" rx="3" fill="white"/>
 <text x="${xPix}" y="${(Y(yTop)+Y(yBot))/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700" transform="rotate(-90 ${xPix} ${(Y(yTop)+Y(yBot))/2})">${lbl}</text>`;}
   const dims=
-    dimH(-g.half,g.half,Y(g.H)-18,`B\u2081=${g.B1}`)+
+    dimH(-g.half,g.half,Y(g.H)-18,`B₁=${g.B1}`)+
     dimV(g.H,0,X(minx)-20,`H=${g.H}`)+
     dimH(g.wb,g.fe,Y(0)+20,`F=${g.F}`)+
-    `<text x="${X(g.lt)+2}" y="${Y(g.ldy)+12}" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">lip ${g.Lp}@${g.beta}\u00b0</text>`+
-    `<text x="${X(g.half+g.run*0.5)-2}" y="${Y(g.H*0.5)}" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">${g.th}\u00b0</text>`;
+    `<text x="${X(g.lt)+2}" y="${Y(g.ldy)+12}" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">lip ${g.Lp}@${g.beta}°</text>`+
+    `<text x="${X(g.half+g.run*0.5)-2}" y="${Y(g.H*0.5)}" font-size="9.5" fill="${DC}" font-family="Arial" font-weight="700">${g.th}°</text>`;
   document.getElementById('hat-svg').innerHTML=grid+sym+line+na+dims;
-  document.getElementById('dlbl').textContent=`Bottom width (lip tip) = ${(2*g.lt).toFixed(1)} mm \u00b7 web base = ${(2*g.wb).toFixed(1)} mm \u00b7 height = ${g.H} mm`;
+  document.getElementById('dlbl').textContent=`Bottom width (lip tip) = ${(2*g.lt).toFixed(1)} mm · web base = ${(2*g.wb).toFixed(1)} mm · height = ${g.H} mm`;
 }
 
 // ── LTB allowable (IS 801 Cl.6.2 transition) ────────────────────────────────
@@ -310,7 +416,272 @@ function setLoadMode(m){
   document.getElementById('lmb-staad').className='lmb'+(m==='staad'?' on':'');
 }
 
-// ── MAIN ────────────────────────────────────────────────────────────────────
+// ── SESSION LOG ──────────────────────────────────────────────────────────────
+const sessionLog=[];
+
+function pushLog(entry){
+  sessionLog.push(entry);
+  renderLog();
+  document.getElementById('log-count').textContent='('+sessionLog.length+')';
+}
+
+function renderLog(){
+  const tbody=document.getElementById('log-body');
+  if(sessionLog.length===0){
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:#aaa;padding:20px;font-size:12px">No calculations yet — run Calculate to start the log.</td></tr>';
+    return;
+  }
+  tbody.innerHTML=sessionLog.map(e=>{
+    const cls=e.overall==='PASS'?'log-row-pass':e.overall==='MARGINAL'?'log-row-marginal':'log-row-fail';
+    const ocls=e.overall==='PASS'?'log-pass':e.overall==='MARGINAL'?'log-marginal':'log-fail';
+    const fx=(x)=>isNaN(x)?'—':(x*100).toFixed(0)+'%';
+    return `<tr class="${cls}">
+      <td>${e.n}</td><td>${e.section}</td><td>${e.project}</td><td>${e.timestamp}</td>
+      <td>${e.Mz_up}</td>
+      <td>${fx(e.UR.bend)}</td><td>${fx(e.UR.shear)}</td><td>${fx(e.UR.ltb)}</td><td>${fx(e.UR.defl)}</td>
+      <td class="${ocls}">${e.overall}</td>
+    </tr>`;
+  }).join('');
+}
+
+function clearLog(){
+  if(sessionLog.length===0)return;
+  if(!confirm('Clear all log entries?'))return;
+  sessionLog.length=0;
+  renderLog();
+  document.getElementById('log-count').textContent='';
+}
+
+function exportCSV(){
+  if(sessionLog.length===0){alert('No log entries to export.');return;}
+  const fx=(x)=>isNaN(x)?'':(x*100).toFixed(0);
+  const rows=['#,Section,Project,Time,Mz_up(kNm),Bending%,Shear%,LTB%,Defl%,Overall'];
+  for(const e of sessionLog){
+    rows.push([e.n,`"${e.section}"`,`"${e.project}"`,e.timestamp,e.Mz_up,fx(e.UR.bend),fx(e.UR.shear),fx(e.UR.ltb),fx(e.UR.defl),e.overall].join(','));
+  }
+  const blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='hat_purlin_log.csv'; a.click();
+}
+
+// ── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(name){
+  ['check','library','log'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('on',t===name);
+    document.getElementById('pane-'+t).classList.toggle('on',t===name);
+  });
+  if(name==='library') renderLibrary();
+}
+
+// ── PERSISTENCE (localStorage) ───────────────────────────────────────────────
+const LS_SEC='hat_sections', LS_PROJ='hat_projects';
+
+function loadAllSections(){
+  try{return JSON.parse(localStorage.getItem(LS_SEC)||'{}')}catch(e){return {};}
+}
+function saveAllSections(obj){localStorage.setItem(LS_SEC,JSON.stringify(obj));}
+function loadAllProjects(){
+  try{return JSON.parse(localStorage.getItem(LS_PROJ)||'{}')}catch(e){return {};}
+}
+function saveAllProjects(obj){localStorage.setItem(LS_PROJ,JSON.stringify(obj));}
+
+// Seed defaults on first load
+function seedDefaults(){
+  const secs=loadAllSections();
+  if(Object.keys(secs).length===0){
+    secs['HAT-40-70-t09']={B1:40,H:70,th:75,F:22,Lp:10,beta:45,t:0.90,grade:'550'};
+    saveAllSections(secs);
+  }
+  const projs=loadAllProjects();
+  if(Object.keys(projs).length===0){
+    projs['Solar-3.1m']={L:3.1,N:50,defLim:'180',Lb:3100,Cb:1.0,loadMode:'udl',w_up:0.981,w_grav:0.147,w_weak:0};
+    saveAllProjects(projs);
+  }
+}
+
+function sortedKeys(obj){return Object.keys(obj).sort((a,b)=>a.localeCompare(b));}
+
+function refreshSectionDropdown(){
+  const sel=document.getElementById('sec-preset-sel');
+  const cur=sel.value;
+  const secs=loadAllSections();
+  sel.innerHTML='<option value="">— select —</option>'+sortedKeys(secs).map(k=>`<option value="${k}">${k}</option>`).join('');
+  if(cur&&secs[cur]) sel.value=cur;
+}
+function refreshProjectDropdown(){
+  const sel=document.getElementById('proj-preset-sel');
+  const cur=sel.value;
+  const projs=loadAllProjects();
+  sel.innerHTML='<option value="">— select —</option>'+sortedKeys(projs).map(k=>`<option value="${k}">${k}</option>`).join('');
+  if(cur&&projs[cur]) sel.value=cur;
+}
+
+// Track which preset is "active" for the log name
+let activeSectionName='Custom', activeProjectName='Custom';
+
+function loadSectionPreset(){
+  const name=document.getElementById('sec-preset-sel').value;
+  if(!name) return;
+  const secs=loadAllSections();
+  const s=secs[name]; if(!s) return;
+  const fields=['B1','H','th','F','Lp','beta','t'];
+  fields.forEach(f=>{document.getElementById(f).value=s[f];});
+  // grade select
+  document.getElementById('grade').value=String(s.grade);
+  activeSectionName=name;
+  drawDiagram();
+}
+
+function saveSectionPreset(){
+  const name=prompt('Save section as:','');
+  if(!name||!name.trim()) return;
+  const nm=name.trim();
+  const secs=loadAllSections();
+  if(secs[nm]&&!confirm(`Section "${nm}" already exists. Overwrite?`)) return;
+  const g=geom();
+  secs[nm]={B1:g.B1,H:g.H,th:g.th,F:g.F,Lp:g.Lp,beta:g.beta,t:g.t,grade:v('grade')};
+  saveAllSections(secs);
+  refreshSectionDropdown();
+  document.getElementById('sec-preset-sel').value=nm;
+  activeSectionName=nm;
+  renderLibrary();
+}
+
+function loadProjectPreset(){
+  const name=document.getElementById('proj-preset-sel').value;
+  if(!name) return;
+  const projs=loadAllProjects();
+  const p=projs[name]; if(!p) return;
+  document.getElementById('L').value=p.L;
+  document.getElementById('N').value=p.N;
+  document.getElementById('defLim').value=p.defLim||'180';
+  document.getElementById('Lb').value=p.Lb;
+  document.getElementById('Cb').value=p.Cb;
+  setLoadMode(p.loadMode||'udl');
+  if(p.loadMode==='udl'||!p.loadMode){
+    document.getElementById('w_up').value=p.w_up||0;
+    document.getElementById('w_grav').value=p.w_grav||0;
+    document.getElementById('w_weak').value=p.w_weak||0;
+  } else {
+    if(p.s_Mz_up!==undefined) document.getElementById('s_Mz_up').value=p.s_Mz_up;
+    if(p.s_My_up!==undefined) document.getElementById('s_My_up').value=p.s_My_up;
+    if(p.s_Fx_up!==undefined) document.getElementById('s_Fx_up').value=p.s_Fx_up;
+    if(p.s_Mz_gr!==undefined) document.getElementById('s_Mz_gr').value=p.s_Mz_gr;
+    if(p.s_My_gr!==undefined) document.getElementById('s_My_gr').value=p.s_My_gr;
+    if(p.s_Fx_gr!==undefined) document.getElementById('s_Fx_gr').value=p.s_Fx_gr;
+    if(p.s_Fy!==undefined) document.getElementById('s_Fy').value=p.s_Fy;
+    if(p.s_Mx!==undefined) document.getElementById('s_Mx').value=p.s_Mx;
+    if(p.s_def!==undefined) document.getElementById('s_def').value=p.s_def;
+    if(p.munit!==undefined) document.getElementById('munit').value=p.munit;
+    if(p.funit!==undefined) document.getElementById('funit').value=p.funit;
+    if(p.s_wind!==undefined) document.getElementById('s_wind').checked=!!p.s_wind;
+  }
+  activeProjectName=name;
+}
+
+function saveProjectPreset(){
+  const name=prompt('Save project as:','');
+  if(!name||!name.trim()) return;
+  const nm=name.trim();
+  const projs=loadAllProjects();
+  if(projs[nm]&&!confirm(`Project "${nm}" already exists. Overwrite?`)) return;
+  const obj={
+    L:+v('L'), N:+v('N'), defLim:v('defLim'), Lb:+v('Lb'), Cb:+v('Cb'), loadMode:loadMode,
+    w_up:+v('w_up'), w_grav:+v('w_grav'), w_weak:+v('w_weak'),
+    s_Mz_up:+v('s_Mz_up'), s_My_up:+v('s_My_up'), s_Fx_up:+v('s_Fx_up'),
+    s_Mz_gr:+v('s_Mz_gr'), s_My_gr:+v('s_My_gr'), s_Fx_gr:+v('s_Fx_gr'),
+    s_Fy:+v('s_Fy'), s_Mx:+v('s_Mx'), s_def:+v('s_def'),
+    munit:v('munit'), funit:v('funit'),
+    s_wind:document.getElementById('s_wind').checked
+  };
+  projs[nm]=obj;
+  saveAllProjects(projs);
+  refreshProjectDropdown();
+  document.getElementById('proj-preset-sel').value=nm;
+  activeProjectName=nm;
+  renderLibrary();
+}
+
+// ── LIBRARY RENDER ───────────────────────────────────────────────────────────
+function renderLibrary(){
+  const secs=loadAllSections();
+  const secKeys=sortedKeys(secs);
+  const sbody=document.getElementById('lib-sections-body');
+  if(secKeys.length===0){
+    sbody.innerHTML='<tr><td colspan="10" style="color:#aaa;text-align:center;padding:12px">No saved sections</td></tr>';
+  } else {
+    sbody.innerHTML=secKeys.map(k=>{
+      const s=secs[k];
+      return `<tr>
+        <td><strong>${k}</strong></td>
+        <td>${s.B1}</td><td>${s.H}</td><td>${s.th}</td><td>${s.F}</td>
+        <td>${s.Lp}</td><td>${s.beta}</td><td>${s.t}</td><td>${s.grade}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-sm" onclick="libLoadSection('${k}')">Load</button>
+          &nbsp;
+          <button class="btn-sm danger" onclick="libDelSection('${k}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  const projs=loadAllProjects();
+  const projKeys=sortedKeys(projs);
+  const pbody=document.getElementById('lib-projects-body');
+  if(projKeys.length===0){
+    pbody.innerHTML='<tr><td colspan="5" style="color:#aaa;text-align:center;padding:12px">No saved projects</td></tr>';
+  } else {
+    pbody.innerHTML=projKeys.map(k=>{
+      const p=projs[k];
+      return `<tr>
+        <td><strong>${k}</strong></td>
+        <td>${p.L} m</td><td>${p.Lb} mm</td><td>${p.loadMode||'udl'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-sm" onclick="libLoadProject('${k}')">Load</button>
+          &nbsp;
+          <button class="btn-sm danger" onclick="libDelProject('${k}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function libLoadSection(name){
+  const secs=loadAllSections();
+  const s=secs[name]; if(!s) return;
+  ['B1','H','th','F','Lp','beta','t'].forEach(f=>document.getElementById(f).value=s[f]);
+  document.getElementById('grade').value=String(s.grade);
+  document.getElementById('sec-preset-sel').value=name;
+  activeSectionName=name;
+  drawDiagram();
+  switchTab('check');
+}
+
+function libDelSection(name){
+  if(!confirm(`Delete section "${name}"?`)) return;
+  const secs=loadAllSections();
+  delete secs[name];
+  saveAllSections(secs);
+  refreshSectionDropdown();
+  renderLibrary();
+}
+
+function libLoadProject(name){
+  document.getElementById('proj-preset-sel').value=name;
+  loadProjectPreset();
+  switchTab('check');
+}
+
+function libDelProject(name){
+  if(!confirm(`Delete project "${name}"?`)) return;
+  const projs=loadAllProjects();
+  delete projs[name];
+  saveAllProjects(projs);
+  refreshProjectDropdown();
+  renderLibrary();
+}
+
+// ── MAIN CALCULATE ────────────────────────────────────────────────────────────
 function calculate(){
   const g=geom(); const p=computeProps(g);
   const t=g.t, E=200000, Fy=+v('grade');
@@ -379,14 +750,14 @@ function calculate(){
     const UR_gr=tA_gr+fbz_gr;
     UR_axial=Math.max(UR_up,UR_gr);
     const comp=(fa_up<0||fa_gr<0);
-    axialNote=`Fa=${Fa.toFixed(0)} MPa (KL/r=${KLr.toFixed(0)}); fa_up=${fa_up.toFixed(1)}, fa_gr=${fa_gr.toFixed(1)} MPa`+(comp?' \u2014 compression: full Cl.6.7 stability (Cm + amplification) advised':' \u2014 tension');
+    axialNote=`Fa=${Fa.toFixed(0)} MPa (KL/r=${KLr.toFixed(0)}); fa_up=${fa_up.toFixed(1)}, fa_gr=${fa_gr.toFixed(1)} MPa`+(comp?' — compression: full Cl.6.7 stability (Cm + amplification) advised':' — tension');
   }
   // torsion flag (Mx)
   let UR_tor=0, torNote='', hasTor=(Mx_Nmm>1e-6);
   if(hasTor){
     const tau=Mx_Nmm*t/p.J;          // St-Venant max shear, thin open section
     UR_tor=tau/(0.4*Fy);
-    torNote=`\u03c4=${tau.toFixed(0)} MPa vs 0.4Fy=${(0.4*Fy).toFixed(0)} \u2014 OPEN section weak in torsion; load through shear centre / restrain ends`;
+    torNote=`τ=${tau.toFixed(0)} MPa vs 0.4Fy=${(0.4*Fy).toFixed(0)} — OPEN section weak in torsion; load through shear centre / restrain ends`;
   }
 
   // LTB (compression-flange method): Fe = Cb pi^2 E /(Lb/rycf)^2
@@ -404,7 +775,8 @@ function calculate(){
   const R=2;
   const Pw=t**2*Fy*1.01*(1-0.325*Math.sqrt(R/t))*(1+0.083*Math.sqrt(N/t))*(1-0.068*Math.sqrt(Math.min(wt_web,200)));
   const Pwa=2*Pw/1000;
-  const Preact=w_net>0?w_net*L/2/1000:0;
+  const w_net_val=loadMode==='udl'?+v('w_up'):0;
+  const Preact=w_net_val>0?w_net_val*L/2/1000:0;
 
   // deflection (resultant)
   let d_s=NaN,d_w=NaN,d_t;
@@ -427,19 +799,19 @@ function calculate(){
   document.getElementById('info-row').innerHTML=`
     <div class="chip">Span <span>${(L/1000).toFixed(1)} m</span></div>
     <div class="chip">Fy <span>${Fy} MPa</span></div>
-    <div class="chip">&theta; <span>${g.th}\u00b0</span></div>
+    <div class="chip">&theta; <span>${g.th}°</span></div>
     <div class="chip">Bottom width <span>${(2*g.lt).toFixed(0)} mm</span></div>
     <div class="chip">Lb <span>${Lb} mm</span></div>`;
 
   document.getElementById('sec-props').innerHTML=[
-    {l:'Area A',v:p.A.toFixed(0),u:'mm\u00b2'},
-    {l:'Centroid \u1ef3 (from foot line)',v:p.yc.toFixed(2),u:'mm'},
-    {l:'Ixx (strong)',v:(p.Ixx/1000).toFixed(0),u:'\u00d710\u00b3 mm\u2074'},
-    {l:'Iyy (weak)',v:(p.Iyy/1000).toFixed(0),u:'\u00d710\u00b3 mm\u2074'},
-    {l:'Z_top (tension/uplift)',v:p.Ztop.toFixed(0),u:'mm\u00b3'},
-    {l:'Z_bot (comp/uplift)',v:p.Zbot.toFixed(0),u:'mm\u00b3'},
-    {l:'Z_weak',v:p.Zweak.toFixed(0),u:'mm\u00b3'},
-    {l:'J (torsion)',v:p.J.toFixed(1),u:'mm\u2074'},
+    {l:'Area A',v:p.A.toFixed(0),u:'mm²'},
+    {l:'Centroid ỳ (from foot line)',v:p.yc.toFixed(2),u:'mm'},
+    {l:'Ixx (strong)',v:(p.Ixx/1000).toFixed(0),u:'×10³ mm⁴'},
+    {l:'Iyy (weak)',v:(p.Iyy/1000).toFixed(0),u:'×10³ mm⁴'},
+    {l:'Z_top (tension/uplift)',v:p.Ztop.toFixed(0),u:'mm³'},
+    {l:'Z_bot (comp/uplift)',v:p.Zbot.toFixed(0),u:'mm³'},
+    {l:'Z_weak',v:p.Zweak.toFixed(0),u:'mm³'},
+    {l:'J (torsion)',v:p.J.toFixed(1),u:'mm⁴'},
     {l:'r_y comp.flange',v:p.rycf.toFixed(1),u:'mm'},
     {l:'web slant',v:wslant.toFixed(1),u:'mm'},
     {l:'Fv allow',v:Fv.toFixed(0),u:'MPa'},
@@ -448,24 +820,24 @@ function calculate(){
 
   document.getElementById('biaxial-note').innerHTML=
     `<strong>Effective section:</strong> `+(allEff?'all compression elements FULLY EFFECTIVE at service stress &rarr; gross section governs (Z not reduced).':'&#9888; an element exceeds &lambda;=0.673 &mdash; bending UR shown uses GROSS Z; a full effective-section iteration is required.')+
-    ` &nbsp;|&nbsp; uplift fibres: comp(low)=${f_comp_up.toFixed(0)}, tens(top)=${f_top_up.toFixed(0)} MPa &rarr; governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb(+\u2153)=${Fb_wl.toFixed(0)} MPa`;
+    ` &nbsp;|&nbsp; uplift fibres: comp(low)=${f_comp_up.toFixed(0)}, tens(top)=${f_top_up.toFixed(0)} MPa &rarr; governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb(+⅓)=${Fb_wl.toFixed(0)} MPa`;
 
   document.getElementById('ltb-note').innerHTML=
     `<strong>LTB (Cl.6.2, compression-flange method):</strong> r_y(feet+lips)=${p.rycf.toFixed(1)} mm, L&#x1D47;/r_y=${(Lb/p.rycf).toFixed(0)} &rarr; Fe=${Fe.toFixed(0)} MPa `+
-    `(2.78Fy=${(2.78*Fy).toFixed(0)}). Fb_LTB=${Fb_ltb.toFixed(0)}&times;\u2074\u2044\u2083=${Fb_ltb_wl.toFixed(0)} MPa. `+
-    `<strong>${Fb_ltb>=Fb?'LTB does NOT govern \u2713 (wide outward feet give large r_y)':'LTB REDUCES capacity'}</strong>`;
+    `(2.78Fy=${(2.78*Fy).toFixed(0)}). Fb_LTB=${Fb_ltb.toFixed(0)}&times;⁴⁄₃=${Fb_ltb_wl.toFixed(0)} MPa. `+
+    `<strong>${Fb_ltb>=Fb?'LTB does NOT govern ✓ (wide outward feet give large r_y)':'LTB REDUCES capacity'}</strong>`;
 
-  const fx=(x,n)=>isNaN(x)?'\u2014':x.toFixed(n);
+  const fx=(x,n)=>isNaN(x)?'—':x.toFixed(n);
   const ls = (loadMode==='staad') ? [
       {l:'Mz uplift',v:fx(M_up,4),u:'kNm'},{l:'Mz gravity',v:fx(M_sg,4),u:'kNm'},
       {l:'My (minor)',v:fx(M_weak,4),u:'kNm'},{l:'Fx axial',v:fx(Fx_up_N/1000,3),u:'kN'},
       {l:'Fy shear',v:fx(V,3),u:'kN'},{l:'Mx torsion',v:fx(Mx_Nmm/1e6,4),u:'kNm'},
-      {l:'\u03b4 (STAAD)',v:fx(d_t,2),u:'mm'},{l:'\u03b4_allow',v:fx(d_a,2),u:'mm'},
+      {l:'δ (STAAD)',v:fx(d_t,2),u:'mm'},{l:'δ_allow',v:fx(d_a,2),u:'mm'},
     ] : [
       {l:'w_net uplift',v:fx(+v('w_up'),3),u:'kN/m'},{l:'w_gravity',v:fx(+v('w_grav'),3),u:'kN/m'},
       {l:'w_weak',v:fx(+v('w_weak'),3),u:'kN/m'},{l:'M_uplift',v:fx(M_up,4),u:'kNm'},
       {l:'M_gravity',v:fx(M_sg,4),u:'kNm'},{l:'V_max',v:fx(V,3),u:'kN'},
-      {l:'\u03b4_resultant',v:fx(d_t,2),u:'mm'},{l:'\u03b4_allow',v:fx(d_a,2),u:'mm'},
+      {l:'δ_resultant',v:fx(d_t,2),u:'mm'},{l:'δ_allow',v:fx(d_a,2),u:'mm'},
     ];
   document.getElementById('load-sum').innerHTML=ls.map(m=>`<div class="metric"><div class="lbl">${m.l}</div><div class="val">${m.v} <span style="font-size:11px;color:#888">${m.u}</span></div></div>`).join('');
 
@@ -483,20 +855,20 @@ function calculate(){
       <div class="st ${sc(ur)}">${sl(ur)}</div><div class="rf">${ref}</div></div>`;}
 
   document.getElementById('ck-wt').innerHTML=
-    row('Foot (stiffened, k=4)',UR.wt_foot,'IS 801 Cl.5.2',`w/t=${(g.F/t).toFixed(1)}, \u03bb=${ew_foot.lam.toFixed(3)}, \u03c1=${ew_foot.r.toFixed(3)}`)+
-    row('Lip (unstiffened, k=0.43)',UR.wt_lip,'IS 801 Cl.5.2',`w/t=${(g.Lp/t).toFixed(1)}, \u03bb=${ew_lip.lam.toFixed(3)}, \u03c1=${ew_lip.r.toFixed(3)}`)+
-    row('Web (gradient, k=24)',UR.wt_web,'IS 801 Cl.5.2',`w/t=${(wslant/t).toFixed(1)}, \u03bb=${ew_web.lam.toFixed(3)}, \u03c1=${ew_web.r.toFixed(3)}`);
+    row('Foot (stiffened, k=4)',UR.wt_foot,'IS 801 Cl.5.2',`w/t=${(g.F/t).toFixed(1)}, λ=${ew_foot.lam.toFixed(3)}, ρ=${ew_foot.r.toFixed(3)}`)+
+    row('Lip (unstiffened, k=0.43)',UR.wt_lip,'IS 801 Cl.5.2',`w/t=${(g.Lp/t).toFixed(1)}, λ=${ew_lip.lam.toFixed(3)}, ρ=${ew_lip.r.toFixed(3)}`)+
+    row('Web (gradient, k=24)',UR.wt_web,'IS 801 Cl.5.2',`w/t=${(wslant/t).toFixed(1)}, λ=${ew_web.lam.toFixed(3)}, ρ=${ew_web.r.toFixed(3)}`);
 
   document.getElementById('ck-lip').innerHTML=
-    row('Lip provides min stiffener I',UR.lip,'IS 801 Cl.5.2.2.1',`Is=${Is.toFixed(1)} mm\u2074 vs Imin=${Imin.toFixed(1)} mm\u2074`);
+    row('Lip provides min stiffener I',UR.lip,'IS 801 Cl.5.2.2.1',`Is=${Is.toFixed(1)} mm⁴ vs Imin=${Imin.toFixed(1)} mm⁴`);
 
   document.getElementById('ck-flex').innerHTML=
-    row('Biaxial \u2014 uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`)+
+    row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`)+
     row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)}`)+
     (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.1',axialNote):'');
 
   document.getElementById('ck-ltb').innerHTML=
-    row('LTB \u2014 uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.2',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+\u2153)=${Fb_ltb_wl.toFixed(0)} MPa`);
+    row('LTB — uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.2',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+⅓)=${Fb_ltb_wl.toFixed(0)} MPa`);
 
   document.getElementById('ck-shear').innerHTML=
     row('Shear (2 webs)',UR.shear,'IS 801 Cl.7',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`)+
@@ -504,25 +876,48 @@ function calculate(){
     (hasTor?row('Torsion (St-Venant)',UR.tor,'IS 801 Cl.6.6',torNote):'');
 
   document.getElementById('ck-defl').innerHTML=
-    row(`Resultant \u03b4 (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter \u03b4_max from STAAD (or use Direct UDL mode)`:`\u03b4=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`);
+    row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD (or use Direct UDL mode)`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`);
 
   const I_req=p.Ixx*UR.defl;
   const fixes=[];
-  if(UR.wt_foot>=1||UR.wt_lip>=1||UR.wt_web>=1)fixes.push({tag:'Eff. width',text:`A compression element is slender (\u03bb&gt;0.673). Increase t, or run a full effective-section calc.`});
-  if(UR.lip>=1)fixes.push({tag:'Lip',text:`Lip too small: increase lip length so Is &ge; ${Imin.toFixed(1)} mm\u2074 (need \u2265 <em>${(Math.cbrt(Imin*12/(t*Math.sin(g.beta*Math.PI/180)**2))).toFixed(1)} mm</em>) or steepen lip angle.`});
-  if(UR.biaxial>=1)fixes.push({tag:'Bending',text:`Increase H (Ixx\u221dH\u00b2\u00b7\u00b3) or t.`});
+  if(UR.wt_foot>=1||UR.wt_lip>=1||UR.wt_web>=1)fixes.push({tag:'Eff. width',text:`A compression element is slender (λ&gt;0.673). Increase t, or run a full effective-section calc.`});
+  if(UR.lip>=1)fixes.push({tag:'Lip',text:`Lip too small: increase lip length so Is &ge; ${Imin.toFixed(1)} mm⁴ (need ≥ <em>${(Math.cbrt(Imin*12/(t*Math.sin(g.beta*Math.PI/180)**2))).toFixed(1)} mm</em>) or steepen lip angle.`});
+  if(UR.biaxial>=1)fixes.push({tag:'Bending',text:`Increase H (Ixx∝H²·³) or t.`});
   if(UR.grav>=1)fixes.push({tag:'Gravity bend',text:`Increase Z_top: raise H or t.`});
-  if(UR.ltb>=1)fixes.push({tag:'LTB',text:`Reduce L\u1D47 (add mid-span brace) or increase foot/lip (raises r_y of compression flange).`});
+  if(UR.ltb>=1)fixes.push({tag:'LTB',text:`Reduce Lᵇ (add mid-span brace) or increase foot/lip (raises r_y of compression flange).`});
   if(UR.shear>=1)fixes.push({tag:'Shear',text:`Increase t or H; or reduce span.`});
   if(UR.web>=1)fixes.push({tag:'Web crippling',text:`Likely N/A under uplift if feet bolted (check connection for ${Preact.toFixed(2)} kN). For bearing cases: increase N or add stiffener.`});
-  if(UR.defl>=1)fixes.push({tag:'Deflection',text:`Need Ixx \u00d7${UR.defl.toFixed(2)} (\u2265 <em>${(I_req/1000).toFixed(0)}\u00d710\u00b3 mm\u2074</em>). Routes: t (\u03b4\u221d1/t), H (\u03b4\u221d1/H\u00b3), or span (\u03b4\u221dL\u2074, add mid-support &rarr; L\u2248<em>${(L*Math.pow(1/UR.defl,0.25)/1000).toFixed(2)} m</em>).`});
+  if(UR.defl>=1)fixes.push({tag:'Deflection',text:`Need Ixx ×${UR.defl.toFixed(2)} (≥ <em>${(I_req/1000).toFixed(0)}×10³ mm⁴</em>). Routes: t (δ∝1/t), H (δ∝1/H³), or span (δ∝L⁴, add mid-support &rarr; L≈<em>${(L*Math.pow(1/UR.defl,0.25)/1000).toFixed(2)} m</em>).`});
   const fw=document.getElementById('fix-summary');
   if(fixes.length){document.getElementById('fix-items').innerHTML=fixes.map(f=>`<div class="fi"><div class="ftag">${f.tag}</div><div class="ftxt">${f.text}</div></div>`).join('');fw.style.display='block';}
   else fw.style.display='none';
 
   document.getElementById('results').style.display='block';
   drawDiagram();
+
+  // ── LOG ENTRY ──────────────────────────────────────────────────────────────
+  const allURs=[UR.biaxial, UR.grav, UR.ltb, UR.shear, UR.defl, UR.lip,
+                UR.wt_foot, UR.wt_lip, UR.wt_web];
+  const validURs=allURs.filter(u=>!isNaN(u));
+  let overall='PASS';
+  if(validURs.some(u=>u>=1)) overall='FAIL';
+  else if(validURs.some(u=>u>=0.9)) overall='MARGINAL';
+
+  pushLog({
+    n: sessionLog.length+1,
+    section: activeSectionName,
+    project: activeProjectName,
+    timestamp: new Date().toLocaleTimeString(),
+    Mz_up: M_up.toFixed(4),
+    UR: {bend:UR.biaxial, shear:UR.shear, ltb:UR.ltb, defl:UR.defl},
+    overall: overall
+  });
 }
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+seedDefaults();
+refreshSectionDropdown();
+refreshProjectDropdown();
 drawDiagram();
 </script>
 </body>
