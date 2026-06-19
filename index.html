@@ -384,12 +384,17 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
 
   <!-- IS 801 checks -->
   <div class="card">
-    <div class="card-title" style="display:flex;align-items:center">
-      IS 801:1975 Design Checks
-      <div class="view-toggle" style="margin-left:auto">
-        <button class="vtb on" id="vtb-overview" onclick="setView('overview')">Overview</button>
-        <button class="vtb" id="vtb-detailed" onclick="setView('detailed')">Detailed</button>
-      </div>
+    <div class="card-title">IS 801:1975 Design Checks</div>
+    <!-- View toggle — full-width row, impossible to miss -->
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="vtb-overview" onclick="setView('overview')"
+        style="flex:1;padding:8px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer;border:1.5px solid var(--navy);background:var(--navy);color:#fff">
+        &#9776; Overview
+      </button>
+      <button id="vtb-detailed" onclick="setView('detailed')"
+        style="flex:1;padding:8px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer;border:1.5px solid var(--navy);background:#fff;color:var(--navy)">
+        &#128196; Detailed (formulas)
+      </button>
     </div>
 
     <!-- OVERVIEW panel -->
@@ -862,8 +867,12 @@ function setView(v){
   currentView=v;
   document.getElementById('view-overview').style.display=v==='overview'?'block':'none';
   document.getElementById('view-detailed').style.display=v==='detailed'?'block':'none';
-  document.getElementById('vtb-overview').classList.toggle('on',v==='overview');
-  document.getElementById('vtb-detailed').classList.toggle('on',v==='detailed');
+  const ov=document.getElementById('vtb-overview');
+  const dv=document.getElementById('vtb-detailed');
+  ov.style.background=v==='overview'?'var(--navy)':'#fff';
+  ov.style.color=v==='overview'?'#fff':'var(--navy)';
+  dv.style.background=v==='detailed'?'var(--navy)':'#fff';
+  dv.style.color=v==='detailed'?'#fff':'var(--navy)';
 }
 
 // ── DETAILED CHECK RENDERER ──────────────────────────────────────────────────
@@ -1300,9 +1309,15 @@ function calculate(){
   document.getElementById('ck-ltb').innerHTML=
     row('LTB — uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.2',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+⅓)=${Fb_ltb_wl.toFixed(0)} MPa`);
 
+  // Web crippling: N/A under uplift (bolted feet carry reaction, not web bearing)
+  const webcripRow = loadMode==='udl' && +v('w_up')>0
+    ? `<div class="check-row"><div class="cn">Web crippling EOF<br><small>N/A under uplift — bolted feet carry reaction, not web bearing. Check connection for ${(+v('w_up')*L/2/1000).toFixed(2)} kN uplift.</small></div>
+       <div class="bw"></div><div class="uv" style="color:#aaa">N/A</div>
+       <div class="st warn">N/A</div><div class="rf">IS 801 Cl.8.1</div></div>`
+    : row('Web crippling EOF',UR.web,'IS 801 Cl.8.1',`R=${Preact.toFixed(3)} kN, Pc=${Pwa.toFixed(3)} kN`);
   document.getElementById('ck-shear').innerHTML=
     row('Shear (2 webs)',UR.shear,'IS 801 Cl.7',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`)+
-    row('Web crippling EOF',UR.web,'IS 801 Cl.8.1',`R=${Preact.toFixed(3)} kN, Pc=${Pwa.toFixed(3)} kN`)+
+    webcripRow+
     (hasTor?row('Torsion (St-Venant)',UR.tor,'IS 801 Cl.6.6',torNote):'');
 
   document.getElementById('ck-defl').innerHTML=
@@ -1317,7 +1332,7 @@ function calculate(){
   if(UR.grav>=1)fixes.push({tag:'Gravity bend',text:`Increase Ztop: raise H or t.`});
   if(UR.ltb>=1)fixes.push({tag:'LTB',text:`Reduce Lb (add mid-span brace) or increase foot/lip (raises rycf).`});
   if(UR.shear>=1)fixes.push({tag:'Shear',text:`Increase t or H; or reduce span.`});
-  if(UR.web>=1)fixes.push({tag:'Web crippling',text:`Likely N/A under uplift if feet bolted. For bearing: increase N or add stiffener.`});
+  if(UR.web>=1 && !(loadMode==='udl' && +v('w_up')>0))fixes.push({tag:'Web crippling',text:`For bearing cases: increase N or add stiffener at support.`});
   if(UR.defl>=1)fixes.push({tag:'Deflection',text:`Need Ixx ×${UR.defl.toFixed(2)} (≥ <em>${(I_req/1000).toFixed(0)}×10³ mm⁴</em>). Routes: t (δ∝1/t), H (δ∝1/H³), mid-support → L≈<em>${(L*Math.pow(1/UR.defl,0.25)/1000).toFixed(2)} m</em> (δ∝L⁴, cheapest).`});
   const fw=document.getElementById('fix-summary');
   if(fixes.length){document.getElementById('fix-items').innerHTML=fixes.map(f=>`<div class="fi"><div class="ftag">${f.tag}</div><div class="ftxt">${f.text}</div></div>`).join('');fw.style.display='block';}
