@@ -1,6 +1,6 @@
 // Service worker — offline cache for the HAT IS 801 calculator.
 // Bump CACHE version whenever index.html or assets change to force an update.
-const CACHE = 'hat-is801-v2';
+const CACHE = 'hat-is801-v3';
 const ASSETS = [
   './',
   './index.html',
