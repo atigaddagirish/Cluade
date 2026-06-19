@@ -1393,7 +1393,20 @@ drawDiagram();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW:',e));
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.update();
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        nw.addEventListener('statechange',()=>{
+          if(nw.state==='installed'&&navigator.serviceWorker.controller){
+            navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'});
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(e=>console.warn('SW:',e));
+    // Force claim if a new SW just took over
+    navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
   });
 }
 </script>
