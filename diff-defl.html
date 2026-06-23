@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Differential Deflection Checker — STAAD Output</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1e3a5f;--bg:#f5f4f0;--card:#fff;--border:#d8d6cc;
+  --pass-bg:#EAF3DE;--pass-fg:#3B6D11;
+  --fail-bg:#FCEBEB;--fail-fg:#A32D2D;
+  --warn-bg:#FAEEDA;--warn-fg:#854F0B;
+  --blue-bg:#E6F1FB;--blue-fg:#185FA5;
+}
+body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:var(--bg);min-height:100vh}
+.app-header{background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;
+  padding:0.75rem 1.25rem;position:sticky;top:0;z-index:50}
+.app-header h1{font-size:15px;font-weight:600;letter-spacing:-0.2px}
+.app-header .sub{font-size:11px;color:#94b8d6;margin-top:1px}
+.nav-btn{background:rgba(255,255,255,.12);border:0.5px solid rgba(255,255,255,.3);
+  color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;text-decoration:none;
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.nav-btn:hover{background:rgba(255,255,255,.2)}
+.app-wrap{padding:1rem 1.25rem;max-width:1400px;margin:0 auto}
+.two-col{display:grid;grid-template-columns:360px 1fr;gap:14px;align-items:start}
+@media(max-width:860px){.two-col{grid-template-columns:1fr}}
+.card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px}
+.field{margin-bottom:9px}
+.field label{display:block;font-size:11px;color:#666;margin-bottom:3px}
+.field input,.field select,.field textarea{width:100%;padding:6px 9px;font-size:13px;
+  border:0.5px solid #bbb;border-radius:7px;background:var(--bg);color:#1a1a1a;font-family:inherit}
+.field textarea{font-family:monospace;font-size:11px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#888}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn-primary{width:100%;padding:12px;font-size:14px;font-weight:600;cursor:pointer;
+  border:none;border-radius:10px;background:var(--navy);color:#fff;margin-top:4px;transition:background .15s}
+.btn-primary:hover{background:#162e4e}
+.btn-sm{padding:5px 10px;font-size:11px;font-weight:500;border:0.5px solid #bbb;border-radius:6px;
+  background:var(--bg);cursor:pointer}
+.btn-sm:hover{background:#e8e6e0}
+.btn-sm.danger{color:var(--fail-fg);border-color:var(--fail-fg)}
+.hint{font-size:11px;color:#999;margin-top:5px;line-height:1.5}
+
+/* type rows */
+.type-row{display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:0.5px solid #f0ede8;flex-wrap:wrap}
+.type-row:last-child{border-bottom:none}
+.type-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.type-name{font-size:12px;font-weight:500;flex:0 0 200px}
+.type-range{flex:1;min-width:180px}
+.type-range input{padding:5px 8px;font-size:12px;border:0.5px solid #bbb;border-radius:6px;
+  background:var(--bg);width:100%}
+
+/* upload zone */
+.upload-zone{border:1.5px dashed #bbb;border-radius:10px;padding:20px;text-align:center;
+  cursor:pointer;background:var(--bg);transition:border-color .15s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--navy)}
+.upload-zone .icon{font-size:28px;margin-bottom:6px}
+.upload-zone .label{font-size:13px;color:#555;font-weight:500}
+.upload-zone .hint2{font-size:11px;color:#999;margin-top:4px}
+#file-input{display:none}
+
+/* results */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+@media(max-width:600px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+.metric{background:var(--bg);border-radius:8px;padding:8px 10px}
+.metric .lbl{font-size:10px;color:#888;margin-bottom:2px}
+.metric .val{font-size:16px;font-weight:700}
+.metric .sub{font-size:10px;color:#aaa}
+.group-title{font-size:12px;font-weight:700;color:var(--navy);display:flex;align-items:center;
+  gap:8px;margin:14px 0 6px}
+.group-title .swatch{width:12px;height:12px;border-radius:2px}
+.group-max{background:var(--warn-bg);color:var(--warn-fg);border-radius:6px;padding:2px 8px;
+  font-size:11px;font-weight:700;margin-left:auto}
+.group-max.high{background:var(--fail-bg);color:var(--fail-fg)}
+.group-max.ok{background:var(--pass-bg);color:var(--pass-fg)}
+.result-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px}
+.result-table th{padding:6px 10px;text-align:left;font-size:10px;font-weight:700;color:#888;
+  text-transform:uppercase;letter-spacing:0.4px;border-bottom:0.5px solid var(--border);background:#fafaf8}
+.result-table td{padding:6px 10px;border-bottom:0.5px solid #f0ede8;vertical-align:middle}
+.result-table tr:last-child td{border-bottom:none}
+.result-table tr.is-max td{background:#fffdf0;font-weight:600}
+.diff-bar-wrap{width:80px;height:8px;background:#ebe8e2;border-radius:20px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
+.diff-bar{height:100%;border-radius:20px;background:#185FA5}
+.diff-bar.high{background:var(--fail-fg)}
+.diff-bar.warn{background:var(--warn-fg)}
+.badge-high{display:inline-block;font-size:9px;background:var(--fail-bg);color:var(--fail-fg);
+  border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px}
+.badge-max{display:inline-block;font-size:9px;background:#fff3cd;color:#856404;
+  border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px}
+
+/* parse log */
+.log-area{font-family:monospace;font-size:11px;background:#1a1a2e;color:#8be9fd;
+  border-radius:8px;padding:10px;max-height:160px;overflow-y:auto;white-space:pre;margin-top:8px}
+.log-area .err{color:#ff5555}
+.log-area .ok{color:#50fa7b}
+.log-area .warn{color:#ffb86c}
+
+/* lc selector */
+.lc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.lc-chip{padding:4px 10px;font-size:11px;font-weight:500;border:0.5px solid #bbb;
+  border-radius:20px;cursor:pointer;background:var(--bg)}
+.lc-chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* export */
+.export-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.export-row .info{font-size:11px;color:#888;flex:1}
+
+/* empty state */
+.empty-state{text-align:center;padding:40px 20px;color:#aaa}
+.empty-state .icon{font-size:36px;margin-bottom:10px}
+.empty-state p{font-size:13px}
+
+/* tooltip */
+[title]{cursor:help}
+
+@media print{
+  .app-header .nav-btn,.card:first-child,.export-row{display:none!important}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div>
+    <h1>Differential Deflection Checker</h1>
+    <div class="sub">STAAD output &rarr; member end-node &Delta;&delta; &middot; rafter type grouping</div>
+  </div>
+  <a href="index.html" class="nav-btn">&#8592; Purlin Calc</a>
+</header>
+
+<div class="app-wrap">
+<div class="two-col">
+
+<!-- ══ LEFT: CONFIG ══ -->
+<div class="col-left">
+
+  <!-- Upload -->
+  <div class="card">
+    <div class="card-title">1 &mdash; STAAD Output File</div>
+    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="ev.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div class="icon">&#128196;</div>
+      <div class="label">Click or drop STAAD output here</div>
+      <div class="hint2">.ANL / .OUT / .txt &mdash; any plain-text STAAD output</div>
+    </div>
+    <input type="file" id="file-input" accept=".anl,.out,.txt,.sta,.std" onchange="handleFileSelect(event)">
+    <div id="file-status" class="hint" style="margin-top:6px"></div>
+
+    <div style="margin-top:10px">
+      <div class="field">
+        <label>Or paste STAAD output text directly</label>
+        <textarea id="paste-area" rows="5" placeholder="Paste STAAD .ANL or output text here…"></textarea>
+      </div>
+      <button class="btn-sm" onclick="parsePastedText()">Parse pasted text</button>
+    </div>
+
+    <div id="parse-log" style="display:none">
+      <div style="font-size:11px;font-weight:600;color:#555;margin-top:10px;margin-bottom:4px">Parse log</div>
+      <div class="log-area" id="log-content"></div>
+    </div>
+  </div>
+
+  <!-- Load case selector -->
+  <div class="card" id="lc-card" style="display:none">
+    <div class="card-title">2 &mdash; Load Case</div>
+    <div class="field">
+      <label>Select load combination / case to analyse</label>
+      <select id="lc-select" onchange="onLcChange()"></select>
+    </div>
+    <div class="field">
+      <label>Displacement direction</label>
+      <select id="dir-select" onchange="onLcChange()">
+        <option value="y">Y (vertical, global)</option>
+        <option value="x">X (horizontal)</option>
+        <option value="z">Z (horizontal)</option>
+        <option value="resultant">Resultant (√X²+Y²+Z²)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Differential limit (mm) &mdash; highlight threshold</label>
+      <input type="number" id="diff-limit" value="10" step="0.5" min="0">
+    </div>
+    <p class="hint">Differential = |disp_start&minus;node &minus; disp_end&minus;node| for each member</p>
+  </div>
+
+  <!-- Member type grouping -->
+  <div class="card" id="types-card" style="display:none">
+    <div class="card-title">3 &mdash; Member Type Groups</div>
+    <p class="hint" style="margin-bottom:10px">Assign member number ranges to rafter types. Ranges: <code>1-50, 60, 75-80</code></p>
+    <div id="type-rows">
+      <!-- populated by JS -->
+    </div>
+    <button class="btn-sm" onclick="addTypeRow()" style="margin-top:8px">+ Add group</button>
+    <p class="hint" style="margin-top:6px">Members not in any group go to <em>Ungrouped</em></p>
+  </div>
+
+  <!-- Run -->
+  <div class="card" id="run-card" style="display:none">
+    <button class="btn-primary" onclick="runAnalysis()">&#9654; Compute Differential Deflection</button>
+  </div>
+
+</div>
+
+<!-- ══ RIGHT: RESULTS ══ -->
+<div class="col-right">
+
+  <div id="results-pane">
+    <div class="empty-state">
+      <div class="icon">&#128200;</div>
+      <p>Upload a STAAD output file and configure groups to see results.</p>
+    </div>
+  </div>
+
+</div>
+</div><!-- two-col -->
+</div><!-- app-wrap -->
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let parsedData = null; // { memberInc, jointDisp, loadCases, title }
+let typeColors = ['#185FA5','#A32D2D','#3B6D11','#854F0B','#5A1F8A','#1a6b5a','#8B6914'];
+
+// Default groups matching user's rafter categories
+const DEFAULT_TYPES = [
+  { name:'Rafter Simple Span — Front',  color:'#185FA5', range:'' },
+  { name:'Rafter Cantilever — South',   color:'#A32D2D', range:'' },
+  { name:'Rafter Simple — North',       color:'#3B6D11', range:'' },
+  { name:'Rafter Cantilever — North',   color:'#854F0B', range:'' },
+];
+
+// ── PARSE STAAD OUTPUT ────────────────────────────────────────────────────────
+function parseSTAAD(text) {
+  const lines = text.split('\n');
+  const log = [];
+  const memberInc = {};    // memberId -> [startJoint, endJoint]
+  const jointDisp = {};    // `joint_lc` -> {x,y,z}
+  const loadCases = {};    // lcId -> label string
+  let title = '';
+
+  // Extract title (first non-blank line after START)
+  for (let i = 0; i < Math.min(40, lines.length); i++) {
+    const t = lines[i].trim();
+    if (t && !t.startsWith('*') && !t.toUpperCase().startsWith('STAAD') &&
+        !t.toUpperCase().startsWith('START') && t.length > 3) {
+      title = t; break;
+    }
+    if (t.toUpperCase().startsWith('STAAD SPACE') || t.toUpperCase().startsWith('STAAD PLANE')) {
+      title = t; break;
+    }
+  }
+
+  // ── MEMBER INCIDENCES ──
+  let inMI = false;
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const up = raw.toUpperCase().trim();
+    if (up.startsWith('MEMBER INCIDENCE')) { inMI = true; continue; }
+    if (inMI) {
+      if (/^[A-Z]/i.test(raw.trim()) && !/^\s*\d/.test(raw)) { inMI = false; continue; }
+      // Match lines like:  15  206  207  or  15 TO 20  206  207 (STAAD doesn't repeat range this way in ANL echo)
+      const nums = raw.trim().match(/^(\d+)\s+(\d+)\s+(\d+)/);
+      if (nums) {
+        memberInc[+nums[1]] = [+nums[2], +nums[3]];
+      }
+    }
+  }
+  const miCount = Object.keys(memberInc).length;
+  log.push(miCount > 0
+    ? `<span class="ok">✓ Member incidences: ${miCount} members found</span>`
+    : `<span class="err">✗ No member incidences found. Ensure the STAAD input echo is in the file.</span>`);
+
+  // ── LOAD CASE TITLES ──
+  // Patterns: LOAD 1 LOADTYPE... or LOAD COMBINATION 33 "DL+RL+WL-Y"
+  for (const line of lines) {
+    let m = line.match(/^\s*LOAD\s+COMBINATION\s+(\d+)\s+(.*)/i);
+    if (m) { loadCases[+m[1]] = `LC ${m[1]}: ${m[2].replace(/['"]/g,'').trim()}`; continue; }
+    m = line.match(/^\s*LOAD\s+(\d+)\s+LOADTYPE\s+\S+\s+TITLE\s+(.*)/i);
+    if (m) { loadCases[+m[1]] = `LC ${m[1]}: ${m[2].trim()}`; continue; }
+    m = line.match(/^\s*LOAD\s+(\d+)\s+(.+)/i);
+    if (m && !loadCases[+m[1]]) {
+      const lbl = m[2].trim();
+      if (lbl && !/^(DEAD|LIVE|WIND|SEISMIC|NONE|TYPE)/i.test(lbl))
+        loadCases[+m[1]] = `LC ${m[1]}: ${lbl}`;
+      else
+        loadCases[+m[1]] = `LC ${m[1]}`;
+    }
+  }
+
+  // ── JOINT DISPLACEMENTS ──
+  // Section header pattern (various STAAD versions):
+  //   JOINT DISPLACEMENT (MM)    STRUCTURE TYPE = SPACE
+  //   JOINT  LOAD   X-TRANS   Y-TRANS   Z-TRANS  ...
+  let inJD = false;
+  let skipHeader = false;
+  let dispCount = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const up = raw.toUpperCase();
+
+    if (!inJD && up.includes('JOINT DISPLACEMENT')) {
+      inJD = true;
+      skipHeader = true; // skip the column header line
+      continue;
+    }
+    if (!inJD) continue;
+
+    // Skip dashes/blank lines and the column header
+    if (/^\s*[-=]+\s*$/.test(raw) || /^\s*$/.test(raw)) continue;
+    if (skipHeader && /JOINT\s+LOAD/i.test(raw)) { skipHeader = false; continue; }
+    if (skipHeader && /X-TRANS/i.test(raw)) { skipHeader = false; continue; }
+
+    // End of section: a new all-caps keyword section
+    if (/^[A-Z]{3,}/.test(raw.trim()) && !/^\s*\d/.test(raw)) {
+      inJD = false; continue;
+    }
+
+    // Data line: JOINT LOAD  X   Y   Z   RX  RY  RZ
+    //   206    33   -0.01234  -6.52000   0.00000  ...
+    const m = raw.trim().match(/^(\d+)\s+(\d+)\s+([-\d.Ee+]+)\s+([-\d.Ee+]+)\s+([-\d.Ee+]+)/);
+    if (m) {
+      const joint = +m[1], lc = +m[2];
+      const key = `${joint}_${lc}`;
+      jointDisp[key] = { x: +m[3], y: +m[4], z: +m[5] };
+      if (!loadCases[lc]) loadCases[lc] = `LC ${lc}`;
+      dispCount++;
+    }
+  }
+
+  log.push(dispCount > 0
+    ? `<span class="ok">✓ Joint displacements: ${dispCount} records across ${Object.keys(loadCases).length} load cases</span>`
+    : `<span class="err">✗ No joint displacements found. Check file contains PRINT JOINT DISP output.</span>`);
+
+  if (title) log.push(`<span class="warn">Model: ${title}</span>`);
+
+  return { memberInc, jointDisp, loadCases, log, title };
+}
+
+// ── FILE HANDLING ─────────────────────────────────────────────────────────────
+function handleDrop(ev) {
+  ev.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const f = ev.dataTransfer.files[0];
+  if (f) readFile(f);
+}
+function handleFileSelect(ev) {
+  const f = ev.target.files[0];
+  if (f) readFile(f);
+}
+function readFile(file) {
+  document.getElementById('file-status').textContent = `Reading: ${file.name} (${(file.size/1024).toFixed(1)} KB)…`;
+  const reader = new FileReader();
+  reader.onload = e => processText(e.target.result, file.name);
+  reader.readAsText(file);
+}
+function parsePastedText() {
+  const t = document.getElementById('paste-area').value.trim();
+  if (!t) { alert('Paste STAAD output text first.'); return; }
+  processText(t, 'pasted text');
+}
+function processText(text, sourceName) {
+  const d = parseSTAAD(text);
+  parsedData = d;
+
+  // Show log
+  document.getElementById('parse-log').style.display = 'block';
+  document.getElementById('log-content').innerHTML = d.log.join('\n');
+  document.getElementById('file-status').textContent = `Loaded: ${sourceName}`;
+
+  // Populate load case dropdown
+  const sel = document.getElementById('lc-select');
+  sel.innerHTML = '';
+  const lcs = Object.keys(d.loadCases).map(Number).sort((a,b)=>a-b);
+  lcs.forEach(lc => {
+    const o = document.createElement('option');
+    o.value = lc;
+    o.textContent = d.loadCases[lc];
+    // Auto-select if name contains WL or WIND (likely governing)
+    if (/wind|wl/i.test(d.loadCases[lc])) o.selected = true;
+    sel.appendChild(o);
+  });
+  if (lcs.length === 0) {
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = '— no load cases found —';
+    sel.appendChild(o);
+  }
+
+  document.getElementById('lc-card').style.display = 'block';
+  document.getElementById('types-card').style.display = 'block';
+  document.getElementById('run-card').style.display = 'block';
+}
+
+// ── TYPE ROWS UI ──────────────────────────────────────────────────────────────
+function initTypeRows() {
+  DEFAULT_TYPES.forEach((t, i) => addTypeRow(t.name, t.color, t.range));
+}
+
+function addTypeRow(name='New Group', color='', range='') {
+  const c = color || typeColors[document.querySelectorAll('.type-row').length % typeColors.length];
+  const container = document.getElementById('type-rows');
+  const div = document.createElement('div');
+  div.className = 'type-row';
+  div.innerHTML = `
+    <div class="type-swatch" style="background:${c}"></div>
+    <input type="color" value="${c}" style="width:24px;height:24px;border:none;background:none;cursor:pointer;padding:0"
+           onchange="this.previousElementSibling.style.background=this.value">
+    <input type="text" value="${name}" placeholder="Group name" style="flex:1;min-width:140px;max-width:180px;
+      padding:5px 8px;font-size:12px;border:0.5px solid #bbb;border-radius:6px;background:var(--bg)">
+    <input type="text" value="${range}" placeholder="e.g. 1-50, 60, 75-80"
+      style="flex:2;padding:5px 8px;font-size:12px;border:0.5px solid #bbb;border-radius:6px;background:var(--bg)">
+    <button class="btn-sm danger" onclick="this.closest('.type-row').remove()">✕</button>
+  `;
+  container.appendChild(div);
+}
+
+function getTypeGroups() {
+  const rows = document.querySelectorAll('.type-row');
+  const groups = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const colorPicker = inputs[0]; // color input
+    const nameInput = inputs[1];
+    const rangeInput = inputs[2];
+    const color = colorPicker.value;
+    const name = nameInput.value.trim() || 'Group';
+    const rangeStr = rangeInput.value.trim();
+    const members = parseRangeStr(rangeStr);
+    groups.push({ name, color, members, rangeStr });
+  });
+  return groups;
+}
+
+function parseRangeStr(s) {
+  // "1-50, 60, 75-80" → Set of member numbers
+  const result = new Set();
+  if (!s) return result;
+  s.split(/[,\s]+/).forEach(part => {
+    const m = part.match(/^(\d+)-(\d+)$/);
+    if (m) {
+      for (let i = +m[1]; i <= +m[2]; i++) result.add(i);
+    } else if (/^\d+$/.test(part)) {
+      result.add(+part);
+    }
+  });
+  return result;
+}
+
+// ── MAIN ANALYSIS ─────────────────────────────────────────────────────────────
+function onLcChange() { /* could auto-refresh */ }
+
+function runAnalysis() {
+  if (!parsedData) { alert('No data loaded. Upload a STAAD output file first.'); return; }
+
+  const lc = +document.getElementById('lc-select').value;
+  const dir = document.getElementById('dir-select').value;
+  const limit = +document.getElementById('diff-limit').value || 10;
+  const groups = getTypeGroups();
+
+  const { memberInc, jointDisp, loadCases } = parsedData;
+
+  // Build results per member
+  const memberResults = [];
+  let missing = 0;
+  for (const [midStr, [sj, ej]] of Object.entries(memberInc)) {
+    const mid = +midStr;
+    const sk = `${sj}_${lc}`;
+    const ek = `${ej}_${lc}`;
+    const sd = jointDisp[sk];
+    const ed = jointDisp[ek];
+    if (!sd || !ed) { missing++; continue; }
+
+    let dispS, dispE;
+    if (dir === 'y')         { dispS = sd.y; dispE = ed.y; }
+    else if (dir === 'x')    { dispS = sd.x; dispE = ed.x; }
+    else if (dir === 'z')    { dispS = sd.z; dispE = ed.z; }
+    else /* resultant */     {
+      dispS = Math.sqrt(sd.x**2 + sd.y**2 + sd.z**2);
+      dispE = Math.sqrt(ed.x**2 + ed.y**2 + ed.z**2);
+    }
+
+    const diff = Math.abs(dispS - dispE);
+    memberResults.push({ mid, sj, ej, dispS, dispE, diff });
+  }
+
+  // Sort by member number
+  memberResults.sort((a,b) => a.mid - b.mid);
+
+  // Assign to groups
+  const assignedMids = new Set();
+  const groupResults = groups.map(g => {
+    const rows = memberResults.filter(r => g.members.has(r.mid));
+    rows.forEach(r => assignedMids.add(r.mid));
+    return { ...g, rows };
+  });
+
+  // Ungrouped
+  const ungrouped = memberResults.filter(r => !assignedMids.has(r.mid));
+  if (ungrouped.length > 0) {
+    groupResults.push({ name:'Ungrouped', color:'#aaa', members: new Set(), rows: ungrouped });
+  }
+
+  // Compute overall stats
+  const allDiffs = memberResults.map(r => r.diff);
+  const maxDiff = allDiffs.length ? Math.max(...allDiffs) : 0;
+  const avgDiff = allDiffs.length ? allDiffs.reduce((a,b)=>a+b,0)/allDiffs.length : 0;
+  const exceedCount = allDiffs.filter(d => d > limit).length;
+
+  // Render
+  renderResults({
+    groupResults, memberResults, lc, dir, limit, missing,
+    lcLabel: loadCases[lc] || `LC ${lc}`,
+    maxDiff, avgDiff, exceedCount
+  });
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────────
+function renderResults(ctx) {
+  const { groupResults, memberResults, lc, dir, limit, missing, lcLabel,
+          maxDiff, avgDiff, exceedCount } = ctx;
+
+  const maxBar = maxDiff > 0 ? maxDiff : 1;
+
+  let html = `
+    <div class="export-row">
+      <span class="info">Load case: <strong>${lcLabel}</strong> &nbsp;|&nbsp; Dir: <strong>${dir.toUpperCase()}</strong>
+        &nbsp;|&nbsp; ${memberResults.length} members &nbsp;|&nbsp; Limit: <strong>${limit} mm</strong>
+        ${missing ? `&nbsp;|&nbsp; <span style="color:var(--warn-fg)">${missing} members skipped (no disp data)</span>` : ''}
+      </span>
+      <button class="btn-sm" onclick="exportCSV()">&#8659; CSV</button>
+      <button class="btn-sm" onclick="window.print()">&#128424; Print</button>
+    </div>
+
+    <div class="summary-grid">
+      <div class="metric"><div class="lbl">Total Members</div><div class="val">${memberResults.length}</div></div>
+      <div class="metric"><div class="lbl">Max &Delta;&delta;</div><div class="val" style="color:${maxDiff>limit?'var(--fail-fg)':'#1a1a1a'}">${maxDiff.toFixed(3)} mm</div></div>
+      <div class="metric"><div class="lbl">Avg &Delta;&delta;</div><div class="val">${avgDiff.toFixed(3)} mm</div></div>
+      <div class="metric"><div class="lbl">Exceed ${limit}mm</div>
+        <div class="val" style="color:${exceedCount>0?'var(--fail-fg)':'var(--pass-fg)'}">${exceedCount}</div>
+      </div>
+    </div>
+  `;
+
+  // Per group
+  for (const g of groupResults) {
+    if (g.rows.length === 0) {
+      html += `<div class="group-title"><div class="swatch" style="background:${g.color}"></div>${g.name}
+        <span style="font-size:11px;color:#aaa;font-weight:400">(no members)</span></div>`;
+      continue;
+    }
+
+    const gMax = Math.max(...g.rows.map(r => r.diff));
+    const gMaxClass = gMax > limit ? 'high' : (gMax > limit*0.7 ? '' : 'ok');
+
+    html += `
+      <div class="group-title">
+        <div class="swatch" style="background:${g.color}"></div>
+        ${g.name}
+        <span class="group-max ${gMaxClass}">MAX &Delta;&delta; = ${gMax.toFixed(3)} mm</span>
+      </div>
+      <div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:10px;margin-bottom:4px">
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Start Node</th>
+            <th>End Node</th>
+            <th>Disp Start (mm)</th>
+            <th>Disp End (mm)</th>
+            <th>&Delta;&delta; (mm)</th>
+            <th>vs Limit</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    const maxRow = g.rows.reduce((a,b) => a.diff >= b.diff ? a : b);
+
+    g.rows.forEach(r => {
+      const isMax = r === maxRow;
+      const pct = Math.min(100, (r.diff / maxBar) * 100);
+      const barClass = r.diff > limit ? 'high' : (r.diff > limit*0.7 ? 'warn' : '');
+      const exceed = r.diff > limit;
+      const status = exceed
+        ? `<span style="color:var(--fail-fg);font-weight:700">FAIL</span>`
+        : `<span style="color:var(--pass-fg)">OK</span>`;
+
+      html += `
+        <tr class="${isMax ? 'is-max' : ''}">
+          <td><strong>${r.mid}</strong>${isMax ? '<span class="badge-max">MAX</span>' : ''}
+              ${exceed ? '<span class="badge-high">!</span>' : ''}</td>
+          <td>${r.sj}</td>
+          <td>${r.ej}</td>
+          <td style="font-family:monospace">${r.dispS.toFixed(3)}</td>
+          <td style="font-family:monospace">${r.dispE.toFixed(3)}</td>
+          <td style="font-family:monospace;font-weight:600">
+            ${r.diff.toFixed(3)}
+            <span class="diff-bar-wrap"><span class="diff-bar ${barClass}" style="width:${pct.toFixed(0)}%"></span></span>
+          </td>
+          <td>${status}</td>
+        </tr>
+      `;
+    });
+
+    html += `</tbody></table></div>`;
+  }
+
+  document.getElementById('results-pane').innerHTML = html;
+
+  // Store for CSV export
+  window._lastResults = { groupResults, lcLabel, dir, limit };
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!window._lastResults) return;
+  const { groupResults, lcLabel, dir, limit } = window._lastResults;
+  let csv = `Differential Deflection Report\nLoad Case:,${lcLabel}\nDirection:,${dir.toUpperCase()}\nLimit:,${limit} mm\n\n`;
+  csv += 'Group,Member,Start Node,End Node,Disp Start (mm),Disp End (mm),Delta-defl (mm),Status\n';
+
+  for (const g of groupResults) {
+    g.rows.forEach(r => {
+      const status = r.diff > limit ? 'FAIL' : 'OK';
+      csv += `"${g.name}",${r.mid},${r.sj},${r.ej},${r.dispS.toFixed(4)},${r.dispE.toFixed(4)},${r.diff.toFixed(4)},${status}\n`;
+    });
+  }
+
+  const blob = new Blob([csv], { type:'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `diff_defl_${lcLabel.replace(/[^a-z0-9]/gi,'_')}.csv`;
+  a.click();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+initTypeRows();
+
+// drag handlers for drop zone
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', handleDrop);
+</script>
+</body>
+</html>
