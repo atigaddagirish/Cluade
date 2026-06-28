@@ -107,8 +107,9 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
 .stitle .cl{background:var(--blue-bg);color:var(--blue-fg);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600;letter-spacing:0;text-transform:none}
 .check-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #f0ede8;flex-wrap:wrap}
 .check-row:last-child{border-bottom:none}
-.cn{flex:0 0 200px;font-size:12px;color:#555}
+.cn{flex:0 0 240px;font-size:12px;color:#555}
 .cn small{display:block;font-size:10px;color:#aaa;margin-top:1px}
+.cf{display:block;font-size:10px;color:#7a8aa0;font-family:ui-monospace,Menlo,Consolas,monospace;margin-top:2px;line-height:1.3}
 .bw{flex:1;min-width:50px;height:8px;background:#ebe8e2;border-radius:20px;overflow:hidden}
 .bf{height:100%;border-radius:20px;transition:width .3s}
 .uv{flex:0 0 44px;font-size:13px;font-weight:600;text-align:right}
@@ -850,12 +851,13 @@ function importCatalog(input){
 function sc(u){return u>=1?'fail':u>=0.9?'warn':'pass';}
 function sl(u){return u>=1?'FAIL':u>=0.9?'MARGINAL':'PASS';}
 function bc(u){return u>=1?'#E24B4A':u>=0.9?'#EF9F27':'#639922';}
-function row(name,ur,ref,note){
-  if(isNaN(ur)) return `<div class="check-row"><div class="cn">${name}${note?`<br><small>${note}</small>`:''}</div>
+function row(name,ur,ref,note,formula){
+  const fm=formula?`<div class="cf">${formula}</div>`:'';
+  if(isNaN(ur)) return `<div class="check-row"><div class="cn">${name}${fm}${note?`<br><small>${note}</small>`:''}</div>
     <div class="bw"></div><div class="uv" style="color:#aaa">&mdash;</div>
     <div class="st warn">INPUT</div><div class="rf">${ref}</div></div>`;
   const b=Math.min(ur*100,100).toFixed(1);
-  return `<div class="check-row"><div class="cn">${name}${note?`<br><small>${note}</small>`:''}</div>
+  return `<div class="check-row"><div class="cn">${name}${fm}${note?`<br><small>${note}</small>`:''}</div>
     <div class="bw"><div class="bf" style="width:${b}%;background:${bc(ur)}"></div></div>
     <div class="uv" style="color:${bc(ur)}">${(ur*100).toFixed(0)}%</div>
     <div class="st ${sc(ur)}">${sl(ur)}</div><div class="rf">${ref}</div></div>`;
@@ -1294,20 +1296,20 @@ function calculate(){
   // ── CHECK ROWS ──
   const fx=(x,n)=>isNaN(x)?'—':x.toFixed(n);
   document.getElementById('ck-wt').innerHTML=
-    row('Foot (stiffened, k=4)',UR.wt_foot,'IS 801 Cl.5.2',`w/t=${(g.F/t).toFixed(1)}, λ=${ew_foot.lam.toFixed(3)}, ρ=${ew_foot.r.toFixed(3)}`)+
-    row('Lip (unstiffened, k=0.43)',UR.wt_lip,'IS 801 Cl.5.2',`w/t=${(g.Lp/t).toFixed(1)}, λ=${ew_lip.lam.toFixed(3)}, ρ=${ew_lip.r.toFixed(3)}`)+
-    row('Web (gradient, k=24)',UR.wt_web,'IS 801 Cl.5.2',`w/t=${(wslant/t).toFixed(1)}, λ=${ew_web.lam.toFixed(3)}, ρ=${ew_web.r.toFixed(3)}`);
+    row('Foot (stiffened, k=4)',UR.wt_foot,'IS 801 Cl.5.2',`w/t=${(g.F/t).toFixed(1)}, λ=${ew_foot.lam.toFixed(3)}, ρ=${ew_foot.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ')+
+    row('Lip (unstiffened, k=0.43)',UR.wt_lip,'IS 801 Cl.5.2',`w/t=${(g.Lp/t).toFixed(1)}, λ=${ew_lip.lam.toFixed(3)}, ρ=${ew_lip.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ')+
+    row('Web (gradient, k=24)',UR.wt_web,'IS 801 Cl.5.2',`w/t=${(wslant/t).toFixed(1)}, λ=${ew_web.lam.toFixed(3)}, ρ=${ew_web.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ');
 
   document.getElementById('ck-lip').innerHTML=
-    row('Lip provides min stiffener I',UR.lip,'IS 801 Cl.5.2.2.1',`Is=${Is.toFixed(1)} mm⁴ vs Imin=${Imin.toFixed(1)} mm⁴`);
+    row('Lip provides min stiffener I',UR.lip,'IS 801 Cl.5.2.2.1',`Is=${Is.toFixed(1)} mm⁴ vs Imin=${Imin.toFixed(1)} mm⁴`,'Is=Lp³·t·sin²β/12; Imin=max(1.83t⁴√((w/t)²−4000/Fy), 9.2t⁴); UR=Imin/Is');
 
   document.getElementById('ck-flex').innerHTML=
-    row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`)+
-    row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)} MPa`)+
-    (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.1',axialNote):'');
+    row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`,'UR=f_bz/Fbz + f_by/Fby;  f=M/Z,  Fb=0.6Fy (+⅓ for wind)')+
+    row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)} MPa`,'f_top=M_grav/Ztop;  UR=f_top/Fb,  Fb=0.6Fy')+
+    (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.1',axialNote,'fa/Fa + fbz/Fbz + fby/Fby ≤ 1'):'');
 
   document.getElementById('ck-ltb').innerHTML=
-    row('LTB — uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.2',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+⅓)=${Fb_ltb_wl.toFixed(0)} MPa`);
+    row('LTB — uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.2',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+⅓)=${Fb_ltb_wl.toFixed(0)} MPa`,'Fe=Cb·π²E/(Lb/rycf)²;  Fb per Cl.6.2 transition;  UR=f/Fb_LTB');
 
   // Web crippling: N/A under uplift (bolted feet carry reaction, not web bearing)
   const webcripRow = loadMode==='udl' && +v('w_up')>0
@@ -1316,12 +1318,12 @@ function calculate(){
        <div class="st warn">N/A</div><div class="rf">IS 801 Cl.8.1</div></div>`
     : row('Web crippling EOF',UR.web,'IS 801 Cl.8.1',`R=${Preact.toFixed(3)} kN, Pc=${Pwa.toFixed(3)} kN`);
   document.getElementById('ck-shear').innerHTML=
-    row('Shear (2 webs)',UR.shear,'IS 801 Cl.7',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`)+
+    row('Shear (2 webs)',UR.shear,'IS 801 Cl.7',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`,'Fv per web slenderness h/t;  Vc=2·Fv·H·t;  UR=V/Vc')+
     webcripRow+
-    (hasTor?row('Torsion (St-Venant)',UR.tor,'IS 801 Cl.6.6',torNote):'');
+    (hasTor?row('Torsion (St-Venant)',UR.tor,'IS 801 Cl.6.6',torNote,'τ=Mx·t/J,  J=Σ(L·t³)/3'):'');
 
   document.getElementById('ck-defl').innerHTML=
-    row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`);
+    row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`,'δ=5wL⁴/384EI;  allow=L/'+defDiv+';  UR=δ/allow');
 
   // ── FIX BOX ──
   const I_req=p.Ixx*UR.defl;
