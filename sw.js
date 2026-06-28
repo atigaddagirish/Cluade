@@ -1,6 +1,6 @@
 // Service worker — offline cache for the HAT IS 801 calculator.
 // Bump CACHE version whenever index.html or assets change to force an update.
-const CACHE = 'hat-is801-v2';
+const CACHE = 'hat-is801-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -10,6 +10,10 @@ const ASSETS = [
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('message', e => {
+  if(e.data && e.data.type==='SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
