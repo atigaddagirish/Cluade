@@ -660,7 +660,9 @@ function clearLog(){
 }
 
 function exportCSV(){
-  if(!sessionLog.length){alert('No entries to export.');return;}
+  // If nothing logged yet but a result exists, log the current run automatically.
+  if(!sessionLog.length && lastResult) addToLog();
+  if(!sessionLog.length){alert('No entries to export — run Calculate first.');return;}
   const pct=x=>isNaN(x)?'':(x*100).toFixed(0);
   const rows=['#,Section,Project,Time,Mz_up(kNm),Bending%,Shear%,LTB%,Defl%,Overall'];
   for(const e of sessionLog)
@@ -1422,6 +1424,7 @@ seedDefaults();
 refreshSectionDropdown();
 refreshProjectDropdown();
 drawDiagram();
+calculate();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
