@@ -1107,20 +1107,25 @@ Fb         = ${V.Fb.toFixed(0)} MPa`,
         = (10×${V.Fy}/9) × [1 − ${V.Fy}/(5.04×${V.Fe.toFixed(0)})]
         = ${V.Fb_ltb.toFixed(1)} MPa`:
 `Fb_LTB = Fe / 1.67 = ${V.Fe.toFixed(0)} / 1.67 = ${V.Fb_ltb.toFixed(1)} MPa`;
-  html+=drow('Lateral-Torsional Buckling (compression-flange method)','IS 801 Cl.6.3',
-`Compression flange under uplift = bottom feet + lips (segs 0,1,5,6)
+  html+=drow('Lateral-Torsional Buckling (two methods, governing taken)','IS 801 Cl.6.3',
+`METHOD (a) — compression-flange column analogy:
+Compression flange under uplift = bottom feet + lips (segs 0,1,5,6)
 r_ycf = √(Iycf / Acf) = ${V.rycf.toFixed(2)} mm   [about x=0 axis]
-
 Fe = Cb · π² · E / (Lb / r_ycf)²
    = ${V.Cb} × π² × 200000 / (${V.Lb} / ${V.rycf.toFixed(2)})²
    = ${V.Fe.toFixed(1)} MPa
-
 ${ltbRegime}
-2.78Fy = ${(2.78*V.Fy).toFixed(0)} MPa | 0.56Fy = ${(0.56*V.Fy).toFixed(0)} MPa
+${ltbFormula}   → Fb(a) = ${V.Fb_cf.toFixed(1)} MPa
 
-${ltbFormula}
+METHOD (b) — literal Cl.6.3 (L²Sxc/d·Iyc form):
+Sxc = Zxc (compression) = ${V.Zbot.toFixed(0)} mm³;  Iyc (comp. portion about gravity axis) = ${V.Iycf.toFixed(0)} mm⁴;  d = ${V.H} mm
+X = L²·Sxc / (d·Iyc) = ${V.Lb}² × ${V.Zbot.toFixed(0)} / (${V.H} × ${V.Iycf.toFixed(0)}) = ${V.Xltb.toFixed(0)}
+B = 0.36π²ECb/Fy = ${V.ltbB.toFixed(0)} | C = 1.8π²ECb/Fy = ${V.ltbC.toFixed(0)}
+${V.Xltb<=V.ltbB?'X ≤ B → Fb = 0.6·Fy':V.Xltb<V.ltbC?'B < X < C → Fb = ⅔Fy − [Fy²/(5.4π²ECb)]·X':'X ≥ C → Fb = 0.6π²ECb / X'}
+→ Fb(b) = ${V.Fb63.toFixed(1)} MPa   [capped at 0.6Fy]
 
-Fb_LTB(+⅓) = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`,
+Governing: Fb_LTB = min(a, b) = ${V.Fb_ltb.toFixed(1)} MPa${V.windPlus?`
+Fb_LTB(+⅓) = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`:''}`,
     [
       ['Lb (unbraced length)',`${V.Lb} mm`],
       ['Cb (moment gradient)',`${V.Cb}`],
@@ -1131,8 +1136,15 @@ Fb_LTB(+⅓) = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`,
       ['2.78·Fy',`${(2.78*V.Fy).toFixed(0)} MPa`],
       ['0.56·Fy',`${(0.56*V.Fy).toFixed(0)} MPa`],
       ['Fe (elastic LTB stress)',`${V.Fe.toFixed(1)} MPa`],
-      ['Regime',ltbRegime.split('→')[1].trim()],
-      ['Fb_LTB',`${V.Fb_ltb.toFixed(1)} MPa`],
+      ['Regime (method a)',ltbRegime.split('→')[1].trim()],
+      ['Fb(a) — comp. flange',`${V.Fb_cf.toFixed(1)} MPa`],
+      ['Sxc = Zxc',`${V.Zbot.toFixed(0)} mm³`],
+      ['Iyc (comp. portion)',`${V.Iycf.toFixed(0)} mm⁴`],
+      ['X = L²Sxc/(d·Iyc)',`${V.Xltb.toFixed(0)}`],
+      ['B = 0.36π²ECb/Fy',`${V.ltbB.toFixed(0)}`],
+      ['C = 1.8π²ECb/Fy',`${V.ltbC.toFixed(0)}`],
+      ['Fb(b) — literal Cl.6.3',`${V.Fb63.toFixed(1)} MPa`],
+      ['Fb_LTB = min(a,b)',`${V.Fb_ltb.toFixed(1)} MPa`],
       ['Fb_LTB × 4/3 (wind)',`${V.Fb_ltb_wl.toFixed(1)} MPa`],
       ['f_comp_up (demand)',`${V.f_comp_up.toFixed(1)} MPa`],
     ],
@@ -1170,6 +1182,34 @@ Vcap = 2 × Fv × H_vert × t          [vertical projection]
     ],
     `UR = V / Vcap = ${V.Vkn.toFixed(3)} / ${V.Vcap.toFixed(3)} = ${pct(V.UR.shear)}`,
     V.UR.shear);
+
+  // ── Cl.6.5 Web crippling (literal MKS) ──
+  html+=drow('Web crippling — gravity bearing at supports','IS 801 Cl.6.5',
+`MKS form (t in cm, Fy in kgf/cm²), single unreinforced webs, ×2 webs:
+k = Fy/2320 = ${V.kcr.toFixed(3)};  stress term = k(1.33−0.33k) = ${V.stress_cr.toFixed(3)}
+
+End reaction:
+P_end = 70·t²·[98 + 4.2(N/t) − 0.022(N/t)(h/t) − 0.011(h/t)] · k(1.33−0.33k) × r-factor
+      → ${V.Pend_kN.toFixed(3)} kN (2 webs, r-factor ${V.rfac_end.toFixed(3)})
+
+Interior support:
+P_int = 70·t²·[305 + 2.3(N/t) − 0.009(N/t)(h/t) − 0.5(h/t)] · k(1.33−0.33k) × r-factor
+      → ${V.Pint_kN.toFixed(3)} kN (2 webs, r-factor ${V.rfac_int.toFixed(3)})
+
+Reactions from GRAVITY load (uplift reaction goes to the foot bolts, not web bearing):
+R_end = ${V.Rend_kN.toFixed(3)} kN${V.Rint_kN>0?`;  R_int = ${V.Rint_kN.toFixed(3)} kN`:''}`,
+    [
+      ['Bearing length N',`${V.Ncrip} mm`],
+      ['Inner bend radius r',`${V.Rcrip} mm (r/t=${(V.Rcrip/V.t).toFixed(2)})`],
+      ['h/t (web slant)',`${V.wt_web.toFixed(1)}`],
+      ['k = Fy/2320 (kgf/cm²)',`${V.kcr.toFixed(3)}`],
+      ['P_end allowable',`${V.Pend_kN.toFixed(3)} kN`],
+      ['P_int allowable',`${V.Pint_kN.toFixed(3)} kN`],
+      ['R_end (gravity)',`${V.Rend_kN.toFixed(3)} kN`],
+      ['R_int (gravity)',V.Rint_kN>0?`${V.Rint_kN.toFixed(3)} kN`:'— (simply supported)'],
+    ],
+    `UR = max(R_end/P_end, R_int/P_int) = ${pct(V.UR.web)}`,
+    V.UR.web);
 
   // ── Deflection ──
   const deflFormula=V.staadDef?
@@ -1274,20 +1314,49 @@ function calculate(){
     torNote=`τ=${tau.toFixed(0)} MPa vs 0.4Fy=${(0.4*Fy).toFixed(0)} — open section; restrain against torsion`;
   }
 
+  const spans=v('spans')||'ss';
+
+  // ── LTB — two methods, governing (lower) allowable taken ──
+  // (a) Compression-flange column analogy
   const Fe=Cb*Math.PI**2*E/((Lb/p.rycf)**2);
-  const Fb_ltb=Math.min(Fb, fbLTB(Fe,Fy));
-  const Fb_ltb_wl=Fb_ltb*4/3;
+  const Fb_cf=Math.min(Fb, fbLTB(Fe,Fy));
+  // (b) Literal IS 801 Cl.6.3: X = L²·Sxc/(d·Iyc), Iyc = compression portion about
+  //     the gravity axis parallel to web (feet+lips under uplift), Sxc = comp. modulus
+  const Sxc=p.Zbot, Iyc=p.Iycf, dH=g.H;
+  const Xltb=Lb*Lb*Sxc/(dH*Iyc);
+  const ltbB=0.36*Math.PI**2*E*Cb/Fy, ltbC=1.8*Math.PI**2*E*Cb/Fy;
+  let Fb63;
+  if(Xltb<=ltbB) Fb63=0.6*Fy;
+  else if(Xltb<ltbC) Fb63=(2/3)*Fy-(Fy*Fy/(5.4*Math.PI**2*E*Cb))*Xltb;
+  else Fb63=0.6*Math.PI**2*E*Cb/Xltb;
+  Fb63=Math.min(Fb63,0.6*Fy);
+  const Fb_ltb=Math.min(Fb_cf,Fb63);
+  const Fb_ltb_wl=windPlus?Fb_ltb*4/3:Fb_ltb;
   const UR_ltb=f_comp_up/Fb_ltb_wl;
 
   const wt_web=wslant/t, l1=2.89*Math.sqrt(E/Fy), l2=5.34*Math.sqrt(E/Fy);
   const Fv=wt_web<=l1?0.4*Fy:wt_web<=l2?0.664*Math.sqrt(Fy*E)/wt_web:0.905*E/wt_web**2;
   const Vcap=2*Fv*g.H*t/1000;
 
-  const R=2;
+  // ── Web crippling — literal IS 801 Cl.6.5, MKS form (t in cm, Fy in kgf/cm²) ──
+  // End reaction (cantilever/EOF): P = 70·t²·(98+4.2(N/t)−0.022(N/t)(h/t)−0.011(h/t))·k(1.33−0.33k)
+  // Interior reaction:             P = 70·t²·(305+2.3(N/t)−0.009(N/t)(h/t)−0.5(h/t))·k(1.33−0.33k)
+  // r/t correction: end ×(1.15−0.15r/t), interior ×(1.06−0.06r/t) when r>t. Per web; ×2 webs.
+  const R=2; // inner bend radius, mm
+  const t_cm=t/10, Fy_kgf=Fy/0.0980665, kcr=Fy_kgf/2320;
+  const N_t=N/t, h_t=wt_web;
+  const stress_cr=kcr*(1.33-0.33*kcr);
+  const rfac_end=R<=t?1:(1.15-0.15*R/t), rfac_int=R<=t?1:(1.06-0.06*R/t);
+  const Pend_kN=Math.max(0,70*t_cm**2*(98+4.2*N_t-0.022*N_t*h_t-0.011*h_t)*stress_cr*rfac_end)*2*9.80665/1000;
+  const Pint_kN=Math.max(0,70*t_cm**2*(305+2.3*N_t-0.009*N_t*h_t-0.5*h_t)*stress_cr*rfac_int)*2*9.80665/1000;
+  // Support reactions (gravity/downward bearing) by support condition:
   const w_net_val=loadMode==='udl'?+v('w_up'):0;
-  const Pw=t**2*Fy*1.01*(1-0.325*Math.sqrt(R/t))*(1+0.083*Math.sqrt(N/t))*(1-0.068*Math.sqrt(Math.min(wt_web,200)));
-  const Pwa=2*Pw/1000;
-  const Preact=w_net_val>0?w_net_val*L/2/1000:0;
+  const w_grav_val=loadMode==='udl'?+v('w_grav'):0;
+  const wL=w_grav_val*L/1000; // kN total per span
+  const Rend_kN=spans==='c2'?0.375*wL:spans==='c3'?0.4*wL:0.5*wL;
+  const Rint_kN=spans==='c2'?1.25*wL:spans==='c3'?1.1*wL:0;
+  const UR_web=Math.max(Pend_kN>0?Rend_kN/Pend_kN:0, Pint_kN>0&&Rint_kN>0?Rint_kN/Pint_kN:0);
+  const Pwa=Pend_kN, Preact=Rend_kN;
 
   let d_s=NaN,d_w=NaN,d_t;
   const d_a=L/defDiv;
@@ -1295,7 +1364,6 @@ function calculate(){
   //   simply supported: 5/384 = 0.013021 (max at midspan)
   //   2-span continuous: 0.00542 ≈ wL⁴/185EI (each span ≙ propped cantilever)
   //   3+ span continuous: 0.0069 (end span governs; interior spans deflect less)
-  const spans=v('spans')||'ss';
   const kd=spans==='c2'?0.00542:spans==='c3'?0.0069:5/384;
   const kdLabel=spans==='c2'?'0.00542 (2-span cont. ≈ wL⁴/185EI)':spans==='c3'?'0.0069 (3+ span cont., end span)':'5/384 (simply supported)';
   if(loadMode==='udl'){
@@ -1308,7 +1376,7 @@ function calculate(){
   const UR={
     wt_foot:ew_foot.lam/0.673, wt_lip:ew_lip.lam/0.673, wt_web:ew_web.lam/0.673,
     lip:Imin/Is, biaxial:r_s+r_w, grav:f_top_grav/Fb, axial:UR_axial, tor:UR_tor,
-    ltb:UR_ltb, shear:V/Vcap, web:Preact>0?Preact/Pwa:0, defl:d_t/d_a
+    ltb:UR_ltb, shear:V/Vcap, web:UR_web, defl:d_t/d_a
   };
 
   // ── VERDICT ──
@@ -1356,9 +1424,11 @@ function calculate(){
     '⚠ An element exceeds λ=0.673 — bending UR uses GROSS Z; full effective-section iteration required.')+
     ` Uplift fibres: comp(foot)=${f_comp_up.toFixed(0)} MPa, tens(top)=${f_top_up.toFixed(0)} MPa → governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb(+⅓)=${Fb_wl.toFixed(0)} MPa`;
   document.getElementById('ltb-note').innerHTML=
-    `<strong>LTB (Cl.6.3, compression-flange method):</strong> r_y(feet+lips)=${p.rycf.toFixed(1)} mm, Lb/r_y=${(Lb/p.rycf).toFixed(0)} → Fe=${Fe.toFixed(0)} MPa (2.78Fy=${(2.78*Fy).toFixed(0)} MPa). `+
-    `Fb_LTB=${Fb_ltb.toFixed(0)}×⁴⁄₃=${Fb_ltb_wl.toFixed(0)} MPa. `+
-    `<strong>${Fb_ltb>=Fb?'LTB does NOT govern ✓ (wide outward feet → large r_y)':'LTB REDUCES capacity'}</strong>`;
+    `<strong>LTB (Cl.6.3, two methods — governing taken):</strong><br>`+
+    `(a) Compression-flange: r_y(feet+lips)=${p.rycf.toFixed(1)} mm, Lb/r_y=${(Lb/p.rycf).toFixed(0)} → Fe=${Fe.toFixed(0)} MPa → Fb=${Fb_cf.toFixed(0)} MPa.<br>`+
+    `(b) Literal Cl.6.3: X=L²Sxc/(d·Iyc)=${Xltb.toFixed(0)} vs B=0.36π²ECb/Fy=${ltbB.toFixed(0)}, C=1.8π²ECb/Fy=${ltbC.toFixed(0)} → Fb=${Fb63.toFixed(0)} MPa.<br>`+
+    `Governing Fb_LTB=min(a,b)=${Fb_ltb.toFixed(0)}${windPlus?'×⁴⁄₃='+Fb_ltb_wl.toFixed(0):''} MPa. `+
+    `<strong>${Fb_ltb>=Fb?'LTB does NOT govern ✓':'LTB REDUCES capacity'}</strong>`;
 
   // ── CHECK ROWS ──
   const fx=(x,n)=>isNaN(x)?'—':x.toFixed(n);
@@ -1376,14 +1446,18 @@ function calculate(){
     (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.2',axialNote,'fa/Fa + fbz/Fbz + fby/Fby ≤ 1'):'');
 
   document.getElementById('ck-ltb').innerHTML=
-    row('LTB — uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.3',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+⅓)=${Fb_ltb_wl.toFixed(0)} MPa`,'Fe=Cb·π²E/(Lb/rycf)²;  Fb per Cl.6.3 transition;  UR=f/Fb_LTB');
+    row('LTB — uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.3',`Fb(a)=${Fb_cf.toFixed(0)}, Fb(b)=${Fb63.toFixed(0)} → min${windPlus?'×⁴⁄₃':''}=${Fb_ltb_wl.toFixed(0)} MPa`,'(a) Fe=Cbπ²E/(Lb/rycf)²;  (b) X=L²Sxc/(d·Iyc), Fb=⅔Fy−Fy²X/(5.4π²ECb);  UR=f/min(Fb)');
 
-  // Web crippling: N/A under uplift (bolted feet carry reaction, not web bearing)
-  const webcripRow = loadMode==='udl' && +v('w_up')>0
-    ? `<div class="check-row"><div class="cn">Web crippling EOF<br><small>N/A under uplift — bolted feet carry reaction, not web bearing. Check connection for ${(+v('w_up')*L/2/1000).toFixed(2)} kN uplift.</small></div>
+  // Web crippling (literal Cl.6.5 MKS): gravity bearing at supports. Uplift reaction
+  // goes to the foot bolts (connection check), not web bearing.
+  const upliftNote = loadMode==='udl' && +v('w_up')>0
+    ? `<div class="check-row"><div class="cn">Uplift reaction → connection<br><small>Uplift does not bear on webs — bolted feet carry it. Check bolts/purlin-clamp for ${(+v('w_up')*L/2/1000).toFixed(2)} kN pull-out per support.</small></div>
        <div class="bw"></div><div class="uv" style="color:#aaa">N/A</div>
-       <div class="st warn">N/A</div><div class="rf">IS 801 Cl.6.5</div></div>`
-    : row('Web crippling EOF',UR.web,'IS 801 Cl.6.5',`R=${Preact.toFixed(3)} kN, Pc=${Pwa.toFixed(3)} kN`);
+       <div class="st warn">INFO</div><div class="rf">connection design</div></div>`:'';
+  const webcripRow =
+    row('Web crippling — end reaction',Pend_kN>0?Rend_kN/Pend_kN:NaN,'IS 801 Cl.6.5',`R_end=${Rend_kN.toFixed(3)} kN vs P=${Pend_kN.toFixed(3)} kN (gravity)`,'P=70t²(98+4.2N/t−0.022(N/t)(h/t)−0.011h/t)·k(1.33−0.33k), k=Fy/2320 kgf/cm²')+
+    (Rint_kN>0?row('Web crippling — interior support',Pint_kN>0?Rint_kN/Pint_kN:NaN,'IS 801 Cl.6.5',`R_int=${Rint_kN.toFixed(3)} kN vs P=${Pint_kN.toFixed(3)} kN (gravity)`,'P=70t²(305+2.3N/t−0.009(N/t)(h/t)−0.5h/t)·k(1.33−0.33k)'):'')+
+    upliftNote;
   document.getElementById('ck-shear').innerHTML=
     row('Shear (2 webs)',UR.shear,'IS 801 Cl.6.4.1',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`,'Fv per web slenderness h/t;  Vc=2·Fv·H·t;  UR=V/Vc')+
     webcripRow+
@@ -1401,7 +1475,7 @@ function calculate(){
   if(UR.grav>=1)fixes.push({tag:'Gravity bend',text:`Increase Ztop: raise H or t.`});
   if(UR.ltb>=1)fixes.push({tag:'LTB',text:`Reduce Lb (add mid-span brace) or increase foot/lip (raises rycf).`});
   if(UR.shear>=1)fixes.push({tag:'Shear',text:`Increase t or H; or reduce span.`});
-  if(UR.web>=1 && !(loadMode==='udl' && +v('w_up')>0))fixes.push({tag:'Web crippling',text:`For bearing cases: increase N or add stiffener at support.`});
+  if(UR.web>=1)fixes.push({tag:'Web crippling',text:`Increase bearing length N, thickness t, or add a support stiffener/cleat.`});
   if(UR.defl>=1)fixes.push({tag:'Deflection',text:`Need Ixx ×${UR.defl.toFixed(2)} (≥ <em>${(I_req/1000).toFixed(0)}×10³ mm⁴</em>). Routes: t (δ∝1/t), H (δ∝1/H³), mid-support → L≈<em>${(L*Math.pow(1/UR.defl,0.25)/1000).toFixed(2)} m</em> (δ∝L⁴, cheapest).`});
   const fw=document.getElementById('fix-summary');
   if(fixes.length){document.getElementById('fix-items').innerHTML=fixes.map(f=>`<div class="fi"><div class="ftag">${f.tag}</div><div class="ftxt">${f.text}</div></div>`).join('');fw.style.display='block';}
@@ -1447,7 +1521,10 @@ function calculate(){
     wt_web:wslant/t,
     l1:2.89*Math.sqrt(E/Fy), l2:5.34*Math.sqrt(E/Fy), Fv, Vcap,
     // LTB
-    Fe, Fb_ltb, Fb_ltb_wl,
+    Fe, Fb_ltb, Fb_ltb_wl, Fb_cf, Fb63, Xltb, ltbB, ltbC, windPlus,
+    // web crippling (literal Cl.6.5 MKS)
+    Ncrip:N, Rcrip:R, kcr, stress_cr, rfac_end, rfac_int,
+    Pend_kN, Pint_kN, Rend_kN, Rint_kN,
     // edge stiffener
     Is, Imin,
     Imin_a:term>0?1.83*t**4*Math.sqrt(term):0,
