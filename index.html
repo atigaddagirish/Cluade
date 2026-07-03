@@ -286,6 +286,9 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
     </div>
     <div class="g3">
       <div class="field"><label>Span L (m)</label><input id="L" type="number" value="3.1" step="0.1"></div>
+      <div class="field"><label>Support condition</label>
+        <select id="spans"><option value="ss">Simply supported</option><option value="c2">Continuous — 2 spans</option><option value="c3">Continuous — 3+ spans</option></select>
+      </div>
       <div class="field"><label>End bearing N (mm)</label><input id="N" type="number" value="50"></div>
       <div class="field"><label>Deflection limit</label>
         <select id="defLim"><option value="180">L/180</option><option value="150">L/150</option><option value="120">L/120 (wind)</option><option value="200">L/200</option><option value="240">L/240</option></select>
@@ -795,7 +798,7 @@ function loadProjectPreset(){
   const name=document.getElementById('proj-preset-sel').value; if(!name)return;
   const p=loadAllProjects()[name]; if(!p)return;
   const nf=f=>{ const el=document.getElementById(f); if(el&&p[f]!==undefined)el.value=p[f]; };
-  ['L','N','defLim','Lb','Cb'].forEach(nf);
+  ['L','N','defLim','Lb','Cb','spans'].forEach(nf);
   const lm=p.loadMode||'udl'; setLoadMode(lm);
   if(lm==='udl'){ ['w_up','w_grav','w_weak'].forEach(nf); }
   else {
@@ -812,7 +815,7 @@ function saveProjectPreset(){
   const projs=loadAllProjects();
   if(projs[name]&&!confirm(`Overwrite "${name}"?`))return;
   const lm=loadMode;
-  const obj={L:+v('L'),N:+v('N'),defLim:v('defLim'),Lb:+v('Lb'),Cb:+v('Cb'),loadMode:lm};
+  const obj={L:+v('L'),N:+v('N'),defLim:v('defLim'),Lb:+v('Lb'),Cb:+v('Cb'),spans:v('spans'),loadMode:lm};
   if(lm==='udl'){obj.w_up=+v('w_up');obj.w_grav=+v('w_grav');obj.w_weak=+v('w_weak');}
   else{
     ['munit','funit','s_Mz_up','s_My_up','s_Fx_up','s_Mz_gr','s_My_gr','s_Fx_gr','s_Fy','s_Mx','s_def'].forEach(f=>{obj[f]=v(f);});
@@ -1119,14 +1122,18 @@ Vcap = 2 × Fv × H_vert × t          [vertical projection]
   // ── Deflection ──
   const deflFormula=V.staadDef?
 `δ = STAAD resultant = ${V.d_t.toFixed(2)} mm  (entered directly)`:
-`δ = 5·w·L⁴ / (384·E·Ixx)
-  = 5 × ${V.w_net_udl.toFixed(4)} × ${(V.L).toFixed(0)}⁴ / (384 × 200000 × ${V.Ixx.toFixed(0)})
+`δ = k · w · L⁴ / (E·Ixx),   k = ${V.kdLabel}
+  = ${V.kd.toFixed(5)} × ${V.w_net_udl.toFixed(4)} × ${(V.L).toFixed(0)}⁴ / (200000 × ${V.Ixx.toFixed(0)})
   = ${isNaN(V.d_t)?'—':V.d_t.toFixed(2)} mm
-  [Note: 1 kN/m = 1 N/mm; no unit conversion needed]`;
+  [Note: 1 kN/m = 1 N/mm; no unit conversion needed]
+  [UDL, equal spans, constant EI. Bending still uses M = wL²/8 —
+   exact support moment for 2-span, conservative for 3+ spans (≈wL²/10)]`;
   html+=drow(`Deflection (limit L/${V.defDiv})`,'IS 801 / project spec',
 deflFormula,
     [
       ['Span L',`${(V.L/1000).toFixed(3)} m = ${V.L.toFixed(0)} mm`],
+      ['Support condition',V.spans==='c2'?'Continuous — 2 spans':V.spans==='c3'?'Continuous — 3+ spans':'Simply supported'],
+      ['Coefficient k',`${V.kd.toFixed(5)}`],
       ['Deflection limit',`L / ${V.defDiv}`],
       ['Allowable δ',`${V.d_a.toFixed(2)} mm`],
       ['Computed δ',isNaN(V.d_t)?'— (enter STAAD value)':`${V.d_t.toFixed(2)} mm`],
@@ -1232,10 +1239,17 @@ function calculate(){
 
   let d_s=NaN,d_w=NaN,d_t;
   const d_a=L/defDiv;
+  // Deflection coefficient by support condition (UDL, equal spans, const EI):
+  //   simply supported: 5/384 = 0.013021 (max at midspan)
+  //   2-span continuous: 0.00542 ≈ wL⁴/185EI (each span ≙ propped cantilever)
+  //   3+ span continuous: 0.0069 (end span governs; interior spans deflect less)
+  const spans=v('spans')||'ss';
+  const kd=spans==='c2'?0.00542:spans==='c3'?0.0069:5/384;
+  const kdLabel=spans==='c2'?'0.00542 (2-span cont. ≈ wL⁴/185EI)':spans==='c3'?'0.0069 (3+ span cont., end span)':'5/384 (simply supported)';
   if(loadMode==='udl'){
     const wn=+v('w_up'), ww=+v('w_weak');
-    d_s=Math.abs(5*wn*L**4/(384*E*p.Ixx));
-    d_w=5*ww*L**4/(384*E*p.Iyy);
+    d_s=Math.abs(kd*wn*L**4/(E*p.Ixx));
+    d_w=Math.abs(kd*ww*L**4/(E*p.Iyy));
     d_t=Math.sqrt(d_s*d_s+d_w*d_w);
   } else { d_t = def_staad>0 ? def_staad : NaN; }
 
@@ -1324,7 +1338,7 @@ function calculate(){
     (hasTor?row('Torsion (St-Venant)',UR.tor,'— not in IS 801',torNote,'τ=Mx·t/J,  J=Σ(L·t³)/3'):'');
 
   document.getElementById('ck-defl').innerHTML=
-    row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`,'δ=5wL⁴/384EI;  allow=L/'+defDiv+';  UR=δ/allow');
+    row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`,'δ=k·wL⁴/EI, k='+kd.toFixed(5)+' ('+(spans==='c2'?'2-span cont.':spans==='c3'?'3+ span cont.':'simple, 5/384')+');  allow=L/'+defDiv+';  UR=δ/allow');
 
   // ── FIX BOX ──
   const I_req=p.Ixx*UR.defl;
@@ -1371,7 +1385,7 @@ function calculate(){
     M_up_Nmm:M_up*1e6, M_sg_Nmm:M_sg*1e6,
     Vkn:V,
     w_net_udl:loadMode==='udl'?+v('w_up'):0,
-    L, defDiv, d_a, d_t,
+    L, defDiv, d_a, d_t, kd, kdLabel, spans,
     staadDef:loadMode==='staad'&&def_staad>0,
     // derived stresses
     f_top_up, f_comp_up, f_strong_up, f_top_grav, f_weak, fEW,
