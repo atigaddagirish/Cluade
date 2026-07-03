@@ -294,7 +294,7 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
         <select id="defLim"><option value="180">L/180</option><option value="150">L/150</option><option value="120">L/120 (wind)</option><option value="200">L/200</option><option value="240">L/240</option></select>
       </div>
       <div class="field"><label>Unbraced L&#x1D47; (mm)</label><input id="Lb" type="number" value="3100" step="50"></div>
-      <div class="field"><label>Moment gradient C&#x1D47;</label><input id="Cb" type="number" value="1.0" step="0.05" min="1" max="2.3"></div>
+      <div class="field"><label>Moment gradient C&#x1D47; <span title="Cl.6.3: Cb = 1.75 + 1.05(M1/M2) + 0.3(M1/M2)² ≤ 2.3; conservatively 1.0. Must be 1.0 when axial force acts (Cl.6.7).">ⓘ</span></label><input id="Cb" type="number" value="1.0" step="0.05" min="1" max="2.3"></div>
     </div>
     <p class="hint">Under uplift the compression flange is the bottom feet+lips. L&#x1D47; = span if feet bolted only at ends.</p>
   </div>
@@ -553,7 +553,15 @@ function computeProps(g){
     Acf+=a; Iycf+=Iyl+a*s.xm*s.xm;
   }}
   const rycf=Math.sqrt(Iycf/Acf);
-  return {A,xc,yc,Ixx,Iyy,ytop,ybot,Ztop,Zbot,Zweak,J,Acf,Iycf,rycf};
+  // Iyc per Cl.6.3 letter: compression PORTION under uplift = everything below the
+  // NA (y<yc): feet + lips (full) + the sub-segments of both webs from y=0 to y=yc,
+  // about the gravity axis parallel to the web (x=0).
+  const ws_=Math.hypot(g.run,g.H), fcp=yc/g.H, Lsub=fcp*ws_;
+  const xw2=g.wb-g.run*fcp, xmw=(g.wb+xw2)/2;
+  const cw=g.run/ws_, sw=g.H/ws_;
+  const Iyw=(t*Lsub**3/12)*cw*cw+(Lsub*t**3/12)*sw*sw+Lsub*t*xmw*xmw;
+  const Iyc63=Iycf+2*Iyw;
+  return {A,xc,yc,Ixx,Iyy,ytop,ybot,Ztop,Zbot,Zweak,J,Acf,Iycf,rycf,Iyc63,Lsub,Iyw};
 }
 
 // ── LTB allowable (IS 801 Cl.6.3) ───────────────────────────────────────────
@@ -1124,8 +1132,11 @@ ${ltbRegime}
 ${ltbFormula}   → Fb(a) = ${V.Fb_cf.toFixed(1)} MPa
 
 METHOD (b) — literal Cl.6.3 (L²Sxc/d·Iyc form):
-Sxc = Zxc (compression) = ${V.Zbot.toFixed(0)} mm³;  Iyc (comp. portion about gravity axis) = ${V.Iycf.toFixed(0)} mm⁴;  d = ${V.H} mm
-X = L²·Sxc / (d·Iyc) = ${V.Lb}² × ${V.Zbot.toFixed(0)} / (${V.H} × ${V.Iycf.toFixed(0)}) = ${V.Xltb.toFixed(0)}
+Sxc = Ix/dist. to extreme COMPRESSION fibre = Zbot = ${V.Zbot.toFixed(0)} mm³
+Iyc = compression PORTION (below NA: feet + lips + web below ȳ) about the
+      gravity axis parallel to the web (x=0) = ${V.Iyc63.toFixed(0)} mm⁴
+      [feet+lips ${V.Iycf.toFixed(0)} + 2×web-below-NA ${V.Iyw.toFixed(0)}]
+X = L²·Sxc / (d·Iyc) = ${V.Lb}² × ${V.Zbot.toFixed(0)} / (${V.H} × ${V.Iyc63.toFixed(0)}) = ${V.Xltb.toFixed(0)}
 B = 0.36π²ECb/Fy = ${V.ltbB.toFixed(0)} | C = 1.8π²ECb/Fy = ${V.ltbC.toFixed(0)}
 ${V.Xltb<=V.ltbB?'X ≤ B → Fb = 0.6·Fy':V.Xltb<V.ltbC?'B < X < C → Fb = ⅔Fy − [Fy²/(5.4π²ECb)]·X':'X ≥ C → Fb = 0.6π²ECb / X'}
 → Fb(b) = ${V.Fb63.toFixed(1)} MPa   [capped at 0.6Fy]
@@ -1145,7 +1156,7 @@ Fb_LTB(+⅓) = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`:''
       ['Regime (method a)',ltbRegime.split('→')[1].trim()],
       ['Fb(a) — comp. flange',`${V.Fb_cf.toFixed(1)} MPa`],
       ['Sxc = Zxc',`${V.Zbot.toFixed(0)} mm³`],
-      ['Iyc (comp. portion)',`${V.Iycf.toFixed(0)} mm⁴`],
+      ['Iyc (comp. portion, incl. web below NA)',`${V.Iyc63.toFixed(0)} mm⁴`],
       ['X = L²Sxc/(d·Iyc)',`${V.Xltb.toFixed(0)}`],
       ['B = 0.36π²ECb/Fy',`${V.ltbB.toFixed(0)}`],
       ['C = 1.8π²ECb/Fy',`${V.ltbC.toFixed(0)}`],
@@ -1328,7 +1339,7 @@ function calculate(){
   const Fb_cf=Math.min(Fb, fbLTB(Fe,Fy));
   // (b) Literal IS 801 Cl.6.3: X = L²·Sxc/(d·Iyc), Iyc = compression portion about
   //     the gravity axis parallel to web (feet+lips under uplift), Sxc = comp. modulus
-  const Sxc=p.Zbot, Iyc=p.Iycf, dH=g.H;
+  const Sxc=p.Zbot, Iyc=p.Iyc63, dH=g.H;
   const Xltb=Lb*Lb*Sxc/(dH*Iyc);
   const ltbB=0.36*Math.PI**2*E*Cb/Fy, ltbC=1.8*Math.PI**2*E*Cb/Fy;
   let Fb63;
@@ -1511,7 +1522,7 @@ function calculate(){
     // geometry
     B1:g.B1, H:g.H, th:g.th, F:g.F, Lp:g.Lp, beta:g.beta, t, Fy, Cb, Lb,
     // section
-    Ztop:p.Ztop, Zbot:p.Zbot, Zweak:p.Zweak, Ixx:p.Ixx, rycf:p.rycf, Acf:p.Acf, Iycf:p.Iycf,
+    Ztop:p.Ztop, Zbot:p.Zbot, Zweak:p.Zweak, Ixx:p.Ixx, rycf:p.rycf, Acf:p.Acf, Iycf:p.Iycf, Iyc63:p.Iyc63, Iyw:p.Iyw,
     // loads
     M_up, M_sg, M_weak,
     M_up_Nmm:M_up*1e6, M_sg_Nmm:M_sg*1e6,

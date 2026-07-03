@@ -169,8 +169,14 @@ put(92, "(a) Fe = Cb·π²E/(Lb/rycf)²", "=B17*PI()^2*B13/(B16/B59)^2", "MPa") 
 put(93, "(a) Fb: ≥2.78Fy→0.6Fy; ≥0.56Fy→(10Fy/9)(1−Fy/5.04Fe); else Fe/1.67",
         "=MIN(0.6*B12,IF(B92>=2.78*B12,0.6*B12,IF(B92>=0.56*B12,(10*B12/9)*(1-B12/(5.04*B92)),B92/1.67)))",
         "MPa", "compression-flange method")                                     # B93
-put(94, "(b) Sxc = Zbot (comp.)", "=B54", "mm³", "literal Cl.6.3")             # B94
-put(95, "(b) Iyc = Iycf (comp. portion)", "=B58", "mm⁴")                       # B95
+put(94, "(b) Sxc = Zbot (Ix/dist to comp. fibre)", "=B54", "mm³", "literal Cl.6.3")  # B94
+# Iyc = compression PORTION below NA: feet+lips (B58) + 2 × web sub-segment (y=0→ȳ)
+# web sub-segment: Lsub=(ȳ/H)·slant; x from wb to wb−run·(ȳ/H); about x=0
+put(95, "(b) Iyc = feet+lips + 2×web below NA",
+        "=B58+2*(($B$11*((B48/B6)*B34)^3/12)*(B28/B34)^2"
+        "+(((B48/B6)*B34)*$B$11^3/12)*(B6/B34)^2"
+        "+((B48/B6)*B34)*$B$11*((B29+(B29-B28*(B48/B6)))/2)^2)",
+        "mm⁴", "comp. portion about gravity axis ∥ web")                        # B95
 put(96, "(b) X = Lb²·Sxc/(H·Iyc)", "=B16^2*B94/(B6*B95)", "")                  # B96
 put(97, "(b) B = 0.36π²ECb/Fy", "=0.36*PI()^2*B13*B17/B12", "")                # B97
 put(98, "(b) C = 1.8π²ECb/Fy", "=1.8*PI()^2*B13*B17/B12", "")                  # B98
