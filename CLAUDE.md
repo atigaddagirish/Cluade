@@ -45,9 +45,9 @@ bottom (foot) compression**.
 
 | Check | UR | Status | Clause |
 |---|---|---|---|
-| Bending (governing fibre = top, tension) | 63% | PASS | Cl.6.1 + 6.1.1 (+1/3 wind) |
-| Shear | 14% | PASS | Cl.7 |
-| LTB (compression-flange method) | no reduction | PASS | Cl.6.2 |
+| Bending (governing fibre = top, tension) | 63% | PASS | Cl.6.1.1 (+1/3 wind: WSM practice per IS 800/875, not an IS 801 clause) |
+| Shear | 14% | PASS | Cl.6.4.1 |
+| LTB (compression-flange method) | no reduction | PASS | Cl.6.3 |
 | Edge stiffener (lip) Is≥Imin | OK | PASS | Cl.5.2.2.1 |
 | Effective width (all elements fully effective @ service stress) | ρ=1 | PASS | Cl.5.2 |
 | **Deflection** | **212%** | **FAIL** | δ=36.5 mm = **L/85** vs L/180 |
@@ -56,12 +56,12 @@ bottom (foot) compression**.
 `t → ~1.8 mm`, deeper `H`, or **mid-support → span ≈ 2.6 m** (δ ∝ L^4, cheapest).
 
 ## IS 801 methodology implemented (in `index.html` `calculate()`)
-- **Bending Cl.6.1**: resolve Mz to both fibres (Ztop tension / Zbot compression under uplift); take governing. `+1/3` allowable (Cl.6.1.1) only for wind/seismic combos.
+- **Bending Cl.6.1.1**: resolve Mz to both fibres (Ztop tension / Zbot compression under uplift); take governing. `+1/3` allowable (WSM wind practice per IS 800/875 — IS 801 Cl.6.1.1 is the basic 0.6Fy clause itself) only for wind/seismic combos.
 - **Effective width Cl.5.2**: AISI unified Winter λ-method, `ρ=(1−0.22/λ)/λ`, `λ=(1.052/√k)(w/t)√(f/E)`; k=4 stiffened (foot), 0.43 unstiffened (lip), 24 web-gradient. NOTE: this is the modern unified form; IS 801:1975's literal MKS load-formula constants differ slightly (more conservative). If strict 1975-letter compliance is needed, swap in the MKS load formula. Currently all elements are fully effective at service stress, so gross = effective (exact).
 - **Edge stiffener Cl.5.2.2.1**: `Is = Lp^3·t·sin²(beta)/12` vs `Imin = max(1.83 t^4 √((w/t)²−4000/Fy_ksi), 9.2 t^4)`.
-- **LTB Cl.6.2 — compression-flange method** (deliberate choice): under uplift the compression flange is the bottom feet+lips; treat as a column buckling about x=0 with `rycf`, `Fe = Cb·π²E/(Lb/rycf)²`, then the Cl.6.2 stress transition. The wide outward feet give large rycf → LTB never governs. The rigorous warping/shear-centre (Iw) derivation for this inclined-web+lip shape was intentionally NOT used (would be error-prone and LTB doesn't govern). If LTB ever governs a future geometry, rederive Iw properly.
-- **Shear Cl.7**: Fv by web-slant slenderness; Vcap = 2·Fv·H·t (vertical projection).
-- **Web crippling Cl.8.1 (EOF)**: included, but **N/A under uplift if feet are bolted** — the support connection (bolts) carries the uplift reaction, not web bearing. Flag the connection check instead. Very weak at t=0.9 for any downward bearing case.
+- **LTB Cl.6.3 — compression-flange method** (deliberate choice): under uplift the compression flange is the bottom feet+lips; treat as a column buckling about x=0 with `rycf`, `Fe = Cb·π²E/(Lb/rycf)²`, then the Cl.6.3 stress transition. The wide outward feet give large rycf → LTB never governs. The rigorous warping/shear-centre (Iw) derivation for this inclined-web+lip shape was intentionally NOT used (would be error-prone and LTB doesn't govern). If LTB ever governs a future geometry, rederive Iw properly.
+- **Shear Cl.6.4.1**: Fv by web-slant slenderness; Vcap = 2·Fv·H·t (vertical projection).
+- **Web crippling Cl.6.5 (EOF)**: included, but **N/A under uplift if feet are bolted** — the support connection (bolts) carries the uplift reaction, not web bearing. Flag the connection check instead. Very weak at t=0.9 for any downward bearing case.
 - **Deflection**: STAAD δ if provided, else 5wL^4/384EI (1 kN/m = 1 N/mm — do NOT divide by 1000).
 
 ## Input modes (UI)

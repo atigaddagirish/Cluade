@@ -329,7 +329,7 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
         <div class="field"><label>Fx (axial, +tens)</label><input id="s_Fx_up" type="number" value="0" step="any"></div>
       </div>
       <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;margin:2px 0 10px">
-        <input type="checkbox" id="s_wind" checked style="width:auto"> Wind/seismic combo &rarr; +&frac13; allowable (Cl.6.1.1)
+        <input type="checkbox" id="s_wind" checked style="width:auto"> Wind/seismic combo &rarr; +&frac13; allowable (WSM wind practice, per IS 800/875 — not an IS 801 clause)
       </label>
       <div class="subh">&#8595; Gravity combination (DL / DL+LL)</div>
       <div class="g3">
@@ -400,15 +400,16 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
 
     <!-- OVERVIEW panel -->
     <div id="view-overview">
-      <div class="stitle">Compression Elements <span class="cl">Cl.5.2 — Effective Width</span></div>
+      <div class="stitle">Compression Elements <span class="cl">Cl.5.2.1.1 — Effective Width</span></div>
       <div id="ck-wt"></div>
+      <div style="font-size:10px;color:#aaa;margin:2px 0 4px">*λ-form = AISI unified Winter method (same intent as IS 801 Cl.5.2.1.1; the 1975 MKS load-formula constants differ slightly — swap in if strict letter-compliance is required).</div>
       <div class="stitle" style="margin-top:2px">Edge Stiffener <span class="cl">Cl.5.2.2.1</span></div>
       <div id="ck-lip"></div>
-      <div class="stitle" style="margin-top:2px">Flexure <span class="cl">Cl.6.1</span></div>
+      <div class="stitle" style="margin-top:2px">Flexure <span class="cl">Cl.6.1.1</span></div>
       <div id="ck-flex"></div>
-      <div class="stitle" style="margin-top:2px">Lateral-Torsional Buckling <span class="cl">Cl.6.2 — compression-flange method</span></div>
+      <div class="stitle" style="margin-top:2px">Lateral-Torsional Buckling <span class="cl">Cl.6.3 — compression-flange method</span></div>
       <div id="ck-ltb"></div>
-      <div class="stitle" style="margin-top:2px">Shear &amp; Web Crippling <span class="cl">Cl.7 / Cl.8.1</span></div>
+      <div class="stitle" style="margin-top:2px">Shear &amp; Web Crippling <span class="cl">Cl.6.4.1 / Cl.6.5</span></div>
       <div id="ck-shear"></div>
       <div class="stitle" style="margin-top:2px">Serviceability</div>
       <div id="ck-defl"></div>
@@ -417,7 +418,7 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
         <div class="note-body" id="biaxial-note"></div>
       </details>
       <details class="note-detail">
-        <summary>LTB detail (Cl.6.2)</summary>
+        <summary>LTB detail (Cl.6.3)</summary>
         <div class="note-body ltb" id="ltb-note"></div>
       </details>
     </div>
@@ -550,7 +551,7 @@ function computeProps(g){
   return {A,xc,yc,Ixx,Iyy,ytop,ybot,Ztop,Zbot,Zweak,J,Acf,Iycf,rycf};
 }
 
-// ── LTB allowable (IS 801 Cl.6.2) ───────────────────────────────────────────
+// ── LTB allowable (IS 801 Cl.6.3) ───────────────────────────────────────────
 function fbLTB(Fe,Fy){
   if(Fe>=2.78*Fy) return 0.6*Fy;
   if(Fe>=0.56*Fy) return (10*Fy/9)*(1-Fy/(5.04*Fe));
@@ -911,7 +912,7 @@ function renderDetailed(V){
   let html='';
 
   // ── Cl.5.2 Effective Width — Foot ──
-  html+=drow('Foot (stiffened element, k = 4.0)','IS 801 Cl.5.2',
+  html+=drow('Foot (stiffened element, k = 4.0)','IS 801 Cl.5.2.1.1*',
 `λ = (1.052 / √k) × (w/t) × √(f/E)
   = (1.052 / √4.0) × (${V.F}/${V.t}) × √(${V.fEW.toFixed(1)} / 200000)
   = ${V.ew_foot.lam.toFixed(4)}
@@ -933,7 +934,7 @@ else         → ρ = (1 − 0.22/λ) / λ`,
     V.UR.wt_foot);
 
   // ── Cl.5.2 Effective Width — Lip ──
-  html+=drow('Lip (unstiffened element, k = 0.43)','IS 801 Cl.5.2',
+  html+=drow('Lip (unstiffened element, k = 0.43)','IS 801 Cl.5.2.1.1*',
 `λ = (1.052 / √0.43) × (${V.Lp}/${V.t}) × √(${V.fEW.toFixed(1)} / 200000)
   = ${V.ew_lip.lam.toFixed(4)}
 
@@ -953,7 +954,7 @@ else         → ρ = (1 − 0.22/λ) / λ`,
     V.UR.wt_lip);
 
   // ── Cl.5.2 Effective Width — Web ──
-  html+=drow('Web (gradient stress, k = 24.0)','IS 801 Cl.5.2',
+  html+=drow('Web (gradient stress, k = 24.0)','IS 801 Cl.5.2.1.1*',
 `λ = (1.052 / √24) × (${V.wslant.toFixed(2)}/${V.t}) × √(${V.fEW.toFixed(1)} / 200000)
   = ${V.ew_web.lam.toFixed(4)}   [slant length = √(run²+H²)]`,
     [
@@ -994,9 +995,9 @@ Imin = max( 1.83·t⁴·√[(w/t)²−4000/Fy_ksi] , 9.2·t⁴ )
     V.UR.lip);
 
   // ── Cl.6.1 Bending ──
-  html+=drow('Bending — uplift (biaxial)','IS 801 Cl.6.1 + 6.1.1',
+  html+=drow('Bending — uplift (biaxial)','IS 801 Cl.6.1.1',
 `Fb     = 0.6 × Fy = 0.6 × ${V.Fy} = ${V.Fb.toFixed(0)} MPa
-Fb(+⅓) = Fb × 4/3  = ${V.Fb_wl.toFixed(0)} MPa  [wind/seismic combo, Cl.6.1.1]
+Fb(+⅓) = Fb × 4/3  = ${V.Fb_wl.toFixed(0)} MPa  [wind/seismic +33% — WSM practice per IS 800/875; not an IS 801 clause]
 
 Under uplift (purlin hogs):
   Top flange  → TENSION   f_top = M / Ztop
@@ -1017,7 +1018,7 @@ Interaction: (f_strong + f_weak) / Fb(+⅓) ≤ 1.0`,
       ['f_strong (governing)',`${V.f_strong_up.toFixed(1)} MPa`],
       ['f_weak',`${V.f_weak.toFixed(1)} MPa`],
       ['Fb = 0.6Fy',`${V.Fb.toFixed(0)} MPa`],
-      ['Fb × 4/3 (wind, Cl.6.1.1)',`${V.Fb_wl.toFixed(0)} MPa`],
+      ['Fb × 4/3 (wind, WSM practice)',`${V.Fb_wl.toFixed(0)} MPa`],
       ['r_strong = f_strong / Fb(+⅓)',`${V.r_s.toFixed(4)}`],
       ['r_weak   = f_weak   / Fb(+⅓)',`${V.r_w.toFixed(4)}`],
     ],
@@ -1025,7 +1026,7 @@ Interaction: (f_strong + f_weak) / Fb(+⅓) ≤ 1.0`,
     V.UR.biaxial);
 
   // ── Cl.6.1 Gravity ──
-  html+=drow('Bending — gravity (top compression)','IS 801 Cl.6.1',
+  html+=drow('Bending — gravity (top compression)','IS 801 Cl.6.1.1',
 `Under gravity (purlin sags):
   Top flange → COMPRESSION  f_top = M_grav / Ztop
   Allowable  → Fb = 0.6 × Fy (no wind +⅓)
@@ -1041,7 +1042,7 @@ Fb         = ${V.Fb.toFixed(0)} MPa`,
     `UR = f_top_grav / Fb = ${V.f_top_grav.toFixed(1)} / ${V.Fb.toFixed(0)} = ${pct(V.UR.grav)}`,
     V.UR.grav);
 
-  // ── Cl.6.2 LTB ──
+  // ── Cl.6.3 LTB ──
   const ltbRegime=V.Fe>=2.78*V.Fy?'Fe ≥ 2.78Fy → inelastic (no LTB reduction)':
     V.Fe>=0.56*V.Fy?'0.56Fy ≤ Fe < 2.78Fy → inelastic LTB transition':'Fe < 0.56Fy → elastic LTB';
   const ltbFormula=V.Fe>=2.78*V.Fy?
@@ -1051,7 +1052,7 @@ Fb         = ${V.Fb.toFixed(0)} MPa`,
         = (10×${V.Fy}/9) × [1 − ${V.Fy}/(5.04×${V.Fe.toFixed(0)})]
         = ${V.Fb_ltb.toFixed(1)} MPa`:
 `Fb_LTB = Fe / 1.67 = ${V.Fe.toFixed(0)} / 1.67 = ${V.Fb_ltb.toFixed(1)} MPa`;
-  html+=drow('Lateral-Torsional Buckling (compression-flange method)','IS 801 Cl.6.2',
+  html+=drow('Lateral-Torsional Buckling (compression-flange method)','IS 801 Cl.6.3',
 `Compression flange under uplift = bottom feet + lips (segs 0,1,5,6)
 r_ycf = √(Iycf / Acf) = ${V.rycf.toFixed(2)} mm   [about x=0 axis]
 
@@ -1087,7 +1088,7 @@ Fb_LTB(+⅓) = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`,
   const shearRegime=V.wt_web<=V.l1?`h/t ≤ ${V.l1.toFixed(1)} → Fv = 0.4·Fy`:
     V.wt_web<=V.l2?`${V.l1.toFixed(1)} < h/t ≤ ${V.l2.toFixed(1)} → Fv = 0.664√(Fy·E)/(h/t)`:
     `h/t > ${V.l2.toFixed(1)} → Fv = 0.905·E/(h/t)²`;
-  html+=drow('Shear (two inclined webs)','IS 801 Cl.7',
+  html+=drow('Shear (two inclined webs)','IS 801 Cl.6.4.1',
 `Web slant h = √(run² + H²) = ${V.wslant.toFixed(2)} mm
 h/t = ${V.wslant.toFixed(2)} / ${V.t} = ${V.wt_web.toFixed(2)}
 
@@ -1289,38 +1290,38 @@ function calculate(){
     '⚠ An element exceeds λ=0.673 — bending UR uses GROSS Z; full effective-section iteration required.')+
     ` Uplift fibres: comp(foot)=${f_comp_up.toFixed(0)} MPa, tens(top)=${f_top_up.toFixed(0)} MPa → governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb(+⅓)=${Fb_wl.toFixed(0)} MPa`;
   document.getElementById('ltb-note').innerHTML=
-    `<strong>LTB (Cl.6.2, compression-flange method):</strong> r_y(feet+lips)=${p.rycf.toFixed(1)} mm, Lb/r_y=${(Lb/p.rycf).toFixed(0)} → Fe=${Fe.toFixed(0)} MPa (2.78Fy=${(2.78*Fy).toFixed(0)} MPa). `+
+    `<strong>LTB (Cl.6.3, compression-flange method):</strong> r_y(feet+lips)=${p.rycf.toFixed(1)} mm, Lb/r_y=${(Lb/p.rycf).toFixed(0)} → Fe=${Fe.toFixed(0)} MPa (2.78Fy=${(2.78*Fy).toFixed(0)} MPa). `+
     `Fb_LTB=${Fb_ltb.toFixed(0)}×⁴⁄₃=${Fb_ltb_wl.toFixed(0)} MPa. `+
     `<strong>${Fb_ltb>=Fb?'LTB does NOT govern ✓ (wide outward feet → large r_y)':'LTB REDUCES capacity'}</strong>`;
 
   // ── CHECK ROWS ──
   const fx=(x,n)=>isNaN(x)?'—':x.toFixed(n);
   document.getElementById('ck-wt').innerHTML=
-    row('Foot (stiffened, k=4)',UR.wt_foot,'IS 801 Cl.5.2',`w/t=${(g.F/t).toFixed(1)}, λ=${ew_foot.lam.toFixed(3)}, ρ=${ew_foot.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ')+
-    row('Lip (unstiffened, k=0.43)',UR.wt_lip,'IS 801 Cl.5.2',`w/t=${(g.Lp/t).toFixed(1)}, λ=${ew_lip.lam.toFixed(3)}, ρ=${ew_lip.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ')+
-    row('Web (gradient, k=24)',UR.wt_web,'IS 801 Cl.5.2',`w/t=${(wslant/t).toFixed(1)}, λ=${ew_web.lam.toFixed(3)}, ρ=${ew_web.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ');
+    row('Foot (stiffened, k=4)',UR.wt_foot,'IS 801 Cl.5.2.1.1*',`w/t=${(g.F/t).toFixed(1)}, λ=${ew_foot.lam.toFixed(3)}, ρ=${ew_foot.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ')+
+    row('Lip (unstiffened, k=0.43)',UR.wt_lip,'IS 801 Cl.5.2.1.1*',`w/t=${(g.Lp/t).toFixed(1)}, λ=${ew_lip.lam.toFixed(3)}, ρ=${ew_lip.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ')+
+    row('Web (gradient, k=24)',UR.wt_web,'IS 801 Cl.5.2.1.1*',`w/t=${(wslant/t).toFixed(1)}, λ=${ew_web.lam.toFixed(3)}, ρ=${ew_web.r.toFixed(3)}`,'λ=(1.052/√k)(w/t)√(f/E); ρ=(1−0.22/λ)/λ');
 
   document.getElementById('ck-lip').innerHTML=
     row('Lip provides min stiffener I',UR.lip,'IS 801 Cl.5.2.2.1',`Is=${Is.toFixed(1)} mm⁴ vs Imin=${Imin.toFixed(1)} mm⁴`,'Is=Lp³·t·sin²β/12; Imin=max(1.83t⁴√((w/t)²−4000/Fy), 9.2t⁴); UR=Imin/Is');
 
   document.getElementById('ck-flex').innerHTML=
-    row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`,'UR=f_bz/Fbz + f_by/Fby;  f=M/Z,  Fb=0.6Fy (+⅓ for wind)')+
-    row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)} MPa`,'f_top=M_grav/Ztop;  UR=f_top/Fb,  Fb=0.6Fy')+
-    (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.1',axialNote,'fa/Fa + fbz/Fbz + fby/Fby ≤ 1'):'');
+    row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`,'UR=f_bz/Fbz + f_by/Fby;  f=M/Z,  Fb=0.6Fy (+⅓ for wind)')+
+    row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)} MPa`,'f_top=M_grav/Ztop;  UR=f_top/Fb,  Fb=0.6Fy')+
+    (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.2',axialNote,'fa/Fa + fbz/Fbz + fby/Fby ≤ 1'):'');
 
   document.getElementById('ck-ltb').innerHTML=
-    row('LTB — uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.2',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+⅓)=${Fb_ltb_wl.toFixed(0)} MPa`,'Fe=Cb·π²E/(Lb/rycf)²;  Fb per Cl.6.2 transition;  UR=f/Fb_LTB');
+    row('LTB — uplift (feet+lips comp.)',UR.ltb,'IS 801 Cl.6.3',`Fe=${Fe.toFixed(0)} MPa, Fb_LTB(+⅓)=${Fb_ltb_wl.toFixed(0)} MPa`,'Fe=Cb·π²E/(Lb/rycf)²;  Fb per Cl.6.3 transition;  UR=f/Fb_LTB');
 
   // Web crippling: N/A under uplift (bolted feet carry reaction, not web bearing)
   const webcripRow = loadMode==='udl' && +v('w_up')>0
     ? `<div class="check-row"><div class="cn">Web crippling EOF<br><small>N/A under uplift — bolted feet carry reaction, not web bearing. Check connection for ${(+v('w_up')*L/2/1000).toFixed(2)} kN uplift.</small></div>
        <div class="bw"></div><div class="uv" style="color:#aaa">N/A</div>
-       <div class="st warn">N/A</div><div class="rf">IS 801 Cl.8.1</div></div>`
-    : row('Web crippling EOF',UR.web,'IS 801 Cl.8.1',`R=${Preact.toFixed(3)} kN, Pc=${Pwa.toFixed(3)} kN`);
+       <div class="st warn">N/A</div><div class="rf">IS 801 Cl.6.5</div></div>`
+    : row('Web crippling EOF',UR.web,'IS 801 Cl.6.5',`R=${Preact.toFixed(3)} kN, Pc=${Pwa.toFixed(3)} kN`);
   document.getElementById('ck-shear').innerHTML=
-    row('Shear (2 webs)',UR.shear,'IS 801 Cl.7',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`,'Fv per web slenderness h/t;  Vc=2·Fv·H·t;  UR=V/Vc')+
+    row('Shear (2 webs)',UR.shear,'IS 801 Cl.6.4.1',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`,'Fv per web slenderness h/t;  Vc=2·Fv·H·t;  UR=V/Vc')+
     webcripRow+
-    (hasTor?row('Torsion (St-Venant)',UR.tor,'IS 801 Cl.6.6',torNote,'τ=Mx·t/J,  J=Σ(L·t³)/3'):'');
+    (hasTor?row('Torsion (St-Venant)',UR.tor,'— not in IS 801',torNote,'τ=Mx·t/J,  J=Σ(L·t³)/3'):'');
 
   document.getElementById('ck-defl').innerHTML=
     row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`,'δ=5wL⁴/384EI;  allow=L/'+defDiv+';  UR=δ/allow');
