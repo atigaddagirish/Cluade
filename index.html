@@ -1169,9 +1169,8 @@ Fb_LTB(+⅓) = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`:''
     V.UR.ltb);
 
   // ── Cl.7 Shear ──
-  const shearRegime=V.wt_web<=V.l1?`h/t ≤ ${V.l1.toFixed(1)} → Fv = 0.4·Fy`:
-    V.wt_web<=V.l2?`${V.l1.toFixed(1)} < h/t ≤ ${V.l2.toFixed(1)} → Fv = 0.664√(Fy·E)/(h/t)`:
-    `h/t > ${V.l2.toFixed(1)} → Fv = 0.905·E/(h/t)²`;
+  const shearRegime=V.wt_web<=V.l1?`h/t ≤ 4590/√Fy = ${V.l1.toFixed(1)} → Fv = min(0.4·Fy, 1275√Fy/(h/t)) [kgf/cm²]`:
+    `h/t > 4590/√Fy = ${V.l1.toFixed(1)} → Fv = 5,850,000/(h/t)² [kgf/cm²]`;
   html+=drow('Shear (two inclined webs)','IS 801 Cl.6.4.1',
 `Web slant h = √(run² + H²) = ${V.wslant.toFixed(2)} mm
 h/t = ${V.wslant.toFixed(2)} / ${V.t} = ${V.wt_web.toFixed(2)}
@@ -1189,8 +1188,8 @@ Vcap = 2 × Fv × H_vert × t          [vertical projection]
       ['Web slant length h',`${V.wslant.toFixed(2)} mm`],
       ['Thickness t',`${V.t} mm`],
       ['h/t',`${V.wt_web.toFixed(2)}`],
-      ['λ₁ = 2.89√(E/Fy)',`${V.l1.toFixed(2)}`],
-      ['λ₂ = 5.34√(E/Fy)',`${V.l2.toFixed(2)}`],
+      ['4590/√Fy (kgf/cm²)',`${V.l1.toFixed(2)}`],
+      ['1275√Fy/(h/t) → MPa',`${(1275*Math.sqrt(V.Fy/0.0980665)/V.wt_web*0.0980665).toFixed(1)}`],
       ['Shear regime',shearRegime.split('→')[1].trim()],
       ['Fv (allowable shear stress)',`${V.Fv.toFixed(1)} MPa`],
       ['Vertical projection H',`${V.H} mm`],
@@ -1199,6 +1198,32 @@ Vcap = 2 × Fv × H_vert × t          [vertical projection]
     ],
     `UR = V / Vcap = ${V.Vkn.toFixed(3)} / ${V.Vcap.toFixed(3)} = ${pct(V.UR.shear)}`,
     V.UR.shear);
+
+  // ── Cl.6.4.2 Web bending + Cl.6.4.3 combined ──
+  html+=drow('Web bending stress','IS 801 Cl.6.4.2',
+`Fbw = min( 36,560,000/(h/t)² kgf/cm² , 0.6·Fy )
+    = min( ${(36560000/V.wt_web**2*0.0980665).toFixed(0)} , ${(0.6*V.Fy).toFixed(0)} ) = ${V.Fbw.toFixed(0)} MPa${V.windPlus?`
+Fbw(+⅓) = ${V.Fbw_wl.toFixed(0)} MPa`:''}`,
+    [
+      ['h/t',`${V.wt_web.toFixed(2)}`],
+      ['36.56×10⁶/(h/t)² → MPa',`${(36560000/V.wt_web**2*0.0980665).toFixed(0)} MPa`],
+      ['0.6·Fy',`${(0.6*V.Fy).toFixed(0)} MPa`],
+      ['Fbw governing',`${V.Fbw.toFixed(0)} MPa`],
+      ['f (max flexural, uplift)',`${V.f_strong_up.toFixed(1)} MPa`],
+    ],
+    `UR = f / Fbw${V.windPlus?'(+⅓)':''} = ${V.f_strong_up.toFixed(1)} / ${V.Fbw_wl.toFixed(0)} = ${pct(V.UR.webbend)}`,
+    V.UR.webbend);
+
+  html+=drow('Combined bending + shear in web','IS 801 Cl.6.4.3',
+`√( (fbw/Fbw)² + (fv/Fv)² ) ≤ 1.0
+fv = V/(2·H·t) = ${V.fv_act.toFixed(1)} MPa;  Fv${V.windPlus?'(+⅓)':''} = ${V.Fv_wl.toFixed(1)} MPa
+= √( ${(V.f_strong_up/V.Fbw_wl).toFixed(3)}² + ${(V.fv_act/V.Fv_wl).toFixed(3)}² )`,
+    [
+      ['fbw / Fbw',`${(V.f_strong_up/V.Fbw_wl).toFixed(4)}`],
+      ['fv / Fv',`${(V.fv_act/V.Fv_wl).toFixed(4)}`],
+    ],
+    `UR = ${pct(V.UR.bs)}`,
+    V.UR.bs);
 
   // ── Cl.6.5 Web crippling (literal MKS) ──
   html+=drow('Web crippling — gravity bearing at supports','IS 801 Cl.6.5',
@@ -1210,7 +1235,7 @@ P_end = 70·t²·[98 + 4.2(N/t) − 0.022(N/t)(h/t) − 0.011(h/t)] · k(1.33−
       → ${V.Pend_kN.toFixed(3)} kN (2 webs, r-factor ${V.rfac_end.toFixed(3)})
 
 Interior support:
-P_int = 70·t²·[305 + 2.3(N/t) − 0.009(N/t)(h/t) − 0.5(h/t)] · k(1.33−0.33k) × r-factor
+P_int = 70·t²·[305 + 2.3(N/t) − 0.009(N/t)(h/t) − 0.5(h/t)] · k(1.22−0.22k) × r-factor
       → ${V.Pint_kN.toFixed(3)} kN (2 webs, r-factor ${V.rfac_int.toFixed(3)})
 
 Reactions from GRAVITY load (uplift reaction goes to the foot bolts, not web bearing):
@@ -1220,6 +1245,8 @@ R_end = ${V.Rend_kN.toFixed(3)} kN${V.Rint_kN>0?`;  R_int = ${V.Rint_kN.toFixed(
       ['Inner bend radius r',`${V.Rcrip} mm (r/t=${(V.Rcrip/V.t).toFixed(2)})`],
       ['h/t (web slant)',`${V.wt_web.toFixed(1)}`],
       ['k = Fy/2320 (kgf/cm²)',`${V.kcr.toFixed(3)}`],
+      ['stress term end k(1.33−0.33k)',`${V.stress_cr.toFixed(3)}`],
+      ['stress term int k(1.22−0.22k)',`${V.stress_int.toFixed(3)}`],
       ['P_end allowable',`${V.Pend_kN.toFixed(3)} kN`],
       ['P_int allowable',`${V.Pint_kN.toFixed(3)} kN`],
       ['R_end (gravity)',`${V.Rend_kN.toFixed(3)} kN`],
@@ -1351,9 +1378,27 @@ function calculate(){
   const Fb_ltb_wl=windPlus?Fb_ltb*4/3:Fb_ltb;
   const UR_ltb=f_comp_up/Fb_ltb_wl;
 
-  const wt_web=wslant/t, l1=2.89*Math.sqrt(E/Fy), l2=5.34*Math.sqrt(E/Fy);
-  const Fv=wt_web<=l1?0.4*Fy:wt_web<=l2?0.664*Math.sqrt(Fy*E)/wt_web:0.905*E/wt_web**2;
+  // ── Shear — literal IS 801 Cl.6.4.1 (MKS): Fv = min(0.4Fy, 1275√Fy/(h/t)) when
+  //    h/t ≤ 4590/√Fy, else Fv = 5,850,000/(h/t)²  [Fy in kgf/cm²]
+  const wt_web=wslant/t;
+  const Fy_kgf0=Fy/0.0980665;
+  const l1=4590/Math.sqrt(Fy_kgf0);
+  const Fv_kgf=wt_web<=l1?Math.min(0.4*Fy_kgf0,1275*Math.sqrt(Fy_kgf0)/wt_web):5850000/wt_web**2;
+  const Fv=Fv_kgf*0.0980665;
   const Vcap=2*Fv*g.H*t/1000;
+
+  // ── Web bending Cl.6.4.2: Fbw = 36,560,000/(h/t)² kgf/cm², ≤ 0.6Fy ──
+  const Fbw=Math.min(36560000/wt_web**2*0.0980665, 0.6*Fy);
+  const Fbw_wl=windPlus?Fbw*4/3:Fbw;
+  const UR_webbend=f_strong_up/Fbw_wl;
+
+  // ── Flat-width ratio maxima Cl.5.2.4: flange w/t ≤ 60, web h/t ≤ 150 ──
+  const UR_wtmax=(g.F/t)/60, UR_htmax=wt_web/150;
+
+  // ── Combined bending + shear in web, Cl.6.4.3: √((fbw/Fbw)² + (fv/Fv)²) ≤ 1 ──
+  const fv_act=V*1000/(2*g.H*t);
+  const Fv_wl=windPlus?Fv*4/3:Fv;
+  const UR_bs=Math.sqrt((f_strong_up/Fbw_wl)**2+(fv_act/Fv_wl)**2);
 
   // ── Web crippling — literal IS 801 Cl.6.5, MKS form (t in cm, Fy in kgf/cm²) ──
   // End reaction (cantilever/EOF): P = 70·t²·(98+4.2(N/t)−0.022(N/t)(h/t)−0.011(h/t))·k(1.33−0.33k)
@@ -1362,10 +1407,11 @@ function calculate(){
   const R=2; // inner bend radius, mm
   const t_cm=t/10, Fy_kgf=Fy/0.0980665, kcr=Fy_kgf/2320;
   const N_t=N/t, h_t=wt_web;
-  const stress_cr=kcr*(1.33-0.33*kcr);
+  const stress_cr=kcr*(1.33-0.33*kcr);       // end reactions
+  const stress_int=kcr*(1.22-0.22*kcr);      // interior reactions (NOT 1.33−0.33k)
   const rfac_end=R<=t?1:(1.15-0.15*R/t), rfac_int=R<=t?1:(1.06-0.06*R/t);
   const Pend_kN=Math.max(0,70*t_cm**2*(98+4.2*N_t-0.022*N_t*h_t-0.011*h_t)*stress_cr*rfac_end)*2*9.80665/1000;
-  const Pint_kN=Math.max(0,70*t_cm**2*(305+2.3*N_t-0.009*N_t*h_t-0.5*h_t)*stress_cr*rfac_int)*2*9.80665/1000;
+  const Pint_kN=Math.max(0,70*t_cm**2*(305+2.3*N_t-0.009*N_t*h_t-0.5*h_t)*stress_int*rfac_int)*2*9.80665/1000;
   // Support reactions (gravity/downward bearing) by support condition:
   const w_net_val=loadMode==='udl'?+v('w_up'):0;
   const w_grav_val=loadMode==='udl'?+v('w_grav'):0;
@@ -1393,11 +1439,13 @@ function calculate(){
   const UR={
     wt_foot:ew_foot.lam/0.673, wt_lip:ew_lip.lam/0.673, wt_web:ew_web.lam/0.673,
     lip:Imin/Is, biaxial:r_s+r_w, grav:f_top_grav/Fb, axial:UR_axial, tor:UR_tor,
-    ltb:UR_ltb, shear:V/Vcap, web:UR_web, defl:d_t/d_a
+    ltb:UR_ltb, shear:V/Vcap, web:UR_web, defl:d_t/d_a,
+    webbend:UR_webbend, bs:UR_bs, wtmax:UR_wtmax, htmax:UR_htmax
   };
 
   // ── VERDICT ──
-  const allURs=[UR.wt_foot,UR.wt_lip,UR.wt_web,UR.lip,UR.biaxial,UR.grav,UR.ltb,UR.shear,UR.defl]
+  const allURs=[UR.wt_foot,UR.wt_lip,UR.wt_web,UR.lip,UR.biaxial,UR.grav,UR.ltb,UR.shear,UR.defl,
+                UR.webbend,UR.bs,UR.wtmax,UR.htmax,UR.web]
                .filter(x=>!isNaN(x));
   const maxUR=Math.max(...allURs);
   const overall=maxUR>=1?'FAIL':maxUR>=0.9?'MARGINAL':'PASS';
@@ -1473,10 +1521,14 @@ function calculate(){
        <div class="st warn">INFO</div><div class="rf">connection design</div></div>`:'';
   const webcripRow =
     row('Web crippling — end reaction',Pend_kN>0?Rend_kN/Pend_kN:NaN,'IS 801 Cl.6.5',`R_end=${Rend_kN.toFixed(3)} kN vs P=${Pend_kN.toFixed(3)} kN (gravity)`,'P=70t²(98+4.2N/t−0.022(N/t)(h/t)−0.011h/t)·k(1.33−0.33k), k=Fy/2320 kgf/cm²')+
-    (Rint_kN>0?row('Web crippling — interior support',Pint_kN>0?Rint_kN/Pint_kN:NaN,'IS 801 Cl.6.5',`R_int=${Rint_kN.toFixed(3)} kN vs P=${Pint_kN.toFixed(3)} kN (gravity)`,'P=70t²(305+2.3N/t−0.009(N/t)(h/t)−0.5h/t)·k(1.33−0.33k)'):'')+
+    (Rint_kN>0?row('Web crippling — interior support',Pint_kN>0?Rint_kN/Pint_kN:NaN,'IS 801 Cl.6.5',`R_int=${Rint_kN.toFixed(3)} kN vs P=${Pint_kN.toFixed(3)} kN (gravity)`,'P=70t²(305+2.3N/t−0.009(N/t)(h/t)−0.5h/t)·k(1.22−0.22k)'):'')+
     upliftNote;
   document.getElementById('ck-shear').innerHTML=
-    row('Shear (2 webs)',UR.shear,'IS 801 Cl.6.4.1',`V=${V.toFixed(3)} kN, Vc=${Vcap.toFixed(2)} kN`,'Fv per web slenderness h/t;  Vc=2·Fv·H·t;  UR=V/Vc')+
+    row('Flange w/t ≤ 60',UR.wtmax,'IS 801 Cl.5.2.4',`w/t=${(g.F/t).toFixed(1)}`,'max flat-width ratio, stiffened flange')+
+    row('Web h/t ≤ 150',UR.htmax,'IS 801 Cl.5.2.4',`h/t=${wt_web.toFixed(1)}`,'max web slenderness')+
+    row('Shear (2 webs)',UR.shear,'IS 801 Cl.6.4.1',`Fv=${Fv.toFixed(1)} MPa, V=${V.toFixed(3)} vs Vc=${Vcap.toFixed(2)} kN`,'Fv=min(0.4Fy, 1275√Fy/(h/t)) kgf/cm² [h/t≤4590/√Fy]; else 5.85×10⁶/(h/t)²')+
+    row('Web bending',UR.webbend,'IS 801 Cl.6.4.2',`f=${f_strong_up.toFixed(1)} MPa vs Fbw${windPlus?'(+⅓)':''}=${Fbw_wl.toFixed(0)} MPa`,'Fbw=min(36.56×10⁶/(h/t)² kgf/cm², 0.6Fy)')+
+    row('Combined bending + shear',UR.bs,'IS 801 Cl.6.4.3',`fbw ratio=${(f_strong_up/Fbw_wl).toFixed(3)}, fv ratio=${(fv_act/Fv_wl).toFixed(3)}`,'√((fbw/Fbw)² + (fv/Fv)²) ≤ 1')+
     webcripRow+
     (hasTor?row('Torsion (St-Venant)',UR.tor,'— not in IS 801',torNote,'τ=Mx·t/J,  J=Σ(L·t³)/3'):'');
 
@@ -1536,7 +1588,7 @@ function calculate(){
     // effective width
     ew_foot, ew_lip, ew_web, wslant,
     wt_web:wslant/t,
-    l1:2.89*Math.sqrt(E/Fy), l2:5.34*Math.sqrt(E/Fy), Fv, Vcap,
+    l1, l2:l1, Fv, Vcap, Fbw, Fbw_wl, fv_act, Fv_wl, stress_int,
     // LTB
     Fe, Fb_ltb, Fb_ltb_wl, Fb_cf, Fb63, Xltb, ltbB, ltbC, windPlus,
     // web crippling (literal Cl.6.5 MKS)

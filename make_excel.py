@@ -190,10 +190,10 @@ put(102, "UR LTB = f_bot/Fb_LTB(+⅓)", "=B68/B101", "")                        
 # ── SHEAR ──
 head(104, "9. SHEAR — Cl.6.4.1")
 put(105, "h/t (web slant)", "=B34/B11", "")                                    # B105
-put(106, "limit1 = 2.89√(E/Fy)", "=2.89*SQRT(B13/B12)", "")                    # B106
-put(107, "limit2 = 5.34√(E/Fy)", "=5.34*SQRT(B13/B12)", "")                    # B107
-put(108, "Fv: ≤l1→0.4Fy; ≤l2→0.664√(FyE)/(h/t); else 0.905E/(h/t)²",
-         "=IF(B105<=B106,0.4*B12,IF(B105<=B107,0.664*SQRT(B12*B13)/B105,0.905*B13/B105^2))", "MPa")  # B108
+put(106, "h/t limit = 4590/√Fy (kgf/cm²)", "=4590/SQRT(B115)", "")             # B106
+put(107, "Fv (kgf/cm²): ≤lim→min(0.4Fy, 1275√Fy/(h/t)); else 5.85e6/(h/t)²",
+         "=IF(B105<=B106,MIN(0.4*B115,1275*SQRT(B115)/B105),5850000/B105^2)", "kgf/cm²", "literal Cl.6.4.1")  # B107
+put(108, "Fv (MPa)", "=B107*0.0980665", "MPa")                                  # B108
 put(109, "Vcap = 2·Fv·H·t", "=2*B108*B6*B11/1000", "kN")                       # B109
 put(110, "V = max(w)·L/2", "=MAX(ABS(B21),B22)*B14/2", "kN")                   # B110
 put(111, "UR shear = V/Vcap", "=B110/B109", "")                                # B111
@@ -203,14 +203,17 @@ head(113, "10. WEB CRIPPLING — Cl.6.5 (literal MKS: t in cm, Fy in kgf/cm²)")
 put(114, "t (cm)", "=B11/10", "cm")                                            # B114
 put(115, "Fy (kgf/cm²)", "=B12/0.0980665", "kgf/cm²")                          # B115
 put(116, "k = Fy/2320", "=B115/2320", "")                                      # B116
-put(117, "stress term k(1.33−0.33k)", "=B116*(1.33-0.33*B116)", "")            # B117
+put(117, "stress end k(1.33−0.33k); int k(1.22−0.22k)", "=B116*(1.33-0.33*B116)", "", "end term")  # B117
+ws.cell(117, 5, "=B116*(1.22-0.22*B116)").font = VAL
+ws.cell(117, 5).fill = OUT; ws.cell(117, 5).border = BOX
+ws.cell(117, 6, "int term (E117)").font = REF
 put(118, "r-factor end = if r≤t:1 else 1.15−0.15r/t", "=IF(B19<=B11,1,1.15-0.15*B19/B11)", "")  # B118
 put(119, "r-factor int = if r≤t:1 else 1.06−0.06r/t", "=IF(B19<=B11,1,1.06-0.06*B19/B11)", "")  # B119
 put(120, "P_end = 70t²[98+4.2(N/t)−0.022(N/t)(h/t)−0.011(h/t)]·st·rf ×2 webs",
          "=MAX(0,70*B114^2*(98+4.2*(B18/B11)-0.022*(B18/B11)*(B105)-0.011*B105)*B117*B118)*2*9.80665/1000",
          "kN")                                                                  # B120
 put(121, "P_int = 70t²[305+2.3(N/t)−0.009(N/t)(h/t)−0.5(h/t)]·st·rf ×2 webs",
-         "=MAX(0,70*B114^2*(305+2.3*(B18/B11)-0.009*(B18/B11)*B105-0.5*B105)*B117*B119)*2*9.80665/1000",
+         "=MAX(0,70*B114^2*(305+2.3*(B18/B11)-0.009*(B18/B11)*B105-0.5*B105)*E117*B119)*2*9.80665/1000",
          "kN")                                                                  # B121
 put(122, "R_end (gravity) coeff·w·L", '=IF(B15="2-span continuous",0.375,IF(B15="3+ span continuous",0.4,0.5))*B22*B14', "kN")  # B122
 put(123, "R_int (gravity)", '=IF(B15="2-span continuous",1.25,IF(B15="3+ span continuous",1.1,0))*B22*B14', "kN")  # B123
@@ -227,8 +230,18 @@ put(130, "δ resultant = √(δs²+δw²)", "=SQRT(B128^2+B129^2)", "mm")       
 put(131, "δ allowable = 1000L/divisor", "=B14*1000/B20", "mm")                 # B131
 put(132, "UR deflection = δ/δ_allow", "=B130/B131", "")                        # B132
 
+# ── ADDITIONAL WEB & RATIO CHECKS ──
+head(134, "12. WEB BENDING Cl.6.4.2 / COMBINED Cl.6.4.3 / FLAT-WIDTH Cl.5.2.4")
+put(135, "Fbw = min(36.56e6/(h/t)² kgf/cm², 0.6Fy)", "=MIN(36560000/B105^2*0.0980665,0.6*B12)", "MPa", "Cl.6.4.2")  # B135
+put(136, "Fbw(+⅓ if wind)", "=B135*IF(B24=1,4/3,1)", "MPa")                     # B136
+put(137, "UR web bending = f_strong/Fbw", "=B69/B136", "")                      # B137
+put(138, "fv actual = V/(2·H·t)", "=B110*1000/(2*B6*B11)", "MPa")               # B138
+put(139, "UR combined = √((f/Fbw)²+(fv/Fv)²)", "=SQRT((B69/B136)^2+(B138/(B108*IF(B24=1,4/3,1)))^2)", "", "Cl.6.4.3")  # B139
+put(140, "UR flange w/t ≤ 60", "=(B8/B11)/60", "", "Cl.5.2.4")                  # B140
+put(141, "UR web h/t ≤ 150", "=B105/150", "", "Cl.5.2.4")                       # B141
+
 # ── SUMMARY ──
-head(134, "12. SUMMARY OF CHECKS")
+head(143, "13. SUMMARY OF CHECKS")
 checks = [
     ("Effective width (max λ/0.673)", "B83", "Cl.5.2.1.1"),
     ("Edge stiffener Imin/Is", "B89", "Cl.5.2.2.1"),
@@ -237,20 +250,24 @@ checks = [
     ("LTB (governing of 2 methods)", "B102", "Cl.6.3"),
     ("Shear", "B111", "Cl.6.4.1"),
     ("Web crippling (gravity bearing)", "B124", "Cl.6.5"),
+    ("Web bending", "B137", "Cl.6.4.2"),
+    ("Combined bending + shear", "B139", "Cl.6.4.3"),
+    ("Flange w/t ≤ 60", "B140", "Cl.5.2.4"),
+    ("Web h/t ≤ 150", "B141", "Cl.5.2.4"),
     ("Deflection", "B132", "serviceability"),
 ]
-ws.cell(135, 1, "Check").font = Font(bold=True)
-ws.cell(135, 2, "UR").font = Font(bold=True)
-ws.cell(135, 3, "Status").font = Font(bold=True)
-ws.cell(135, 4, "Clause").font = Font(bold=True)
+ws.cell(144, 1, "Check").font = Font(bold=True)
+ws.cell(144, 2, "UR").font = Font(bold=True)
+ws.cell(144, 3, "Status").font = Font(bold=True)
+ws.cell(144, 4, "Clause").font = Font(bold=True)
 for i, (name, cell, cl) in enumerate(checks):
-    r = 136 + i
+    r = 145 + i
     ws.cell(r, 1, name).font = LBL
     c = ws.cell(r, 2, f"={cell}"); c.number_format = "0.0%"; c.font = VAL; c.border = BOX
     s = ws.cell(r, 3, f'=IF({cell}>=1,"FAIL",IF({cell}>=0.9,"MARGINAL","PASS"))')
     s.font = VAL; s.border = BOX
     ws.cell(r, 4, cl).font = REF
-r = 136 + len(checks)
+r = 145 + len(checks)
 ws.cell(r, 1, "OVERALL (max UR)").font = Font(bold=True, size=11)
 c = ws.cell(r, 2, "=MAX(" + ",".join(x[1] for x in checks) + ")")
 c.number_format = "0.0%"; c.font = Font(bold=True, size=11); c.border = BOX
