@@ -27,8 +27,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Probe IMD endpoints (diagnostic)
+        run: python3 scripts/probe_imd.py
+        continue-on-error: true
+
       - name: Fetch IMD data
         run: python3 scripts/fetch_imd.py --out /tmp/imd.json
+        continue-on-error: true
         # station/city default to 43213 (Kurnool); pass --district <id> here
         # once the Jogulamba Gadwal nowcast district id is confirmed.
 
