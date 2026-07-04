@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b2545">
+<title>Site Rain Watch — IMD</title>
+<link rel="manifest" href="weather.webmanifest">
+<link rel="icon" href="weather-icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --bg:#0b1424; --card:#122036; --card2:#0e1a2e; --line:#1e3350;
+  --txt:#dbe7f5; --dim:#7e93b0; --accent:#4fa3ff; --rain:#38bdf8;
+  --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --orange:#fb923c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%}
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,#0b2545,#0b1e3a);
+  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line)}
+header h1{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;padding-right:92px}
+header h1 .loc{font-size:11px;color:var(--dim);font-weight:400;display:block;margin-top:2px}
+.hbtns{position:absolute;right:10px;top:calc(10px + env(safe-area-inset-top));display:flex;gap:6px}
+.hbtns button{background:var(--card);border:1px solid var(--line);color:var(--txt);
+  border-radius:10px;width:38px;height:38px;font-size:17px;cursor:pointer}
+.hbtns button:active{background:var(--line)}
+#lastupd{font-size:10.5px;color:var(--dim);margin-top:4px}
+main{padding:12px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px;margin-bottom:12px}
+.card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+  margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.badge{font-size:9.5px;letter-spacing:.05em;padding:2px 8px;border-radius:99px;
+  border:1px solid var(--line);color:var(--dim);text-transform:none}
+.badge.live{color:var(--ok);border-color:var(--ok)}
+.badge.relay{color:var(--warn);border-color:var(--warn)}
+.badge.fail{color:var(--bad);border-color:var(--bad)}
+.rainhero{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rainhero .big{font-size:52px;font-weight:800;color:var(--rain);line-height:1}
+.rainhero .unit{font-size:16px;color:var(--dim)}
+.rainhero .sub{width:100%;font-size:12.5px;color:var(--dim);margin-top:6px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.kv .cell{background:var(--card2);border-radius:10px;padding:9px 11px}
+.kv .cell .k{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.kv .cell .v{font-size:15px;font-weight:600;margin-top:2px;word-break:break-word}
+.fcday{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.fcday:last-child{border-bottom:none}
+.fcday .ico{font-size:22px;width:32px;text-align:center;flex:none}
+.fcday .mid{flex:1;min-width:0}
+.fcday .d{font-size:13px;font-weight:700}
+.fcday .t{font-size:12px;color:var(--dim);margin-top:2px}
+.fcday .temps{font-size:13px;text-align:right;flex:none;color:var(--dim)}
+.fcday .temps b{color:var(--txt)}
+.fcday.rainy{background:linear-gradient(90deg,rgba(56,189,248,.10),transparent);border-radius:10px}
+.fcday.rainy .t{color:var(--rain)}
+.nowc{border-left:4px solid var(--dim);background:var(--card2);border-radius:8px;
+  padding:10px 12px;margin-bottom:8px;font-size:13px}
+.nowc .h{font-weight:700;font-size:12px;margin-bottom:4px}
+.nowc.sev-yellow{border-left-color:var(--warn)}
+.nowc.sev-orange{border-left-color:var(--orange)}
+.nowc.sev-red{border-left-color:var(--bad)}
+.nowc.sev-green{border-left-color:var(--ok)}
+.imgwrap{background:#000;border-radius:10px;overflow:hidden;margin-bottom:6px}
+.imgwrap img{width:100%;display:block;min-height:120px}
+.imgcap{font-size:11px;color:var(--dim);margin-bottom:14px;display:flex;justify-content:space-between}
+.imgcap a{color:var(--accent);text-decoration:none}
+details{margin-top:10px}
+details summary{font-size:11.5px;color:var(--dim);cursor:pointer}
+table.raw{width:100%;border-collapse:collapse;margin-top:8px;font-size:11.5px}
+table.raw td{border-bottom:1px solid var(--line);padding:5px 6px;vertical-align:top;word-break:break-word}
+table.raw td:first-child{color:var(--dim);width:45%}
+.diag{font-size:11.5px}
+.diag .row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.diag .row:last-child{border-bottom:none}
+.diag .dot{width:8px;height:8px;border-radius:50%;flex:none;position:relative;top:0}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.diag .nm{font-weight:600;flex:none}
+.diag .ms{color:var(--dim);word-break:break-all}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0b1e3a;
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav button{flex:1;background:none;border:none;color:var(--dim);font-size:10.5px;
+  padding:8px 0 9px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button .i{font-size:19px}
+nav button.on{color:var(--rain)}
+.tab{display:none}.tab.on{display:block}
+.note{font-size:11.5px;color:var(--dim);line-height:1.5}
+.note a{color:var(--accent)}
+/* settings modal */
+#settings{position:fixed;inset:0;background:rgba(4,10,20,.85);z-index:20;display:none;
+  overflow:auto;padding:20px 14px calc(20px + env(safe-area-inset-bottom))}
+#settings.on{display:block}
+#settings .panel{max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:16px}
+#settings h2{font-size:15px;margin-bottom:12px}
+#settings label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;
+  letter-spacing:.05em;margin:12px 0 4px}
+#settings input,#settings select{width:100%;background:var(--card2);border:1px solid var(--line);
+  color:var(--txt);border-radius:8px;padding:9px 10px;font-size:14px}
+#settings .btns{display:flex;gap:8px;margin-top:16px}
+#settings .btns button{flex:1;border-radius:10px;padding:11px;font-size:14px;font-weight:600;
+  border:1px solid var(--line);background:var(--card2);color:var(--txt);cursor:pointer}
+#settings .btns button.save{background:var(--accent);border-color:var(--accent);color:#04101f}
+.spin{display:inline-block;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>☔ Site Rain Watch
+    <span class="loc" id="loctxt"></span>
+  </h1>
+  <div class="hbtns">
+    <button id="btn-refresh" title="Refresh">⟳</button>
+    <button id="btn-settings" title="Settings">⚙</button>
+  </div>
+  <div id="lastupd">Loading…</div>
+</header>
+
+<main>
+  <!-- NOW -->
+  <section class="tab on" id="tab-now">
+    <div class="card">
+      <h2>Rainfall — past 24 h <span class="badge" id="src-current">…</span></h2>
+      <div class="rainhero">
+        <span class="big" id="rain24">–</span><span class="unit">mm</span>
+        <span class="sub" id="rainsub">Observation station: –</span>
+      </div>
+      <div class="kv" id="nowkv"></div>
+      <details><summary>All reported fields (raw IMD data)</summary>
+        <table class="raw" id="nowraw"></table>
+      </details>
+    </div>
+    <div class="card">
+      <h2>Today's forecast (station)</h2>
+      <div id="todayfc" style="font-size:14px;line-height:1.5">–</div>
+    </div>
+  </section>
+
+  <!-- 7 DAY -->
+  <section class="tab" id="tab-fc">
+    <div class="card">
+      <h2>7-day forecast <span class="badge" id="src-forecast">…</span></h2>
+      <div id="fclist"></div>
+      <details><summary>Raw IMD data</summary><table class="raw" id="fcraw"></table></details>
+    </div>
+  </section>
+
+  <!-- NOWCAST -->
+  <section class="tab" id="tab-nc">
+    <div class="card">
+      <h2>Nowcast / warnings (next 3 h) <span class="badge" id="src-nowcast">…</span></h2>
+      <div id="nclist"><p class="note">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>About nowcasts</h2>
+      <p class="note">IMD nowcasts are 3-hourly severe-weather alerts (thunderstorm, rain
+      intensity, squall) issued per district / station. Colour code: green = no warning,
+      yellow = watch, orange = alert, red = warning. If this panel shows "no data", set the
+      correct district ID in ⚙ Settings (see README for how to find it).</p>
+    </div>
+  </section>
+
+  <!-- MAPS -->
+  <section class="tab" id="tab-maps">
+    <div class="card">
+      <h2>Doppler radar — Hyderabad (nearest, ~150 km)</h2>
+      <div class="imgwrap"><img id="img-radar" alt="IMD Hyderabad radar" loading="lazy"></div>
+      <div class="imgcap"><span id="cap-radar">Max-Z composite</span>
+        <a id="lnk-radar" target="_blank" rel="noopener">open ↗</a></div>
+
+      <h2>Satellite rainfall (INSAT hydro-estimator)</h2>
+      <div class="imgwrap"><img id="img-hem" alt="INSAT hydro-estimator rainfall" loading="lazy"></div>
+      <div class="imgcap"><span>Rain rate derived from INSAT-3DR/3DS</span>
+        <a id="lnk-hem" target="_blank" rel="noopener">open ↗</a></div>
+
+      <h2>Satellite IR (clouds)</h2>
+      <div class="imgwrap"><img id="img-ir" alt="INSAT infrared imagery" loading="lazy"></div>
+      <div class="imgcap"><span>INSAT IR — Asia sector</span>
+        <a id="lnk-ir" target="_blank" rel="noopener">open ↗</a></div>
+
+      <p class="note">Images are IMD operational products, hot-linked from mausam.imd.gov.in.
+      Your site is on the Telangana–AP border ≈ 30 km N of Kurnool. If an image fails to load,
+      IMD may have renamed the product — tap "open ↗" to check, then update the URL in Settings.</p>
+    </div>
+  </section>
+
+  <!-- INFO / DIAGNOSTICS -->
+  <section class="tab" id="tab-info">
+    <div class="card">
+      <h2>Data source diagnostics</h2>
+      <div class="diag" id="diag"></div>
+    </div>
+    <div class="card">
+      <h2>Where this data comes from</h2>
+      <p class="note">
+        All weather data is from the <b>India Meteorological Department (IMD)</b>, Ministry of
+        Earth Sciences — fetched live from IMD's public JSON services
+        (<b>mausam.imd.gov.in</b> / <b>city.imd.gov.in</b>). If your network or IMD's CORS
+        policy blocks a direct fetch, the app falls back to a <b>relay copy</b>: a GitHub
+        Action in this repository fetches the same IMD endpoints every 30 min and publishes
+        the raw JSON (badge shows <span class="badge relay">RELAY</span> with its age).
+        Either way the origin of every number is IMD.<br><br>
+        Official IMD channels for the same data:
+        <a href="https://mausam.imd.gov.in" target="_blank" rel="noopener">mausam.imd.gov.in</a> ·
+        <a href="https://city.imd.gov.in" target="_blank" rel="noopener">city.imd.gov.in</a> ·
+        the <b>"Mausam"</b> app (IMD's official mobile app) ·
+        <b>"Meghdoot"</b> (agromet advisories) · <b>"Damini"</b> (lightning alerts).
+      </p>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="now" class="on"><span class="i">☔</span>Now</button>
+  <button data-tab="fc"><span class="i">📅</span>7-Day</button>
+  <button data-tab="nc"><span class="i">⚠️</span>Nowcast</button>
+  <button data-tab="maps"><span class="i">🛰️</span>Maps</button>
+  <button data-tab="info"><span class="i">ℹ️</span>Info</button>
+</nav>
+
+<!-- SETTINGS -->
+<div id="settings">
+  <div class="panel">
+    <h2>⚙ Settings</h2>
+    <label>Site latitude</label><input id="s-lat" inputmode="decimal">
+    <label>Site longitude</label><input id="s-lon" inputmode="decimal">
+    <label>IMD observation station ID (current wx + 24 h rain)</label>
+    <input id="s-station" inputmode="numeric" placeholder="43213 = Kurnool">
+    <label>IMD city forecast ID (7-day)</label>
+    <input id="s-city" inputmode="numeric" placeholder="43213 = Kurnool">
+    <label>IMD district nowcast ID (optional — Jogulamba Gadwal)</label>
+    <input id="s-district" inputmode="numeric" placeholder="leave blank to use station nowcast">
+    <label>Relay JSON URL (GitHub Action fallback)</label>
+    <input id="s-relay">
+    <label>Auto-refresh (minutes, 0 = off)</label>
+    <input id="s-refresh" inputmode="numeric">
+    <label>Radar image URL</label><input id="s-radarurl">
+    <div class="btns">
+      <button id="s-cancel">Cancel</button>
+      <button class="save" id="s-save">Save &amp; reload</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= config ================= */
+const DEFAULTS = {
+  lat: 16.08790535475237,
+  lon: 78.09998163768542,
+  station: '43213',            // Kurnool — nearest IMD obs/forecast city (~29 km S of site)
+  city: '43213',
+  district: '',                // Jogulamba Gadwal district nowcast id — set when known
+  relay: 'https://raw.githubusercontent.com/atigaddagirish/Cluade/weather-data/imd.json',
+  refresh: 30,
+  radarurl: 'https://mausam.imd.gov.in/Radar/caz_hyd.gif'
+};
+const IMG_HEM = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_hem.jpg';
+const IMG_IR  = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_ir1.jpg';
+
+function cfg(){
+  try{ return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('rw-cfg')||'{}')); }
+  catch(e){ return Object.assign({}, DEFAULTS); }
+}
+let C = cfg();
+
+function endpoints(){
+  return {
+    current:  `https://mausam.imd.gov.in/api/current_wx_api.php?id=${C.station}`,
+    forecast: `https://city.imd.gov.in/api/cityweather.php?id=${C.city}`,
+    nowcast:  C.district
+      ? `https://mausam.imd.gov.in/api/nowcast_district_api.php?id=${C.district}`
+      : `https://mausam.imd.gov.in/api/nowcastapi.php?id=${C.station}`
+  };
+}
+
+/* ================= state ================= */
+const S = { relayDoc:null, diag:{}, data:{current:null, forecast:null, nowcast:null},
+            src:{current:null, forecast:null, nowcast:null} };
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function pick(obj, patterns, exclude){
+  // find first key matching any regex in patterns (and not matching exclude)
+  for(const p of patterns){
+    for(const k of Object.keys(obj)){
+      if(p.test(k) && !(exclude && exclude.test(k))){
+        const v = obj[k];
+        if(v !== null && v !== undefined && String(v).trim() !== '') return {k, v:String(v).trim()};
+      }
+    }
+  }
+  return null;
+}
+const isNA = v => !v || /^(na|nil|n\/a|-+|null)$/i.test(String(v).trim());
+
+function fetchJSON(url, timeoutMs=12000){
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), timeoutMs);
+  return fetch(url, {signal: ctl.signal, cache:'no-store'})
+    .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .finally(()=>clearTimeout(t));
+}
+
+function setBadge(id, mode, title){
+  const el = $(id); if(!el) return;
+  el.className = 'badge ' + (mode==='live'?'live':mode==='relay'?'relay':'fail');
+  el.textContent = mode==='live' ? 'LIVE · IMD' : mode==='relay' ? ('RELAY'+(title?' · '+title:'')) : 'NO DATA';
+}
+
+/* ================= data loading ================= */
+async function loadRelay(){
+  if(!C.relay) return null;
+  try{
+    const doc = await fetchJSON(C.relay + (C.relay.includes('?')?'&':'?') + 't=' + Date.now());
+    S.relayDoc = doc;
+    S.diag.relay = {ok:true, msg:'fetched, data from ' + (doc.fetched_utc || 'unknown time')};
+    return doc;
+  }catch(e){
+    S.diag.relay = {ok:false, msg:String(e.message||e)};
+    return null;
+  }
+}
+
+function relayAge(){
+  if(!S.relayDoc || !S.relayDoc.fetched_utc) return '';
+  const mins = Math.round((Date.now() - Date.parse(S.relayDoc.fetched_utc))/60000);
+  return mins < 90 ? mins + ' min old' : Math.round(mins/60*10)/10 + ' h old';
+}
+
+async function loadSource(name){
+  const url = endpoints()[name];
+  try{
+    const data = await fetchJSON(url);
+    S.data[name] = data; S.src[name] = 'live';
+    S.diag[name] = {ok:true, msg:'direct from IMD — ' + url};
+    return;
+  }catch(e){
+    S.diag[name] = {ok:false, msg:'direct fetch failed ('+String(e.message||e)+') — ' + url};
+  }
+  // fallback: relay copy (fetch already started in parallel by refreshAll)
+  const doc = S.relayDoc || await (S.relayPromise || loadRelay());
+  const rel = doc && doc.sources && doc.sources[name];
+  if(rel && rel.ok && rel.data){
+    S.data[name] = rel.data; S.src[name] = 'relay';
+    S.diag[name].msg += ' → using relay copy (' + relayAge() + ')';
+    S.diag[name].warn = true;
+  }else{
+    S.data[name] = null; S.src[name] = null;
+  }
+}
+
+async function refreshAll(){
+  $('lastupd').innerHTML = '<span class="spin">⟳</span> refreshing…';
+  C = cfg();
+  $('loctxt').textContent =
+    `${(+C.lat).toFixed(4)}°N ${(+C.lon).toFixed(4)}°E · Jogulamba Gadwal (TG) · station ${C.station}`;
+  S.relayPromise = loadRelay();            // start relay fetch in parallel; sources await it only on failure
+  await Promise.all([loadSource('current'), loadSource('forecast'), loadSource('nowcast'), S.relayPromise]);
+  renderNow(); renderForecast(); renderNowcast(); renderMaps(); renderDiag();
+  $('lastupd').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN',
+    {hour:'2-digit',minute:'2-digit'}) + ' · data © IMD, Govt. of India';
+}
+
+/* ================= renderers ================= */
+function firstRecord(d){
+  if(Array.isArray(d)) return d.length ? d[0] : null;
+  if(d && typeof d === 'object') return d;
+  return null;
+}
+
+function renderNow(){
+  setBadge('src-current', S.src.current, S.src.current==='relay'?relayAge():'');
+  const rec = firstRecord(S.data.current);
+  const kv = $('nowkv'), raw = $('nowraw');
+  kv.innerHTML=''; raw.innerHTML='';
+  if(!rec){
+    $('rain24').textContent='–';
+    $('rainsub').textContent='No data — check Info tab diagnostics.';
+    $('todayfc').textContent='–';
+    return;
+  }
+  const rain = pick(rec, [/past.*24.*rain/i, /rain.?fall/i, /\brain\b/i]);
+  $('rain24').textContent = rain ? (isNA(rain.v) ? '0' : rain.v.replace(/[^\d.]/g,'')||rain.v) : '–';
+  const st = pick(rec, [/station/i]); const dt = pick(rec, [/date/i]); const tm = pick(rec, [/time/i]);
+  $('rainsub').textContent = 'Station: ' + (st?st.v:C.station) +
+      (dt ? ' · obs ' + dt.v : '') + (tm ? ' ' + tm.v : '') +
+      (rain && isNA(rain.v) ? ' · rainfall reported NIL/NA' : '');
+  const cells = [
+    ['Temperature', pick(rec,[/^temp/i,/temperature/i],/max|min|feel/i)],
+    ['Feels like',  pick(rec,[/feel/i])],
+    ['Humidity',    pick(rec,[/humid/i])],
+    ['Wind',        pick(rec,[/wind.*speed/i,/wind/i],/direction/i)],
+    ['Wind dir',    pick(rec,[/wind.*dir/i])],
+    ['Max / Min',   null],
+    ['Sunset',      pick(rec,[/sunset/i])],
+    ['Sunrise',     pick(rec,[/sunrise/i])]
+  ];
+  const mx = pick(rec,[/max.*temp/i]), mn = pick(rec,[/min.*temp/i]);
+  if(mx||mn) cells[5][1] = {k:'maxmin', v:(mx?mx.v:'–')+' / '+(mn?mn.v:'–')+' °C'};
+  for(const [label,c] of cells){
+    if(!c || isNA(c.v)) continue;
+    kv.insertAdjacentHTML('beforeend',
+      `<div class="cell"><div class="k">${esc(label)}</div><div class="v">${esc(c.v)}</div></div>`);
+  }
+  const fc = pick(rec, [/today.*forecast/i, /forecast/i]);
+  $('todayfc').textContent = fc && !isNA(fc.v) ? fc.v : 'Not reported in this observation.';
+  for(const k of Object.keys(rec))
+    raw.insertAdjacentHTML('beforeend', `<tr><td>${esc(k)}</td><td>${esc(rec[k])}</td></tr>`);
+}
+
+const RAIN_RE = /rain|shower|thunder|drizzle|storm/i;
+
+function renderForecast(){
+  setBadge('src-forecast', S.src.forecast, S.src.forecast==='relay'?relayAge():'');
+  const list = $('fclist'), raw = $('fcraw');
+  list.innerHTML=''; raw.innerHTML='';
+  const d = S.data.forecast;
+  const rows = Array.isArray(d) ? d : (d && typeof d==='object' ? [d] : []);
+  if(!rows.length){ list.innerHTML = '<p class="note">No data — check Info tab diagnostics.</p>'; return; }
+
+  const rec0 = rows[0];
+  // Two shapes exist in the wild: one record per day, or one record with Day_1..Day_7 keys.
+  const dayKeys = Object.keys(rec0).filter(k=>/forecast/i.test(k) && /\d/.test(k));
+  if(rows.length===1 && dayKeys.length>=2){
+    dayKeys.sort((a,b)=>(a.match(/\d+/)||[0])[0]-(b.match(/\d+/)||[0])[0]);
+    dayKeys.forEach((k,i)=>{
+      const txt = String(rec0[k]||'');
+      const n = (k.match(/\d+/)||[i+1])[0];
+      const dateK = Object.keys(rec0).find(x=>/date/i.test(x) && x.includes(String(n)));
+      addDay(list, dateK?rec0[dateK]:('Day +'+n), txt, null, null);
+    });
+  }else{
+    rows.slice(0,10).forEach(r=>{
+      const dt = pick(r,[/date/i]);
+      const fc = pick(r,[/forecast/i,/weather/i]);
+      const mx = pick(r,[/max/i]); const mn = pick(r,[/min/i]);
+      addDay(list, dt?dt.v:'', fc?fc.v:'', mx?mx.v:null, mn?mn.v:null);
+    });
+  }
+  for(const k of Object.keys(rec0))
+    raw.insertAdjacentHTML('beforeend', `<tr><td>${esc(k)}</td><td>${esc(rec0[k])}</td></tr>`);
+}
+
+function addDay(list, date, txt, mx, mn){
+  const rainy = RAIN_RE.test(txt);
+  const ico = rainy ? (/thunder|storm/i.test(txt) ? '⛈️' : '🌧️')
+            : /cloud/i.test(txt) ? '☁️' : /clear|sunny|fair/i.test(txt) ? '☀️' : '🌤️';
+  list.insertAdjacentHTML('beforeend',
+    `<div class="fcday${rainy?' rainy':''}">
+       <div class="ico">${ico}</div>
+       <div class="mid"><div class="d">${esc(date||'')}</div><div class="t">${esc(txt||'–')}</div></div>
+       ${(mx||mn)?`<div class="temps"><b>${esc(mx||'–')}°</b><br>${esc(mn||'–')}°</div>`:''}
+     </div>`);
+}
+
+function renderNowcast(){
+  setBadge('src-nowcast', S.src.nowcast, S.src.nowcast==='relay'?relayAge():'');
+  const box = $('nclist'); box.innerHTML='';
+  const d = S.data.nowcast;
+  const rows = Array.isArray(d) ? d : (d && typeof d==='object' ? [d] : []);
+  if(!rows.length){
+    box.innerHTML = '<p class="note">No nowcast returned. Either there is no active warning, '+
+      'or the station/district ID needs setting (⚙ Settings). Check diagnostics in Info tab.</p>';
+    return;
+  }
+  rows.slice(0,12).forEach(r=>{
+    const msg = pick(r,[/warning/i,/nowcast/i,/message/i,/remark/i]);
+    const col = pick(r,[/colou?r/i]);
+    const dt  = pick(r,[/date/i]); const tm = pick(r,[/time/i,/valid/i]);
+    const sev = col ? String(col.v).toLowerCase() : '';
+    const cls = /red/.test(sev)?'sev-red':/orange|amber/.test(sev)?'sev-orange'
+              :/yellow/.test(sev)?'sev-yellow':/green|no warning/.test(sev)?'sev-green':'';
+    box.insertAdjacentHTML('beforeend',
+      `<div class="nowc ${cls}">
+         <div class="h">${esc((dt?dt.v+' ':'')+(tm?tm.v:''))}${col?' · '+esc(col.v):''}</div>
+         <div>${esc(msg?msg.v:JSON.stringify(r))}</div>
+       </div>`);
+  });
+}
+
+function renderMaps(){
+  const bust = '?t=' + Math.floor(Date.now()/60000);   // refresh at most once/min
+  $('img-radar').src = C.radarurl + bust; $('lnk-radar').href = C.radarurl;
+  $('img-hem').src = IMG_HEM + bust;      $('lnk-hem').href = IMG_HEM;
+  $('img-ir').src  = IMG_IR + bust;       $('lnk-ir').href  = IMG_IR;
+}
+
+function renderDiag(){
+  const box = $('diag'); box.innerHTML='';
+  const rows = [
+    ['Current wx (rain 24 h)','current'],
+    ['7-day forecast','forecast'],
+    ['Nowcast','nowcast'],
+    ['Relay (GitHub copy)','relay']
+  ];
+  for(const [name,key] of rows){
+    const d = S.diag[key] || {ok:false, msg:'not attempted'};
+    const cls = d.ok ? (d.warn?'warn':'ok') : (key==='relay' && d.ok===false ? 'bad' : d.warn?'warn':(d.ok?'ok':'bad'));
+    box.insertAdjacentHTML('beforeend',
+      `<div class="row"><span class="dot ${d.ok?(d.warn?'warn':'ok'):(S.src[key]==='relay'?'warn':'bad')}"></span>
+        <span class="nm">${esc(name)}</span><span class="ms">${esc(d.msg)}</span></div>`);
+  }
+}
+
+/* ================= UI wiring ================= */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.id==='tab-'+b.dataset.tab));
+    if(b.dataset.tab==='maps') renderMaps();
+  });
+});
+$('btn-refresh').addEventListener('click', refreshAll);
+$('btn-settings').addEventListener('click', ()=>{
+  const c = cfg();
+  $('s-lat').value=c.lat; $('s-lon').value=c.lon; $('s-station').value=c.station;
+  $('s-city').value=c.city; $('s-district').value=c.district; $('s-relay').value=c.relay;
+  $('s-refresh').value=c.refresh; $('s-radarurl').value=c.radarurl;
+  $('settings').classList.add('on');
+});
+$('s-cancel').addEventListener('click', ()=>$('settings').classList.remove('on'));
+$('s-save').addEventListener('click', ()=>{
+  localStorage.setItem('rw-cfg', JSON.stringify({
+    lat:+$('s-lat').value||DEFAULTS.lat, lon:+$('s-lon').value||DEFAULTS.lon,
+    station:$('s-station').value.trim()||DEFAULTS.station,
+    city:$('s-city').value.trim()||DEFAULTS.city,
+    district:$('s-district').value.trim(),
+    relay:$('s-relay').value.trim(),
+    refresh:Math.max(0, +$('s-refresh').value||0),
+    radarurl:$('s-radarurl').value.trim()||DEFAULTS.radarurl
+  }));
+  $('settings').classList.remove('on');
+  refreshAll();
+  armTimer();
+});
+
+let timer=null;
+function armTimer(){
+  if(timer) clearInterval(timer);
+  const m = +cfg().refresh;
+  if(m>0) timer = setInterval(refreshAll, m*60000);
+}
+
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+refreshAll();
+armTimer();
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAll(); });
+</script>
+</body>
+</html>
