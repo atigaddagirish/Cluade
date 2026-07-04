@@ -1,0 +1,49 @@
+# Relays official IMD weather JSON into the orphan branch `weather-data`
+# so weather.html can read it from raw.githubusercontent.com (CORS-open)
+# when the phone cannot fetch IMD's servers directly.
+#
+# NOTE: GitHub only runs `schedule` workflows from the repository's DEFAULT
+# branch — merge this file there for the cron to start. `workflow_dispatch`
+# lets you test it manually from the Actions tab first. GitHub also pauses
+# schedules after ~60 days without repo activity; re-enable from Actions tab.
+name: IMD weather relay
+
+on:
+  schedule:
+    - cron: "12,42 * * * *"   # every 30 min (minute offset avoids top-of-hour load)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: imd-weather
+  cancel-in-progress: true
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch IMD data
+        run: python3 scripts/fetch_imd.py --out /tmp/imd.json
+        # station/city default to 43213 (Kurnool); pass --district <id> here
+        # once the Jogulamba Gadwal nowcast district id is confirmed.
+
+      - name: Publish to weather-data branch
+        run: |
+          set -e
+          mkdir /tmp/pub && cd /tmp/pub
+          cp /tmp/imd.json imd.json
+          git init -q -b weather-data
+          git config user.name "imd-weather-relay[bot]"
+          git config user.email "actions@github.com"
+          git add imd.json
+          git commit -q -m "IMD relay $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -f -q \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            weather-data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
