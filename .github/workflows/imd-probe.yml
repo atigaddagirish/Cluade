@@ -1,0 +1,17 @@
+# Temporary diagnostic: probes which IMD endpoints are publicly reachable
+# from GitHub's runners (open internet). Manual trigger only. Delete once
+# the relay's data source is settled.
+name: IMD endpoint probe
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/probe_imd.py
