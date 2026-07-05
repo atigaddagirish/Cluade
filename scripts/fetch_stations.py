@@ -95,30 +95,33 @@ def main():
     except Exception as e:  # noqa: BLE001
         doc["ok"]["synop"] = f"FAIL {type(e).__name__}: {e}"
 
-    # Warnings — probe candidate layers, keep the first that yields data,
-    # and print field names so the mapping can be confirmed.
-    for layer in ("NowcastWarningDistrict", "district_warnings_india",
-                  "subdiv_warnings_now", "NowcastWarningStation"):
-        try:
-            fc = get_layer(layer)
-            feats = fc.get("features", [])
-            if feats:
-                print(f"WARN LAYER {layer}: {len(feats)} feats; "
-                      f"props={sorted(feats[0]['properties'].keys())}", file=sys.stderr)
-                print(f"  sample={json.dumps(feats[0]['properties'])[:500]}", file=sys.stderr)
-                if not doc["warnings"]:
-                    doc["warnings_layer"] = layer
-                    for f in feats:
-                        ll = coords(f)
-                        p = f["properties"]
-                        doc["warnings"].append({
-                            "lat": ll[0] if ll else None,
-                            "lon": ll[1] if ll else None,
-                            "props": {k: v for k, v in p.items()
-                                      if v not in (None, "", "NULL")},
-                        })
-        except Exception as e:  # noqa: BLE001
-            print(f"WARN LAYER {layer}: FAIL {type(e).__name__}: {e}", file=sys.stderr)
+    # Nowcast warnings (next ~3 h) from the station layer (point geometry so
+    # "nearest warning to me" works). Keep only ACTIVE ones (Color > 1) — most
+    # of the 1219 stations are green/no-warning and would just bloat the file.
+    # Color: 1=green(none) 2=yellow(watch) 3=orange(alert) 4=red(warning).
+    doc["warn_cols"] = ["lat", "lon", "station", "color", "active_cats", "msg", "valid_upto"]
+    try:
+        fc = get_layer("NowcastWarningStation")
+        for f in fc.get("features", []):
+            p = f["properties"]
+            color = p.get("Color")
+            try:
+                color = int(color)
+            except (TypeError, ValueError):
+                color = 0
+            if color <= 1:
+                continue
+            ll = coords(f)
+            if not ll:
+                continue
+            cats = [i for i in range(1, 20)
+                    if str(p.get(f"cat{i}", "")).strip() in ("1", "1.0")]
+            doc["warnings"].append([ll[0], ll[1], (p.get("Station") or "").strip(),
+                                    color, cats, (p.get("message") or "").strip(),
+                                    (p.get("vupto") or "").strip()])
+        doc["ok"]["warnings"] = len(doc["warnings"])
+    except Exception as e:  # noqa: BLE001
+        doc["ok"]["warnings"] = f"FAIL {type(e).__name__}: {e}"
 
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
