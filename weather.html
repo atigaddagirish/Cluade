@@ -38,6 +38,11 @@ main{padding:12px;max-width:640px;margin:0 auto}
 #loc-resolved{width:100%;font-size:11.5px;color:var(--dim);margin-top:2px}
 #loc-resolved b{color:var(--rain)}
 .dist{font-size:11px;color:var(--dim)}
+#chips{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 12px}
+.chip{background:var(--card);border:1px solid var(--line);color:var(--txt);
+  border-radius:99px;padding:7px 13px;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.chip:active{opacity:.8}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#04101f;font-weight:600}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
   padding:14px;margin-bottom:12px}
 .card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
@@ -106,8 +111,9 @@ nav button.on{color:var(--rain)}
 #settings h2{font-size:15px;margin-bottom:12px}
 #settings label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;
   letter-spacing:.05em;margin:12px 0 4px}
-#settings input,#settings select{width:100%;background:var(--card2);border:1px solid var(--line);
-  color:var(--txt);border-radius:8px;padding:9px 10px;font-size:14px}
+#settings input,#settings select,#settings textarea{width:100%;background:var(--card2);
+  border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:9px 10px;font-size:14px;
+  font-family:inherit;resize:vertical}
 #settings .btns{display:flex;gap:8px;margin-top:16px}
 #settings .btns button{flex:1;border-radius:10px;padding:11px;font-size:14px;font-weight:600;
   border:1px solid var(--line);background:var(--card2);color:var(--txt);cursor:pointer}
@@ -136,6 +142,7 @@ nav button.on{color:var(--rain)}
     <button id="loc-gps" title="Use my current location">📍</button>
     <div id="loc-resolved"></div>
   </div>
+  <div id="chips"></div>
 
   <!-- NOW -->
   <section class="tab on" id="tab-now">
@@ -258,6 +265,8 @@ nav button.on{color:var(--rain)}
     <input id="s-relay">
     <label>Auto-refresh (minutes, 0 = off)</label>
     <input id="s-refresh" inputmode="numeric">
+    <label>Quick-tap location chips (one per line: <b>Name | lat, lon</b>)</label>
+    <textarea id="s-presets" rows="4" placeholder="Home town | 16.089037, 78.098962"></textarea>
     <label>Radar image URL</label><input id="s-radarurl">
     <div class="btns">
       <button id="s-cancel">Cancel</button>
@@ -282,6 +291,17 @@ const DEFAULTS = {
 };
 const IMG_HEM = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_hem.jpg';
 const IMG_IR  = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_ir1.jpg';
+
+// Quick-tap location chips. Edit in ⚙ Settings (one "Name | lat, lon" per line).
+const DEFAULT_PRESETS = [
+  {name:'Home town', lat:16.089037, lon:78.098962},
+  {name:'Manikonda', lat:17.400695, lon:78.365313},
+  {name:'Nagole',    lat:17.381586, lon:78.566168}
+];
+function presets(){
+  try{ const p=JSON.parse(localStorage.getItem('rw-presets')); if(Array.isArray(p)&&p.length) return p; }catch(e){}
+  return DEFAULT_PRESETS;
+}
 
 function cfg(){
   try{ return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('rw-cfg')||'{}')); }
@@ -452,9 +472,28 @@ function renderAll(){
   $('loctxt').textContent =
     `${loc.lat.toFixed(4)}°N ${loc.lon.toFixed(4)}°E · ${loc.name || 'custom location'}`;
   $('loc-resolved').innerHTML = isHomeSite()
-    ? 'Showing <b>home site</b> (16.088°N, 78.100°E). Type any coordinate above to switch.'
-    : `Showing <b>${esc(loc.lat.toFixed(4))}, ${esc(loc.lon.toFixed(4))}</b> — nearest IMD stations. Clear the box + Go to return home.`;
+    ? 'Showing <b>home site</b> (16.088°N, 78.100°E). Type any coordinate, tap a chip, or 📍.'
+    : `Showing <b>${esc(loc.name || (loc.lat.toFixed(4)+', '+loc.lon.toFixed(4)))}</b> — nearest IMD stations. Clear the box + Go to return home.`;
+  renderChips();
   renderNow(); renderForecast(); renderNowcast(); renderMaps(); renderDiag();
+}
+
+function renderChips(){
+  const box = $('chips'); if(!box) return;
+  const loc = activeLoc();
+  box.innerHTML = '';
+  presets().forEach(p => {
+    const on = Math.abs(p.lat-loc.lat) < 5e-4 && Math.abs(p.lon-loc.lon) < 5e-4;
+    const b = document.createElement('button');
+    b.className = 'chip' + (on?' on':'');
+    b.textContent = p.name;
+    b.addEventListener('click', () => {
+      setActiveLoc(+(+p.lat).toFixed(6), +(+p.lon).toFixed(6), p.name);
+      $('loc-input').value = `${(+p.lat).toFixed(6)}, ${(+p.lon).toFixed(6)}`;
+      renderAll();
+    });
+    box.appendChild(b);
+  });
 }
 
 /* ================= renderers ================= */
@@ -710,6 +749,7 @@ $('btn-settings').addEventListener('click', ()=>{
   $('s-lat').value=c.lat; $('s-lon').value=c.lon; $('s-station').value=c.station;
   $('s-city').value=c.city; $('s-district').value=c.district; $('s-relay').value=c.relay;
   $('s-refresh').value=c.refresh; $('s-radarurl').value=c.radarurl;
+  $('s-presets').value = presets().map(p=>`${p.name} | ${p.lat}, ${p.lon}`).join('\n');
   $('settings').classList.add('on');
 });
 $('s-cancel').addEventListener('click', ()=>$('settings').classList.remove('on'));
@@ -723,6 +763,13 @@ $('s-save').addEventListener('click', ()=>{
     refresh:Math.max(0, +$('s-refresh').value||0),
     radarurl:$('s-radarurl').value.trim()||DEFAULTS.radarurl
   }));
+  // parse "Name | lat, lon" lines into the chip presets
+  const rows = $('s-presets').value.split('\n').map(line=>{
+    const m = line.match(/^\s*(.+?)\s*\|\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    return m ? {name:m[1], lat:+m[2], lon:+m[3]} : null;
+  }).filter(Boolean);
+  if(rows.length) localStorage.setItem('rw-presets', JSON.stringify(rows));
+  else localStorage.removeItem('rw-presets');
   $('settings').classList.remove('on');
   refreshAll();
   armTimer();
