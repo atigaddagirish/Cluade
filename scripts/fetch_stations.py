@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""Fetch IMD GeoServer station + warning layers → compact CORS-open stations.json.
+
+One WFS fetch returns every station in India (with coordinates), so the phone
+can find the nearest station to ANY typed coordinate after downloading this
+once. Data © India Meteorological Department (reactjs.imd.gov.in/geoserver).
+
+Emits arrays (not objects) per station to keep the payload small. Also dumps
+the warning layers' field names to stderr so they can be wired precisely.
+"""
+import argparse
+import json
+import sys
+import urllib.request
+from datetime import datetime, timezone
+
+UA = "Mozilla/5.0 (Linux; Android 14) Chrome/126.0 Mobile Safari/537.36"
+WFS = ("https://reactjs.imd.gov.in/geoserver/imd/ows?service=WFS&version=1.0.0"
+       "&request=GetFeature&typeName=imd:{layer}&outputFormat=application/json")
+TIMEOUT = 60
+
+
+def get_layer(layer):
+    req = urllib.request.Request(WFS.format(layer=layer), headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        return json.loads(r.read().decode("utf-8", errors="replace"))
+
+
+def num(v):
+    """Return a rounded float for a numeric-ish value, else None."""
+    if v is None:
+        return None
+    s = str(v).strip()
+    if s == "" or s.upper() in ("NULL", "NA", "NIL", "NONE"):
+        return None
+    try:
+        return round(float(s), 1)
+    except ValueError:
+        return None
+
+
+def coords(feat):
+    g = feat.get("geometry") or {}
+    c = g.get("coordinates")
+    if c and len(c) >= 2:
+        try:
+            return round(float(c[1]), 3), round(float(c[0]), 3)  # lat, lon
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default="stations.json")
+    a = ap.parse_args()
+
+    doc = {
+        "fetched_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "attribution": "Data (c) India Meteorological Department, Ministry of Earth Sciences",
+        "source": "reactjs.imd.gov.in/geoserver (WFS)",
+        # column legend for the compact arrays below
+        "aws_cols": ["lat", "lon", "name", "rain_mm", "temp_c", "rh_pct", "wind_kmph"],
+        "synop_cols": ["lat", "lon", "id", "rain24_mm", "temp_c", "rh_pct"],
+        "aws": [], "synop": [], "warnings": [], "ok": {},
+    }
+
+    # AWS: dense network, per-station rainfall + temp
+    try:
+        fc = get_layer("aws_data_layer")
+        for f in fc.get("features", []):
+            ll = coords(f)
+            if not ll:
+                continue
+            p = f["properties"]
+            doc["aws"].append([ll[0], ll[1], (p.get("station") or "").strip(),
+                               num(p.get("rainfall")), num(p.get("temp")),
+                               num(p.get("rh")), num(p.get("windspeed"))])
+        doc["ok"]["aws"] = len(doc["aws"])
+    except Exception as e:  # noqa: BLE001
+        doc["ok"]["aws"] = f"FAIL {type(e).__name__}: {e}"
+
+    # SYNOP: authoritative 24-hour rainfall
+    try:
+        fc = get_layer("synop_data_layer")
+        for f in fc.get("features", []):
+            ll = coords(f)
+            if not ll:
+                continue
+            p = f["properties"]
+            doc["synop"].append([ll[0], ll[1], p.get("station_id"),
+                                 num(p.get("24hrlyrain")), num(p.get("dbtemp")),
+                                 num(p.get("rh"))])
+        doc["ok"]["synop"] = len(doc["synop"])
+    except Exception as e:  # noqa: BLE001
+        doc["ok"]["synop"] = f"FAIL {type(e).__name__}: {e}"
+
+    # Warnings — probe candidate layers, keep the first that yields data,
+    # and print field names so the mapping can be confirmed.
+    for layer in ("NowcastWarningDistrict", "district_warnings_india",
+                  "subdiv_warnings_now", "NowcastWarningStation"):
+        try:
+            fc = get_layer(layer)
+            feats = fc.get("features", [])
+            if feats:
+                print(f"WARN LAYER {layer}: {len(feats)} feats; "
+                      f"props={sorted(feats[0]['properties'].keys())}", file=sys.stderr)
+                print(f"  sample={json.dumps(feats[0]['properties'])[:500]}", file=sys.stderr)
+                if not doc["warnings"]:
+                    doc["warnings_layer"] = layer
+                    for f in feats:
+                        ll = coords(f)
+                        p = f["properties"]
+                        doc["warnings"].append({
+                            "lat": ll[0] if ll else None,
+                            "lon": ll[1] if ll else None,
+                            "props": {k: v for k, v in p.items()
+                                      if v not in (None, "", "NULL")},
+                        })
+        except Exception as e:  # noqa: BLE001
+            print(f"WARN LAYER {layer}: FAIL {type(e).__name__}: {e}", file=sys.stderr)
+
+    with open(a.out, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
+    import os
+    print(f"wrote {a.out} ok={doc['ok']} warnings={len(doc['warnings'])} "
+          f"bytes={os.path.getsize(a.out)}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
