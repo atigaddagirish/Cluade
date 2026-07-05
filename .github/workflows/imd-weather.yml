@@ -57,7 +57,7 @@ jobs:
           git init -q -b weather-data
           git config user.name "imd-weather-relay[bot]"
           git config user.email "actions@github.com"
-          git add imd.json
+          git add -A
           git commit -q -m "IMD relay $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -f -q \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
