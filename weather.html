@@ -197,9 +197,9 @@ nav button.on{color:var(--rain)}
       <div class="imgcap"><span id="cap-radar">Max-Z composite</span>
         <a id="lnk-radar" target="_blank" rel="noopener">open ↗</a></div>
 
-      <h2>Satellite rainfall (INSAT hydro-estimator)</h2>
-      <div class="imgwrap"><img id="img-hem" alt="INSAT hydro-estimator rainfall" loading="lazy"></div>
-      <div class="imgcap"><span>Rain rate derived from INSAT-3DR/3DS</span>
+      <h2>Daily rainfall map — India (IMD, observed)</h2>
+      <div class="imgwrap"><img id="img-hem" alt="IMD daily observed rainfall map" loading="lazy"></div>
+      <div class="imgcap"><span>Measured rainfall, IMD rain-gauge network</span>
         <a id="lnk-hem" target="_blank" rel="noopener">open ↗</a></div>
 
       <h2>Satellite IR (clouds)</h2>
@@ -208,7 +208,10 @@ nav button.on{color:var(--rain)}
         <a id="lnk-ir" target="_blank" rel="noopener">open ↗</a></div>
 
       <p class="note">Images are IMD operational products, hot-linked from mausam.imd.gov.in.
-      Your site is on the Telangana–AP border ≈ 30 km N of Kurnool. If an image fails to load,
+      The <b>Hyderabad Doppler radar</b> is the best "is it raining now" view (live precipitation
+      echoes, ~150 km from the site). Note: IMD <b>retired its public satellite hydro-estimator
+      (rain-rate) image</b> in 2026, so this shows the <b>observed daily rainfall map</b> instead —
+      real gauge-measured rainfall across India (updates once daily). If an image fails to load,
       IMD may have renamed the product — tap "open ↗" to check, then update the URL in Settings.</p>
     </div>
   </section>
@@ -289,7 +292,9 @@ const DEFAULTS = {
   refresh: 10,
   radarurl: 'https://mausam.imd.gov.in/Radar/caz_hyd.gif'
 };
-const IMG_HEM = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_hem.jpg';
+// IMD retired the public satellite hydro-estimator image (3Dasiasec_hem.jpg → 404);
+// use the observed daily rainfall map instead (gauge-measured, updates daily).
+const IMG_HEM = 'https://mausam.imd.gov.in/Rainfall/SUBDIVISION_RAINFALL_MAP_COUNTRY_INDIA_cd.JPG';
 const IMG_IR  = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_ir1.jpg';
 
 // Quick-tap location chips. Edit in ⚙ Settings (one "Name | lat, lon" per line).
