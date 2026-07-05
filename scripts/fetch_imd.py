@@ -178,10 +178,14 @@ def main():
             print(f"scrape citywx: FAIL - {type(e).__name__}: {e}", file=sys.stderr)
 
     any_ok = any(s.get("ok") for s in doc["sources"].values())
+    doc["any_ok"] = any_ok
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
-    print(f"wrote {a.out}", file=sys.stderr)
-    return 0 if any_ok else 1
+    print(f"wrote {a.out} (any_ok={any_ok})", file=sys.stderr)
+    # Always exit 0: publishing the relay file — even with all sources stale —
+    # is a successful run. Per-source status travels inside the JSON and the
+    # app surfaces it, so a bad source never turns the workflow red / emails.
+    return 0
 
 
 if __name__ == "__main__":
