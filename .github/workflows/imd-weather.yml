@@ -31,6 +31,17 @@ jobs:
         run: python3 scripts/probe_imd.py
         continue-on-error: true
 
+      - name: Save raw citywx HTML (parser development)
+        run: |
+          python3 - <<'EOF'
+          import urllib.request
+          req = urllib.request.Request(
+            'https://city.imd.gov.in/citywx/citywxnew.php?id=43213',
+            headers={'User-Agent':'Mozilla/5.0 (Linux; Android 14) Chrome/126.0'})
+          open('/tmp/citywx.html','wb').write(urllib.request.urlopen(req, timeout=30).read())
+          EOF
+        continue-on-error: true
+
       - name: Fetch IMD data
         run: python3 scripts/fetch_imd.py --out /tmp/imd.json
         continue-on-error: true
@@ -42,6 +53,7 @@ jobs:
           set -e
           mkdir /tmp/pub && cd /tmp/pub
           cp /tmp/imd.json imd.json
+          cp /tmp/citywx.html citywx.html 2>/dev/null || true
           git init -q -b weather-data
           git config user.name "imd-weather-relay[bot]"
           git config user.email "actions@github.com"
