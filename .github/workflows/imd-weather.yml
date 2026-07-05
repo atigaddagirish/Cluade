@@ -39,6 +39,10 @@ jobs:
         run: python3 scripts/discover_cities.py
         continue-on-error: true
 
+      - name: Probe IMD GeoServer WFS (one-off build aid)
+        run: python3 scripts/probe_geoserver.py | tee /tmp/geoserver.txt
+        continue-on-error: true
+
       - name: Publish to weather-data branch
         run: |
           set -e
@@ -46,6 +50,7 @@ jobs:
           cp /tmp/imd.json imd.json
           cp -r /tmp/disc disc 2>/dev/null || true
           cp -r /tmp/disc2 disc2 2>/dev/null || true
+          cp /tmp/geoserver.txt geoserver.txt 2>/dev/null || true
           git init -q -b weather-data
           git config user.name "imd-weather-relay[bot]"
           git config user.email "actions@github.com"
