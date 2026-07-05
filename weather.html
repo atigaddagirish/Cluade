@@ -28,6 +28,16 @@ header h1 .loc{font-size:11px;color:var(--dim);font-weight:400;display:block;mar
 .hbtns button:active{background:var(--line)}
 #lastupd{font-size:10.5px;color:var(--dim);margin-top:4px}
 main{padding:12px;max-width:640px;margin:0 auto}
+#locbar{display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+#locbar input{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);
+  color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px}
+#locbar button{background:var(--card);border:1px solid var(--line);color:var(--txt);
+  border-radius:10px;padding:10px 13px;font-size:14px;cursor:pointer;white-space:nowrap}
+#locbar button.go{background:var(--accent);border-color:var(--accent);color:#04101f;font-weight:600}
+#locbar button:active{opacity:.8}
+#loc-resolved{width:100%;font-size:11.5px;color:var(--dim);margin-top:2px}
+#loc-resolved b{color:var(--rain)}
+.dist{font-size:11px;color:var(--dim)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
   padding:14px;margin-bottom:12px}
 .card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
@@ -120,6 +130,13 @@ nav button.on{color:var(--rain)}
 </header>
 
 <main>
+  <div id="locbar">
+    <input id="loc-input" inputmode="decimal" placeholder="lat, lon  e.g. 16.088, 78.100">
+    <button class="go" id="loc-go">Go</button>
+    <button id="loc-gps" title="Use my current location">📍</button>
+    <div id="loc-resolved"></div>
+  </div>
+
   <!-- NOW -->
   <section class="tab on" id="tab-now">
     <div class="card">
@@ -134,7 +151,7 @@ nav button.on{color:var(--rain)}
       </details>
     </div>
     <div class="card">
-      <h2>Today's forecast (station)</h2>
+      <h2>7-day forecast — <span id="fc-place">home site</span></h2>
       <div id="todayfc" style="font-size:14px;line-height:1.5">–</div>
     </div>
   </section>
@@ -156,10 +173,12 @@ nav button.on{color:var(--rain)}
     </div>
     <div class="card">
       <h2>About nowcasts</h2>
-      <p class="note">IMD nowcasts are 3-hourly severe-weather alerts (thunderstorm, rain
-      intensity, squall) issued per district / station. Colour code: green = no warning,
-      yellow = watch, orange = alert, red = warning. If this panel shows "no data", set the
-      correct district ID in ⚙ Settings (see README for how to find it).</p>
+      <p class="note">IMD nowcasts are 3-hourly severe-weather alerts (thunderstorm, rain,
+      squall, hail…) issued per station. Colour code: <b>yellow</b> = watch, <b>orange</b> =
+      alert, <b>red</b> = warning (green/no-warning stations are omitted). This panel shows any
+      active warning within 200 km of the location in the bar above, nearest first — change the
+      coordinate and it recomputes instantly. Hazard-category labels are best-effort; the exact
+      IMD legend confirms with the gateway key.</p>
     </div>
   </section>
 
@@ -197,14 +216,14 @@ nav button.on{color:var(--rain)}
       <h2>Where this data comes from</h2>
       <p class="note">
         All weather data is from the <b>India Meteorological Department (IMD)</b>, Ministry of
-        Earth Sciences. Since mid-2026 IMD's JSON APIs answer only whitelisted IP addresses
-        (HTTP 401 to the public), so the usual path is the <b>relay</b>: a GitHub Action in
-        this repository reads IMD's <b>public city weather page</b>
-        (city.imd.gov.in/citywx, Kurnool) every 30 min and publishes the extracted data
-        (badge shows <span class="badge relay">RELAY</span> with its age). A direct IMD API
-        fetch is still attempted first each refresh and takes over automatically if IMD
-        reopens the APIs. Either way the origin of every number is IMD. Nowcast warnings
-        have no open source at present — they need a free api.imd.gov.in key (see README).<br><br>
+        Earth Sciences. <b>Observations &amp; warnings (any coordinate):</b> a GitHub Action in
+        this repo pulls IMD's nationwide GeoServer feed (reactjs.imd.gov.in/geoserver —
+        2,000+ Automatic Weather Stations, 400+ SYNOP stations, plus live nowcast warnings)
+        every 30 min and republishes it CORS-open, so your phone can find the nearest station
+        to <i>any</i> point you type — instantly, no third-party proxy, no key. <b>7-day
+        forecast:</b> from IMD's public Kurnool city page (per-coordinate forecast needs the
+        api.imd.gov.in gateway key). Badges show data age. Since mid-2026 IMD's simple JSON
+        APIs answer only whitelisted IPs (HTTP 401), which is why the relay exists.<br><br>
         Official IMD channels for the same data:
         <a href="https://mausam.imd.gov.in" target="_blank" rel="noopener">mausam.imd.gov.in</a> ·
         <a href="https://city.imd.gov.in" target="_blank" rel="noopener">city.imd.gov.in</a> ·
@@ -257,6 +276,7 @@ const DEFAULTS = {
   city: '43213',
   district: '',                // Jogulamba Gadwal district nowcast id — set when known
   relay: 'https://raw.githubusercontent.com/atigaddagirish/Cluade/weather-data/imd.json',
+  stations: 'https://raw.githubusercontent.com/atigaddagirish/Cluade/weather-data/stations.json',
   refresh: 30,
   radarurl: 'https://mausam.imd.gov.in/Radar/caz_hyd.gif'
 };
@@ -280,12 +300,46 @@ function endpoints(){
 }
 
 /* ================= state ================= */
-const S = { relayDoc:null, diag:{}, data:{current:null, forecast:null, nowcast:null},
+const S = { relayDoc:null, stationsDoc:null, diag:{},
+            data:{current:null, forecast:null, nowcast:null},
             src:{current:null, forecast:null, nowcast:null} };
 
 /* ================= helpers ================= */
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* active location = the coordinate the user is looking at (defaults to home site).
+   Observations + warnings are computed for the nearest IMD station to this point. */
+function activeLoc(){
+  try{
+    const l = JSON.parse(localStorage.getItem('rw-loc')||'null');
+    if(l && isFinite(l.lat) && isFinite(l.lon)) return l;
+  }catch(e){}
+  return {lat:+C.lat, lon:+C.lon, name:'home site · Jogulamba Gadwal (TG)'};
+}
+function setActiveLoc(lat, lon, name){
+  localStorage.setItem('rw-loc', JSON.stringify({lat, lon, name:name||''}));
+}
+function isHomeSite(){ return !localStorage.getItem('rw-loc'); }
+
+/* great-circle distance in km */
+function haversine(aLat, aLon, bLat, bLon){
+  const R=6371, d2r=Math.PI/180;
+  const dLat=(bLat-aLat)*d2r, dLon=(bLon-aLon)*d2r;
+  const s=Math.sin(dLat/2)**2 + Math.cos(aLat*d2r)*Math.cos(bLat*d2r)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));
+}
+/* nearest row [lat,lon,...] whose column `metricIdx` is a finite number */
+function nearestWith(rows, lat, lon, metricIdx){
+  let best=null, bd=Infinity;
+  for(const r of (rows||[])){
+    if(metricIdx!=null && !(typeof r[metricIdx]==='number' && isFinite(r[metricIdx]))) continue;
+    const d=haversine(lat, lon, r[0], r[1]);
+    if(d<bd){ bd=d; best=r; }
+  }
+  return best ? {row:best, dist:bd} : null;
+}
+const km = d => d<10 ? d.toFixed(1)+' km' : Math.round(d)+' km';
 
 function pick(obj, patterns, exclude){
   // find first key matching any regex in patterns (and not matching exclude)
@@ -334,6 +388,25 @@ function relayAge(){
   const mins = Math.round((Date.now() - Date.parse(S.relayDoc.fetched_utc))/60000);
   return mins < 90 ? mins + ' min old' : Math.round(mins/60*10)/10 + ' h old';
 }
+function ageOf(iso){
+  if(!iso) return '';
+  const mins = Math.round((Date.now() - Date.parse(iso))/60000);
+  return mins < 90 ? mins + ' min old' : Math.round(mins/60*10)/10 + ' h old';
+}
+
+async function loadStations(){
+  if(!C.stations) return null;
+  try{
+    const doc = await fetchJSON(C.stations + (C.stations.includes('?')?'&':'?') + 't=' + Date.now(), 20000);
+    S.stationsDoc = doc;
+    const n = (doc.aws?doc.aws.length:0) + (doc.synop?doc.synop.length:0);
+    S.diag.stations = {ok:true, msg:`${n} stations, ${doc.warnings?doc.warnings.length:0} active warnings — ${ageOf(doc.fetched_utc)}`};
+    return doc;
+  }catch(e){
+    S.diag.stations = {ok:false, msg:String(e.message||e)};
+    return null;
+  }
+}
 
 async function loadSource(name){
   const url = endpoints()[name];
@@ -360,13 +433,28 @@ async function loadSource(name){
 async function refreshAll(){
   $('lastupd').innerHTML = '<span class="spin">⟳</span> refreshing…';
   C = cfg();
+  const loc = activeLoc();
   $('loctxt').textContent =
-    `${(+C.lat).toFixed(4)}°N ${(+C.lon).toFixed(4)}°E · Jogulamba Gadwal (TG) · station ${C.station}`;
+    `${loc.lat.toFixed(4)}°N ${loc.lon.toFixed(4)}°E · ${loc.name || 'custom location'}`;
+  $('loc-input').value = isHomeSite() ? '' : `${loc.lat}, ${loc.lon}`;
   S.relayPromise = loadRelay();            // start relay fetch in parallel; sources await it only on failure
-  await Promise.all([loadSource('current'), loadSource('forecast'), loadSource('nowcast'), S.relayPromise]);
-  renderNow(); renderForecast(); renderNowcast(); renderMaps(); renderDiag();
+  await Promise.all([loadStations(), loadSource('current'), loadSource('forecast'),
+                     loadSource('nowcast'), S.relayPromise]);
+  renderAll();
   $('lastupd').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN',
     {hour:'2-digit',minute:'2-digit'}) + ' · data © IMD, Govt. of India';
+}
+
+/* re-render everything for the current active location (no network needed —
+   station data is already downloaded, so switching coordinates is instant) */
+function renderAll(){
+  const loc = activeLoc();
+  $('loctxt').textContent =
+    `${loc.lat.toFixed(4)}°N ${loc.lon.toFixed(4)}°E · ${loc.name || 'custom location'}`;
+  $('loc-resolved').innerHTML = isHomeSite()
+    ? 'Showing <b>home site</b> (16.088°N, 78.100°E). Type any coordinate above to switch.'
+    : `Showing <b>${esc(loc.lat.toFixed(4))}, ${esc(loc.lon.toFixed(4))}</b> — nearest IMD stations. Clear the box + Go to return home.`;
+  renderNow(); renderForecast(); renderNowcast(); renderMaps(); renderDiag();
 }
 
 /* ================= renderers ================= */
@@ -376,42 +464,76 @@ function firstRecord(d){
   return null;
 }
 
+function cell(label, val, extra){
+  return `<div class="cell"><div class="k">${esc(label)}</div>`+
+         `<div class="v">${esc(val)}${extra?` <span class="dist">${esc(extra)}</span>`:''}</div></div>`;
+}
+
 function renderNow(){
-  setBadge('src-current', S.src.current, S.src.current==='relay'?relayAge():'');
-  const rec = firstRecord(S.data.current);
+  const loc = activeLoc();
   const kv = $('nowkv'), raw = $('nowraw');
   kv.innerHTML=''; raw.innerHTML='';
+  const d = S.stationsDoc;
+
+  // Preferred path: nationwide IMD station data → nearest station to active point.
+  if(d && (d.synop || d.aws)){
+    setBadge('src-current', 'relay', ageOf(d.fetched_utc));
+    const synopRain = nearestWith(d.synop, loc.lat, loc.lon, 3);   // 24-hr rain (mm)
+    const awsRain   = nearestWith(d.aws,   loc.lat, loc.lon, 3);   // AWS rainfall (mm)
+    const awsTemp   = nearestWith(d.aws,   loc.lat, loc.lon, 4);   // temp → live obs
+    const awsRH     = nearestWith(d.aws,   loc.lat, loc.lon, 5);
+    const awsWind   = nearestWith(d.aws,   loc.lat, loc.lon, 6);
+
+    // headline = SYNOP 24-h rainfall if a SYNOP station is reasonably near, else AWS
+    let rainVal=null, rainSrc='';
+    if(synopRain && synopRain.dist <= 150){
+      rainVal = synopRain.row[3];
+      rainSrc = `SYNOP station ${synopRain.row[2]} · ${km(synopRain.dist)} away · last 24 h`;
+    }else if(awsRain){
+      rainVal = awsRain.row[3];
+      rainSrc = `AWS ${awsRain.row[2]||''} · ${km(awsRain.dist)} away · since 0300 UTC`;
+    }else if(synopRain){
+      rainVal = synopRain.row[3];
+      rainSrc = `SYNOP station ${synopRain.row[2]} · ${km(synopRain.dist)} away · last 24 h`;
+    }
+    $('rain24').textContent = (rainVal==null) ? '–' : rainVal;
+    $('rainsub').textContent = rainSrc || 'No station reporting rainfall near this point.';
+
+    if(awsTemp) kv.insertAdjacentHTML('beforeend', cell('Temperature', awsTemp.row[4]+' °C',
+      (awsTemp.row[2]||'AWS')+' · '+km(awsTemp.dist)));
+    if(awsRH && awsRH.row[5]!=null)  kv.insertAdjacentHTML('beforeend', cell('Humidity', awsRH.row[5]+' %'));
+    if(awsWind && awsWind.row[6]!=null) kv.insertAdjacentHTML('beforeend', cell('Wind', awsWind.row[6]+' km/h'));
+    if(awsRain && awsRain.row[3]!=null && awsRain!==synopRain)
+      kv.insertAdjacentHTML('beforeend', cell('AWS rain (short)', awsRain.row[3]+' mm', km(awsRain.dist)));
+    if(synopRain) kv.insertAdjacentHTML('beforeend', cell('SYNOP 24 h rain',
+      (synopRain.row[3]==null?'–':synopRain.row[3]+' mm'), 'stn '+synopRain.row[2]+' · '+km(synopRain.dist)));
+
+    // raw table = the nearest stations used
+    const rows = [];
+    if(synopRain) rows.push(['Nearest SYNOP', `id ${synopRain.row[2]} @ ${synopRain.row[0]},${synopRain.row[1]} (${km(synopRain.dist)}) rain24=${synopRain.row[3]} temp=${synopRain.row[4]} rh=${synopRain.row[5]}`]);
+    if(awsTemp)   rows.push(['Nearest AWS', `${awsTemp.row[2]} @ ${awsTemp.row[0]},${awsTemp.row[1]} (${km(awsTemp.dist)}) rain=${awsTemp.row[3]} temp=${awsTemp.row[4]} rh=${awsTemp.row[5]} wind=${awsTemp.row[6]}`]);
+    for(const [k,v] of rows) raw.insertAdjacentHTML('beforeend', `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`);
+    return;
+  }
+
+  // Fallback: the older Kurnool relay record (home site only)
+  setBadge('src-current', S.src.current, S.src.current==='relay'?relayAge():'');
+  const rec = firstRecord(S.data.current);
   if(!rec){
     $('rain24').textContent='–';
     $('rainsub').textContent='No data — check Info tab diagnostics.';
-    $('todayfc').textContent='–';
     return;
   }
   const rain = pick(rec, [/past.*24.*rain/i, /rain.?fall/i, /\brain\b/i]);
   $('rain24').textContent = rain ? (isNA(rain.v) ? '0' : rain.v.replace(/[^\d.]/g,'')||rain.v) : '–';
-  const st = pick(rec, [/station/i]); const dt = pick(rec, [/date/i]); const tm = pick(rec, [/time/i]);
-  $('rainsub').textContent = 'Station: ' + (st?st.v:C.station) +
-      (dt ? ' · obs ' + dt.v : '') + (tm ? ' ' + tm.v : '') +
+  const st = pick(rec, [/station/i]); const dt = pick(rec, [/date/i]);
+  $('rainsub').textContent = 'Station: ' + (st?st.v:C.station) + (dt ? ' · obs ' + dt.v : '') +
       (rain && isNA(rain.v) ? ' · rainfall reported NIL/NA' : '');
-  const cells = [
-    ['Temperature', pick(rec,[/^temp/i,/temperature/i],/max|min|feel/i)],
-    ['Feels like',  pick(rec,[/feel/i])],
-    ['Humidity',    pick(rec,[/humid/i])],
-    ['Wind',        pick(rec,[/wind.*speed/i,/wind/i],/direction/i)],
-    ['Wind dir',    pick(rec,[/wind.*dir/i])],
-    ['Max / Min',   null],
-    ['Sunset',      pick(rec,[/sunset/i])],
-    ['Sunrise',     pick(rec,[/sunrise/i])]
-  ];
   const mx = pick(rec,[/max.*temp/i]), mn = pick(rec,[/min.*temp/i]);
-  if(mx||mn) cells[5][1] = {k:'maxmin', v:(mx?mx.v:'–')+' / '+(mn?mn.v:'–')+' °C'};
-  for(const [label,c] of cells){
-    if(!c || isNA(c.v)) continue;
-    kv.insertAdjacentHTML('beforeend',
-      `<div class="cell"><div class="k">${esc(label)}</div><div class="v">${esc(c.v)}</div></div>`);
-  }
-  const fc = pick(rec, [/today.*forecast/i, /forecast/i]);
-  $('todayfc').textContent = fc && !isNA(fc.v) ? fc.v : 'Not reported in this observation.';
+  const cells = [['Max / Min', (mx||mn)?((mx?mx.v:'–')+' / '+(mn?mn.v:'–')+' °C'):null],
+    ['Humidity', pick(rec,[/humid/i])?pick(rec,[/humid/i]).v:null],
+    ['Sunset', pick(rec,[/sunset/i])?pick(rec,[/sunset/i]).v:null]];
+  for(const [label,v] of cells) if(v) kv.insertAdjacentHTML('beforeend', cell(label, v));
   for(const k of Object.keys(rec))
     raw.insertAdjacentHTML('beforeend', `<tr><td>${esc(k)}</td><td>${esc(rec[k])}</td></tr>`);
 }
@@ -424,6 +546,19 @@ function renderForecast(){
   list.innerHTML=''; raw.innerHTML='';
   const d = S.data.forecast;
   const rows = Array.isArray(d) ? d : (d && typeof d==='object' ? [d] : []);
+
+  // "Today's outlook" card on the Now tab (home-site 7-day text — the free
+  // IMD source is city-based; per-coordinate 7-day needs the api.imd.gov.in key)
+  const rec = rows[0] || {};
+  const today = pick(rec, [/today.*forecast/i]) || pick(rec, [/forecast/i, /weather/i]);
+  $('fc-place').textContent = 'Kurnool (home site)';
+  $('todayfc').innerHTML = (today && !isNA(today.v))
+    ? esc(today.v) + (isHomeSite() ? '' :
+        '<br><span class="dist">7-day forecast is for the home site; for your typed'+
+        ' coordinate the Now card above shows nearest-station observations. Per-location'+
+        ' 7-day forecast unlocks with the IMD gateway key.</span>')
+    : 'Not reported.';
+
   if(!rows.length){ list.innerHTML = '<p class="note">No data — check Info tab diagnostics.</p>'; return; }
 
   const rec0 = rows[0];
@@ -461,29 +596,50 @@ function addDay(list, date, txt, mx, mn){
      </div>`);
 }
 
+const WARN_COLOR = {2:['yellow','sev-yellow','Yellow — watch'],
+                    3:['orange','sev-orange','Orange — alert'],
+                    4:['red','sev-red','Red — warning']};
+// IMD nowcast hazard categories (cat1..cat19). Best-effort labels.
+const WARN_CAT = {1:'Thunderstorm & lightning',2:'Gusty winds',3:'Squall',4:'Duststorm',
+  5:'Hailstorm',6:'Heavy rain',7:'Dust/raising winds',8:'Heat wave',9:'Cold wave',
+  10:'Ground frost',11:'Fog',12:'Cold day',13:'Hot day',14:'Strong surface winds',
+  15:'Snow',16:'Other',17:'Heavy snow',18:'Warm night',19:'Cold night'};
+
 function renderNowcast(){
-  setBadge('src-nowcast', S.src.nowcast, S.src.nowcast==='relay'?relayAge():'');
   const box = $('nclist'); box.innerHTML='';
-  const d = S.data.nowcast;
-  const rows = Array.isArray(d) ? d : (d && typeof d==='object' ? [d] : []);
-  if(!rows.length){
-    box.innerHTML = '<p class="note">No nowcast returned. Either there is no active warning, '+
-      'or the station/district ID needs setting (⚙ Settings). Check diagnostics in Info tab.</p>';
+  const loc = activeLoc();
+  const d = S.stationsDoc;
+
+  if(d && Array.isArray(d.warnings)){
+    setBadge('src-nowcast', 'relay', ageOf(d.fetched_utc));
+    // active warnings within 200 km of the point, nearest first
+    const near = d.warnings
+      .map(w => ({w, dist: haversine(loc.lat, loc.lon, w[0], w[1])}))
+      .filter(x => x.dist <= 200)
+      .sort((a,b) => a.dist - b.dist)
+      .slice(0, 12);
+    if(!near.length){
+      box.innerHTML = '<p class="note">✅ No active IMD nowcast warning within 200 km of this '+
+        'point right now. (IMD issues nowcasts only when severe weather is expected in the next '+
+        '~3 h.) '+ (d.warnings.length ? d.warnings.length+' warning(s) active elsewhere in India.' : '') +'</p>';
+      return;
+    }
+    near.forEach(({w, dist}) => {
+      const [,, station, color, cats, msg, vupto] = w;
+      const meta = WARN_COLOR[color] || ['','','level '+color];
+      const catTxt = (cats||[]).map(c => WARN_CAT[c] || ('cat'+c)).join(', ');
+      box.insertAdjacentHTML('beforeend',
+        `<div class="nowc ${meta[1]}">
+           <div class="h">${esc(station||'station')} · ${esc(km(dist))} away · ${esc(meta[2])}${vupto?' · valid upto '+esc(vupto)+' UTC':''}</div>
+           <div>${esc(catTxt || msg || 'IMD nowcast warning active')}</div>
+         </div>`);
+    });
     return;
   }
-  rows.slice(0,12).forEach(r=>{
-    const msg = pick(r,[/warning/i,/nowcast/i,/message/i,/remark/i]);
-    const col = pick(r,[/colou?r/i]);
-    const dt  = pick(r,[/date/i]); const tm = pick(r,[/time/i,/valid/i]);
-    const sev = col ? String(col.v).toLowerCase() : '';
-    const cls = /red/.test(sev)?'sev-red':/orange|amber/.test(sev)?'sev-orange'
-              :/yellow/.test(sev)?'sev-yellow':/green|no warning/.test(sev)?'sev-green':'';
-    box.insertAdjacentHTML('beforeend',
-      `<div class="nowc ${cls}">
-         <div class="h">${esc((dt?dt.v+' ':'')+(tm?tm.v:''))}${col?' · '+esc(col.v):''}</div>
-         <div>${esc(msg?msg.v:JSON.stringify(r))}</div>
-       </div>`);
-  });
+
+  // fallback: old relay nowcast (usually empty since IMD APIs are IP-locked)
+  setBadge('src-nowcast', S.src.nowcast, S.src.nowcast==='relay'?relayAge():'');
+  box.innerHTML = '<p class="note">Warning data not loaded — check the Info tab diagnostics.</p>';
 }
 
 function renderMaps(){
@@ -496,9 +652,10 @@ function renderMaps(){
 function renderDiag(){
   const box = $('diag'); box.innerHTML='';
   const rows = [
-    ['Current wx (rain 24 h)','current'],
-    ['7-day forecast','forecast'],
-    ['Nowcast','nowcast'],
+    ['Stations (nationwide obs + warnings)','stations'],
+    ['7-day forecast (home site)','forecast'],
+    ['Legacy current wx','current'],
+    ['Legacy nowcast','nowcast'],
     ['Relay (GitHub copy)','relay']
   ];
   for(const [name,key] of rows){
@@ -519,6 +676,35 @@ document.querySelectorAll('nav button').forEach(b=>{
   });
 });
 $('btn-refresh').addEventListener('click', refreshAll);
+
+/* ---- location bar: type "lat, lon" (or drop a Google-Maps style pair) ---- */
+function applyLocation(text){
+  const m = String(text).match(/(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
+  if(!m){ alert('Enter coordinates as:  lat, lon\n e.g.  16.088, 78.100'); return; }
+  const lat=+m[1], lon=+m[2];
+  if(lat<6 || lat>38 || lon<66 || lon>98){
+    if(!confirm('That point looks outside India — IMD stations may be far away. Use it anyway?')) return;
+  }
+  setActiveLoc(lat, lon, `${lat.toFixed(3)}, ${lon.toFixed(3)}`);
+  renderAll();                       // instant — station data already downloaded
+}
+$('loc-go').addEventListener('click', ()=>{
+  const v = $('loc-input').value.trim();
+  if(v===''){ localStorage.removeItem('rw-loc'); renderAll(); }   // empty = home site
+  else applyLocation(v);
+});
+$('loc-input').addEventListener('keydown', e=>{ if(e.key==='Enter') $('loc-go').click(); });
+$('loc-gps').addEventListener('click', ()=>{
+  if(!navigator.geolocation){ alert('This device has no geolocation.'); return; }
+  $('loc-resolved').textContent = 'Getting your location…';
+  navigator.geolocation.getCurrentPosition(
+    p=>{ setActiveLoc(+p.coords.latitude.toFixed(4), +p.coords.longitude.toFixed(4), 'my location');
+         $('loc-input').value = `${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`;
+         renderAll(); },
+    err=>{ $('loc-resolved').textContent = 'Location denied/unavailable ('+err.message+'). Type coordinates instead.'; },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:60000});
+});
+
 $('btn-settings').addEventListener('click', ()=>{
   const c = cfg();
   $('s-lat').value=c.lat; $('s-lon').value=c.lon; $('s-station').value=c.station;

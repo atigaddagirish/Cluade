@@ -44,7 +44,6 @@ jobs:
           set -e
           mkdir /tmp/pub && cd /tmp/pub
           cp /tmp/imd.json imd.json
-          cp -r /tmp/disc disc 2>/dev/null || true
           cp /tmp/stations.json stations.json 2>/dev/null || true
           cp /tmp/stations.log stations.log 2>/dev/null || true
           git init -q -b weather-data

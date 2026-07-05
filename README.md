@@ -50,6 +50,17 @@ branch), open `https://<user>.github.io/Cluade/weather.html` in Chrome, then
 home-screen *widget* needs a native app — a web page can't provide one; the installed
 PWA icon + this app is the closest web equivalent.)
 
+**Any-coordinate lookup:** the top bar takes `lat, lon` (or 📍 uses phone GPS). The app
+finds the nearest IMD station to that point and shows its rainfall/temp/humidity/wind +
+any active nowcast warning within 200 km — instantly, because the whole national station
+set is already downloaded. This is powered by IMD's GeoServer feed
+(`reactjs.imd.gov.in/geoserver`: `aws_data_layer` ≈2,000 Automatic Weather Stations,
+`synop_data_layer` ≈400 SYNOP stations with 24-h rainfall, `NowcastWarningStation`
+warnings). It sends no CORS header, so `scripts/fetch_stations.py` (in the relay) fetches
+the whole country every 30 min and republishes a slim `stations.json` (~140 KB) CORS-open
+on the `weather-data` branch. The 7-day *forecast* stays home-site (Kurnool city page);
+per-coordinate 7-day needs the api.imd.gov.in gateway key.
+
 **Important setup notes:**
 - The **schedule only runs from the repo's default branch** — merge the workflow there,
   then test it once via Actions → "IMD weather relay" → *Run workflow*.
