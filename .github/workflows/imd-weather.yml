@@ -10,7 +10,7 @@ name: IMD weather relay
 
 on:
   schedule:
-    - cron: "12,42 * * * *"   # every 30 min (minute offset avoids top-of-hour load)
+    - cron: "2,12,22,32,42,52 * * * *"   # every 10 min (offset from :00 to avoid load spikes)
   workflow_dispatch:
 
 permissions:
