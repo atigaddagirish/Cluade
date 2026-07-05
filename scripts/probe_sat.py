@@ -23,12 +23,19 @@ PAGES = [
 ]
 
 CANDIDATE_IMAGES = [
-    "https://mausam.imd.gov.in/Satellite/3Dasiasec_hem.jpg",
-    "https://mausam.imd.gov.in/Satellite/3Dimg_hem.jpg",
     "https://mausam.imd.gov.in/Satellite/3Dasiasec_ir1.jpg",
     "https://mausam.imd.gov.in/Satellite/3Dasiasec_vis.jpg",
     "https://mausam.imd.gov.in/Radar/caz_hyd.gif",
-    "https://reactjs.imd.gov.in/satellite/3Dasiasec_hem.jpg",
+    # candidate satellite-rainfall product names
+    "https://mausam.imd.gov.in/Satellite/3Dasiasec_imr.jpg",
+    "https://mausam.imd.gov.in/Satellite/3Dimg_imr.jpg",
+    "https://mausam.imd.gov.in/Satellite/3Dasiasec_hemin.jpg",
+    "https://mausam.imd.gov.in/Satellite/3Dasiasec_rain.jpg",
+    # observed (gauge) rainfall maps
+    "https://mausam.imd.gov.in/Rainfall/SUBDIVISION_RAINFALL_MAP_COUNTRY_INDIA_cd.JPG",
+    "https://mausam.imd.gov.in/Satellite/Converted/IR1.gif",
+    # MOSDAC INSAT hydro-estimator (satellite rainfall)
+    "https://www.mosdac.gov.in/look/3D_IMG/gis/3DIMG_HEM.jpg",
 ]
 
 
