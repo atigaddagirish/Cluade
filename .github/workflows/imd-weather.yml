@@ -45,6 +45,7 @@ jobs:
           mkdir /tmp/pub && cd /tmp/pub
           cp /tmp/imd.json imd.json
           cp -r /tmp/disc disc 2>/dev/null || true
+          cp -r /tmp/disc2 disc2 2>/dev/null || true
           git init -q -b weather-data
           git config user.name "imd-weather-relay[bot]"
           git config user.email "actions@github.com"
