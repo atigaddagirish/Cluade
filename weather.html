@@ -158,7 +158,7 @@ nav button.on{color:var(--rain)}
       </details>
     </div>
     <div class="card">
-      <h2>7-day forecast — <span id="fc-place">home site</span></h2>
+      <h2>Today's outlook — <span id="fc-place">home site</span></h2>
       <div id="todayfc" style="font-size:14px;line-height:1.5">–</div>
     </div>
   </section>
@@ -168,7 +168,11 @@ nav button.on{color:var(--rain)}
     <div class="card">
       <h2>7-day forecast <span class="badge" id="src-forecast">…</span></h2>
       <div id="fclist"></div>
-      <details><summary>Raw IMD data</summary><table class="raw" id="fcraw"></table></details>
+      <p class="note" style="margin-top:8px">Point forecast for the selected location from
+      <b>Open-Meteo</b> (ECMWF-IFS + GFS + ICON global models) — updates with the coordinate/chip
+      you pick. IMD's official <b>observations &amp; severe-weather warnings</b> are on the Now &amp;
+      Nowcast tabs. Official per-coordinate IMD forecast unlocks with the api.imd.gov.in key.</p>
+      <details><summary>Raw forecast data</summary><table class="raw" id="fcraw"></table></details>
     </div>
   </section>
 
@@ -231,9 +235,12 @@ nav button.on{color:var(--rain)}
         2,000+ Automatic Weather Stations, 400+ SYNOP stations, plus live nowcast warnings)
         every 30 min and republishes it CORS-open, so your phone can find the nearest station
         to <i>any</i> point you type — instantly, no third-party proxy, no key. <b>7-day
-        forecast:</b> from IMD's public Kurnool city page (per-coordinate forecast needs the
-        api.imd.gov.in gateway key). Badges show data age. Since mid-2026 IMD's simple JSON
-        APIs answer only whitelisted IPs (HTTP 401), which is why the relay exists.<br><br>
+        forecast (7-day):</b> per-coordinate point forecast from <b>Open-Meteo</b> (a free,
+        CORS-open blend of the ECMWF-IFS, NOAA-GFS and DWD-ICON global models — the same
+        gold-standard NWP that underpins most forecasts). It changes with the location you pick.
+        IMD's own per-coordinate forecast unlocks with the api.imd.gov.in key. Badges show data
+        age. Since mid-2026 IMD's simple JSON APIs answer only whitelisted IPs (HTTP 401), which
+        is why the observation relay exists.<br><br>
         Official IMD channels for the same data:
         <a href="https://mausam.imd.gov.in" target="_blank" rel="noopener">mausam.imd.gov.in</a> ·
         <a href="https://city.imd.gov.in" target="_blank" rel="noopener">city.imd.gov.in</a> ·
@@ -325,7 +332,7 @@ function endpoints(){
 }
 
 /* ================= state ================= */
-const S = { relayDoc:null, stationsDoc:null, diag:{},
+const S = { relayDoc:null, stationsDoc:null, diag:{}, omCache:{}, omForecast:null,
             data:{current:null, forecast:null, nowcast:null},
             src:{current:null, forecast:null, nowcast:null} };
 
@@ -480,7 +487,7 @@ function renderAll(){
     ? 'Showing <b>home site</b> (16.088°N, 78.100°E). Type any coordinate, tap a chip, or 📍.'
     : `Showing <b>${esc(loc.name || (loc.lat.toFixed(4)+', '+loc.lon.toFixed(4)))}</b> — nearest IMD stations. Clear the box + Go to return home.`;
   renderChips();
-  renderNow(); renderForecast(); renderNowcast(); renderMaps(); renderDiag();
+  renderNow(); ensureForecast(); renderNowcast(); renderMaps(); renderDiag();
 }
 
 function renderChips(){
@@ -584,59 +591,94 @@ function renderNow(){
 
 const RAIN_RE = /rain|shower|thunder|drizzle|storm/i;
 
-function renderForecast(){
-  setBadge('src-forecast', S.src.forecast, S.src.forecast==='relay'?relayAge():'');
-  const list = $('fclist'), raw = $('fcraw');
-  list.innerHTML=''; raw.innerHTML='';
-  const d = S.data.forecast;
-  const rows = Array.isArray(d) ? d : (d && typeof d==='object' ? [d] : []);
+// ---- Per-coordinate 7-day forecast via Open-Meteo (ECMWF-IFS + GFS + ICON
+//      blend; free, no key, CORS-open, works for ANY lat/lon). Observations &
+//      warnings stay IMD; this is the point-forecast layer. ----
+const WMO = {
+  0:['Clear sky','☀️',0],1:['Mainly clear','🌤️',0],2:['Partly cloudy','⛅',0],3:['Overcast','☁️',0],
+  45:['Fog','🌫️',0],48:['Rime fog','🌫️',0],
+  51:['Light drizzle','🌦️',1],53:['Drizzle','🌦️',1],55:['Heavy drizzle','🌧️',1],
+  56:['Freezing drizzle','🌧️',1],57:['Freezing drizzle','🌧️',1],
+  61:['Light rain','🌧️',1],63:['Rain','🌧️',1],65:['Heavy rain','🌧️',1],
+  66:['Freezing rain','🌧️',1],67:['Freezing rain','🌧️',1],
+  71:['Light snow','🌨️',1],73:['Snow','🌨️',1],75:['Heavy snow','🌨️',1],77:['Snow grains','🌨️',1],
+  80:['Light showers','🌦️',1],81:['Showers','🌧️',1],82:['Violent showers','⛈️',1],
+  85:['Snow showers','🌨️',1],86:['Snow showers','🌨️',1],
+  95:['Thunderstorm','⛈️',1],96:['Thunderstorm + hail','⛈️',1],99:['Thunderstorm + hail','⛈️',1]
+};
+const wmo = c => WMO[c] || ['—','🌡️',0];
+const fcKey = loc => (+loc.lat).toFixed(3)+','+(+loc.lon).toFixed(3);
 
-  // "Today's outlook" card on the Now tab (home-site 7-day text — the free
-  // IMD source is city-based; per-coordinate 7-day needs the api.imd.gov.in key)
-  const rec = rows[0] || {};
-  const today = pick(rec, [/today.*forecast/i]) || pick(rec, [/forecast/i, /weather/i]);
-  $('fc-place').textContent = 'Kurnool (home site)';
-  $('todayfc').innerHTML = (today && !isNA(today.v))
-    ? esc(today.v) + (isHomeSite() ? '' :
-        '<br><span class="dist">7-day forecast is for the home site; for your typed'+
-        ' coordinate the Now card above shows nearest-station observations. Per-location'+
-        ' 7-day forecast unlocks with the IMD gateway key.</span>')
-    : 'Not reported.';
-
-  if(!rows.length){ list.innerHTML = '<p class="note">No data — check Info tab diagnostics.</p>'; return; }
-
-  const rec0 = rows[0];
-  // Two shapes exist in the wild: one record per day, or one record with Day_1..Day_7 keys.
-  const dayKeys = Object.keys(rec0).filter(k=>/forecast/i.test(k) && /\d/.test(k));
-  if(rows.length===1 && dayKeys.length>=2){
-    dayKeys.sort((a,b)=>(a.match(/\d+/)||[0])[0]-(b.match(/\d+/)||[0])[0]);
-    dayKeys.forEach((k,i)=>{
-      const txt = String(rec0[k]||'');
-      const n = (k.match(/\d+/)||[i+1])[0];
-      const dateK = Object.keys(rec0).find(x=>/date/i.test(x) && x.includes(String(n)));
-      addDay(list, dateK?rec0[dateK]:('Day +'+n), txt, null, null);
-    });
-  }else{
-    rows.slice(0,10).forEach(r=>{
-      const dt = pick(r,[/date/i]);
-      const fc = pick(r,[/forecast/i,/weather/i]);
-      const mx = pick(r,[/max/i]); const mn = pick(r,[/min/i]);
-      addDay(list, dt?dt.v:'', fc?fc.v:'', mx?mx.v:null, mn?mn.v:null);
-    });
-  }
-  for(const k of Object.keys(rec0))
-    raw.insertAdjacentHTML('beforeend', `<tr><td>${esc(k)}</td><td>${esc(rec0[k])}</td></tr>`);
+function ensureForecast(){
+  const loc = activeLoc(), key = fcKey(loc);
+  if(S.omCache[key]){ S.omForecast = S.omCache[key]; renderForecast(); return; }
+  S.omForecast = 'loading'; renderForecast();
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}`+
+    `&daily=weathercode,precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min`+
+    `&forecast_days=7&timezone=auto`;
+  fetchJSON(url, 12000).then(d=>{
+    S.omCache[key]=d;
+    if(fcKey(activeLoc())===key){ S.omForecast=d; S.diag.forecast={ok:true,msg:'Open-Meteo ECMWF/GFS @ '+key}; renderForecast(); }
+  }).catch(e=>{
+    if(fcKey(activeLoc())===key){ S.omForecast=null; S.diag.forecast={ok:false,msg:'Open-Meteo: '+String(e.message||e)}; renderForecast(); }
+  });
 }
 
-function addDay(list, date, txt, mx, mn){
-  const rainy = RAIN_RE.test(txt);
-  const ico = rainy ? (/thunder|storm/i.test(txt) ? '⛈️' : '🌧️')
-            : /cloud/i.test(txt) ? '☁️' : /clear|sunny|fair/i.test(txt) ? '☀️' : '🌤️';
+function renderForecast(){
+  const loc = activeLoc();
+  const list = $('fclist'), raw = $('fcraw'), badge = $('src-forecast');
+  list.innerHTML=''; raw.innerHTML='';
+  $('fc-place').textContent = loc.name || (loc.lat.toFixed(3)+', '+loc.lon.toFixed(3));
+
+  const F = S.omForecast;
+  if(F === 'loading'){
+    badge.className='badge'; badge.textContent='…';
+    $('todayfc').textContent='Loading forecast…';
+    list.innerHTML='<p class="note">Loading 7-day forecast…</p>'; return;
+  }
+  if(F && F.daily && F.daily.time){
+    const dl=F.daily, N=dl.time.length;
+    badge.className='badge live'; badge.textContent='ECMWF/GFS';
+    const w0=wmo(dl.weathercode[0]);
+    $('todayfc').innerHTML = `${w0[1]} <b>${esc(w0[0])}</b> · rain ${esc(dl.precipitation_sum[0])} mm`+
+      ` (${dl.precipitation_probability_max[0]??'–'}% chance) · `+
+      `${Math.round(dl.temperature_2m_min[0])}–${Math.round(dl.temperature_2m_max[0])} °C`;
+    for(let i=0;i<N;i++){
+      const w=wmo(dl.weathercode[i]);
+      const dt=new Date(dl.time[i]+'T00:00').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+      const mm=dl.precipitation_sum[i], pr=dl.precipitation_probability_max[i];
+      const sub=`${w[0]}${mm>0?` · ${mm} mm`:''}${pr!=null?` · ${pr}% chance`:''}`;
+      addDay(list, dt, sub, Math.round(dl.temperature_2m_max[i]), Math.round(dl.temperature_2m_min[i]), w[1], w[2]);
+    }
+    raw.insertAdjacentHTML('beforeend',
+      `<tr><td>source</td><td>Open-Meteo /v1/forecast — ECMWF-IFS + GFS + ICON blend @ ${esc(loc.lat)}, ${esc(loc.lon)}</td></tr>`);
+    for(let i=0;i<N;i++) raw.insertAdjacentHTML('beforeend',
+      `<tr><td>${esc(dl.time[i])}</td><td>wmo ${esc(dl.weathercode[i])} · ${esc(dl.precipitation_sum[i])} mm · ${dl.precipitation_probability_max[i]??'–'}% · ${esc(dl.temperature_2m_min[i])}–${esc(dl.temperature_2m_max[i])} °C</td></tr>`);
+    return;
+  }
+
+  // fallback: IMD relay home-site forecast text (only if Open-Meteo unreachable)
+  badge.className='badge relay'; badge.textContent='IMD home';
+  const d=S.data.forecast, rows=Array.isArray(d)?d:(d&&typeof d==='object'?[d]:[]);
+  const today = rows[0] && (pick(rows[0],[/today.*forecast/i])||pick(rows[0],[/forecast/i,/weather/i]));
+  $('todayfc').textContent = today && !isNA(today.v) ? today.v : 'Forecast unavailable — check Info diagnostics.';
+  if(!rows.length){ list.innerHTML='<p class="note">Forecast source unreachable — check Info tab.</p>'; return; }
+  rows.slice(0,10).forEach(r=>{
+    const dt=pick(r,[/date/i]), fc=pick(r,[/forecast/i,/weather/i]);
+    const mx=pick(r,[/max/i]), mn=pick(r,[/min/i]);
+    addDay(list, dt?dt.v:'', fc?fc.v:'', mx?mx.v:null, mn?mn.v:null);
+  });
+}
+
+function addDay(list, date, txt, mx, mn, icon, rainy){
+  if(rainy===undefined) rainy = RAIN_RE.test(txt);
+  if(!icon) icon = rainy ? (/thunder|storm/i.test(txt)?'⛈️':'🌧️')
+            : /cloud/i.test(txt)?'☁️':/clear|sunny|fair/i.test(txt)?'☀️':'🌤️';
   list.insertAdjacentHTML('beforeend',
     `<div class="fcday${rainy?' rainy':''}">
-       <div class="ico">${ico}</div>
+       <div class="ico">${icon}</div>
        <div class="mid"><div class="d">${esc(date||'')}</div><div class="t">${esc(txt||'–')}</div></div>
-       ${(mx||mn)?`<div class="temps"><b>${esc(mx||'–')}°</b><br>${esc(mn||'–')}°</div>`:''}
+       ${(mx!=null||mn!=null)?`<div class="temps"><b>${esc(mx??'–')}°</b><br>${esc(mn??'–')}°</div>`:''}
      </div>`);
 }
 
@@ -697,7 +739,7 @@ function renderDiag(){
   const box = $('diag'); box.innerHTML='';
   const rows = [
     ['Stations (nationwide obs + warnings)','stations'],
-    ['7-day forecast (home site)','forecast'],
+    ['7-day forecast (Open-Meteo)','forecast'],
     ['Legacy current wx','current'],
     ['Legacy nowcast','nowcast'],
     ['Relay (GitHub copy)','relay']
