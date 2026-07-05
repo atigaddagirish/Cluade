@@ -29,8 +29,11 @@ jobs:
 
       - name: Fetch IMD data
         run: python3 scripts/fetch_imd.py --out /tmp/imd.json
+        env:
+          IMD_API_KEY: ${{ secrets.IMD_API_KEY }}
         # station/city default to 43213 (Kurnool); pass --district <id> here
         # once the Jogulamba Gadwal nowcast district id is confirmed.
+        # IMD_API_KEY (optional repo secret) unlocks api.imd.gov.in gateway data.
 
       - name: Publish to weather-data branch
         run: |
@@ -40,7 +43,7 @@ jobs:
           git init -q -b weather-data
           git config user.name "imd-weather-relay[bot]"
           git config user.email "actions@github.com"
-          git add imd.json
+          git add -A
           git commit -q -m "IMD relay $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -f -q \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \

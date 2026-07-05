@@ -30,14 +30,19 @@ showing **official IMD data only** — past-24 h rainfall, 7-day forecast, 3-h n
 warnings, Hyderabad Doppler radar and INSAT satellite rain imagery.
 
 **Data path (all numbers originate from IMD):**
-1. The page fetches IMD's public JSON directly from your phone:
-   `mausam.imd.gov.in/api/current_wx_api.php?id=43213` (Kurnool, nearest obs station ~29 km),
-   `city.imd.gov.in/api/cityweather.php?id=43213` (7-day), plus the nowcast API.
-2. If the direct fetch is blocked (CORS / network), it falls back to a **relay copy**:
-   `.github/workflows/imd-weather.yml` runs `scripts/fetch_imd.py` every 30 min on GitHub
-   Actions and pushes the raw IMD JSON to the orphan branch `weather-data`; the page reads
-   it from `raw.githubusercontent.com` (CORS-open). The badge on each card shows
-   LIVE vs RELAY and the data age. The Info tab has per-source diagnostics.
+Since mid-2026 IMD's JSON APIs (`mausam.imd.gov.in/api`, `city.imd.gov.in/api`) return
+**HTTP 401 "IP needs to be whitelisted"** to the public — verified 2026-07-04 from GitHub
+runners. The app therefore works relay-first in practice:
+1. `.github/workflows/imd-weather.yml` runs `scripts/fetch_imd.py` every 30 min on GitHub
+   Actions. It still tries the JSON APIs (self-heals if IMD reopens them), then falls back
+   to **IMD's public city weather page** `city.imd.gov.in/citywx/citywxnew.php?id=43213`
+   (Kurnool — past-24 h obs incl. rainfall + 7-day forecast), parses it, and pushes
+   `imd.json` to the orphan branch `weather-data`.
+2. The page reads that JSON from `raw.githubusercontent.com` (CORS-open). Each card's badge
+   shows LIVE vs RELAY and the data age; the Info tab has per-source diagnostics.
+3. Optional upgrade: register (free) at `api.imd.gov.in`, add the key as repo secret
+   `IMD_API_KEY` — the relay then also pulls the new official gateway (incl. nowcast).
+   `scripts/probe_imd.py` re-checks what IMD serves publicly if things break again.
 
 **Put it on your phone:** host the repo on GitHub Pages (Settings → Pages → deploy from
 branch), open `https://<user>.github.io/Cluade/weather.html` in Chrome, then
