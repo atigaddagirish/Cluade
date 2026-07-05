@@ -35,11 +35,16 @@ jobs:
         # once the Jogulamba Gadwal nowcast district id is confirmed.
         # IMD_API_KEY (optional repo secret) unlocks api.imd.gov.in gateway data.
 
+      - name: Discover IMD city list (one-off build aid)
+        run: python3 scripts/discover_cities.py
+        continue-on-error: true
+
       - name: Publish to weather-data branch
         run: |
           set -e
           mkdir /tmp/pub && cd /tmp/pub
           cp /tmp/imd.json imd.json
+          cp -r /tmp/disc disc 2>/dev/null || true
           git init -q -b weather-data
           git config user.name "imd-weather-relay[bot]"
           git config user.email "actions@github.com"
