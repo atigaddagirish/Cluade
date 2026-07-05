@@ -197,12 +197,14 @@ nav button.on{color:var(--rain)}
       <h2>Where this data comes from</h2>
       <p class="note">
         All weather data is from the <b>India Meteorological Department (IMD)</b>, Ministry of
-        Earth Sciences — fetched live from IMD's public JSON services
-        (<b>mausam.imd.gov.in</b> / <b>city.imd.gov.in</b>). If your network or IMD's CORS
-        policy blocks a direct fetch, the app falls back to a <b>relay copy</b>: a GitHub
-        Action in this repository fetches the same IMD endpoints every 30 min and publishes
-        the raw JSON (badge shows <span class="badge relay">RELAY</span> with its age).
-        Either way the origin of every number is IMD.<br><br>
+        Earth Sciences. Since mid-2026 IMD's JSON APIs answer only whitelisted IP addresses
+        (HTTP 401 to the public), so the usual path is the <b>relay</b>: a GitHub Action in
+        this repository reads IMD's <b>public city weather page</b>
+        (city.imd.gov.in/citywx, Kurnool) every 30 min and publishes the extracted data
+        (badge shows <span class="badge relay">RELAY</span> with its age). A direct IMD API
+        fetch is still attempted first each refresh and takes over automatically if IMD
+        reopens the APIs. Either way the origin of every number is IMD. Nowcast warnings
+        have no open source at present — they need a free api.imd.gov.in key (see README).<br><br>
         Official IMD channels for the same data:
         <a href="https://mausam.imd.gov.in" target="_blank" rel="noopener">mausam.imd.gov.in</a> ·
         <a href="https://city.imd.gov.in" target="_blank" rel="noopener">city.imd.gov.in</a> ·
