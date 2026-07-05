@@ -32,6 +32,20 @@ jobs:
     steps:                      # any gaps between GitHub's actual schedule firings
       - uses: actions/checkout@v4
 
+      - name: Probe satellite/radar URLs (one-off; publishes to diag branch)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+        run: |
+          python3 scripts/probe_sat.py > /tmp/satprobe.txt 2>&1 || true
+          cat /tmp/satprobe.txt
+          mkdir -p /tmp/dg && cd /tmp/dg
+          cp /tmp/satprobe.txt satprobe.txt
+          git init -q -b diag
+          git config user.name "diag[bot]"; git config user.email "actions@github.com"
+          git add -A && git commit -q -m "sat probe $(date -u +%FT%TZ)"
+          git push -f -q "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" diag
+
       - name: Relay loop — publish every 10 min
         env:
           IMD_API_KEY: ${{ secrets.IMD_API_KEY }}
