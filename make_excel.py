@@ -72,6 +72,7 @@ put(21, "w net uplift (working)", 0.981, "kN/m", "WL−DL, service", inp=True)  
 put(22, "w gravity (working)", 0.147, "kN/m", inp=True)          # B22
 put(23, "w weak-axis", 0.0, "kN/m", inp=True)                    # B23
 put(24, "Wind +33% allowable increase", 0, "", "REMOVED per project practice — allowables at 0.6Fy", inp=True)  # B24 (kept at 0)
+put(25, "Overhang Lo (m)", 0, "m", "cantilever past end rafter; 0=none", inp=True)  # B25
 
 # ── DERIVED GEOMETRY ──
 head(26, "2. DERIVED GEOMETRY")
@@ -215,10 +216,10 @@ put(120, "P_end = 70t²[98+4.2(N/t)−0.022(N/t)(h/t)−0.011(h/t)]·st·rf ×2 
 put(121, "P_int = 70t²[305+2.3(N/t)−0.009(N/t)(h/t)−0.5(h/t)]·st·rf ×2 webs",
          "=MAX(0,70*B114^2*(305+2.3*(B18/B11)-0.009*(B18/B11)*B105-0.5*B105)*E117*B119)*2*9.80665/1000",
          "kN")                                                                  # B121
-put(122, "R_end (gravity) coeff·w·L", '=IF(B15="2-span continuous",0.375,IF(B15="3+ span continuous",0.4,0.5))*B22*B14', "kN")  # B122
-put(123, "R_int (gravity)", '=IF(B15="2-span continuous",1.25,IF(B15="3+ span continuous",1.1,0))*B22*B14', "kN")  # B123
-put(124, "UR web crippling = max(Rend/Pend, Rint/Pint)",
-         "=MAX(B122/B120,IF(B123>0,B123/B121,0))", "", "uplift reaction → bolt check, not web")  # B124
+put(122, "R_overhang (gravity)", '=IF(B25>0,B22*(B25+B14)^2/(2*B14),IF(B15="2-span continuous",0.375,IF(B15="3+ span continuous",0.4,0.5))*B22*B14)', "kN", "Lo>0: w(Lo+L)²/2L (cantilever end)")  # B122
+put(123, "R_inner span (gravity)", '=IF(B15="2-span continuous",1.25,IF(B15="3+ span continuous",1.1,0))*B22*B14', "kN")  # B123
+put(124, "UR web crippling — OVERHANG = R_overhang/P_cant", "=B122/B120", "", "cantilever end (Cl.6.5)")  # B124
+put(125, "UR web crippling — INNER span = R_inner/P_int", "=IF(B123>0,B123/B121,0)", "", "inner support (Cl.6.5)")  # B125
 
 # ── DEFLECTION ──
 head(126, "11. DEFLECTION — L/" + "x limit")
@@ -249,7 +250,8 @@ checks = [
     ("Bending gravity", "B73", "Cl.6.1.1"),
     ("LTB (governing of 2 methods)", "B102", "Cl.6.3"),
     ("Shear", "B111", "Cl.6.4.1"),
-    ("Web crippling (gravity bearing)", "B124", "Cl.6.5"),
+    ("Web crippling — overhang (cantilever end)", "B124", "Cl.6.5"),
+    ("Web crippling — inner span", "B125", "Cl.6.5"),
     ("Web bending", "B137", "Cl.6.4.2"),
     ("Combined bending + shear", "B139", "Cl.6.4.3"),
     ("Flange w/t ≤ 60", "B140", "Cl.5.2.4"),

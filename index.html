@@ -289,7 +289,8 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
       <div class="field"><label>Support condition</label>
         <select id="spans"><option value="ss">Simply supported</option><option value="c2">Continuous — 2 spans</option><option value="c3">Continuous — 3+ spans</option></select>
       </div>
-      <div class="field"><label>End bearing N (mm)</label><input id="N" type="number" value="50"></div>
+      <div class="field"><label>Bearing width N (mm) <span title="Bearing length = rafter flange width the purlin sits on. Used for both overhang and inner-support web crippling.">ⓘ</span></label><input id="N" type="number" value="50"></div>
+      <div class="field"><label>Overhang Lₒ (m) <span title="Cantilever length of the purlin past the end rafter. 0 = no overhang. The overhang support gets the cantilever (end) web-crippling check.">ⓘ</span></label><input id="Lo" type="number" value="0" step="0.05"></div>
       <div class="field"><label>Deflection limit</label>
         <select id="defLim"><option value="180">L/180</option><option value="150">L/150</option><option value="120">L/120 (wind)</option><option value="200">L/200</option><option value="240">L/240</option></select>
       </div>
@@ -864,7 +865,7 @@ function loadProjectPreset(){
   const name=document.getElementById('proj-preset-sel').value; if(!name)return;
   const p=loadAllProjects()[name]; if(!p)return;
   const nf=f=>{ const el=document.getElementById(f); if(el&&p[f]!==undefined)el.value=p[f]; };
-  ['L','N','defLim','Lb','Cb','spans'].forEach(nf);
+  ['L','N','Lo','defLim','Lb','Cb','spans'].forEach(nf);
   const lm=p.loadMode||'udl'; setLoadMode(lm);
   if(lm==='udl'){ ['w_up','w_grav','w_weak'].forEach(nf); }
   else {
@@ -881,7 +882,7 @@ function saveProjectPreset(){
   const projs=loadAllProjects();
   if(projs[name]&&!confirm(`Overwrite "${name}"?`))return;
   const lm=loadMode;
-  const obj={L:+v('L'),N:+v('N'),defLim:v('defLim'),Lb:+v('Lb'),Cb:+v('Cb'),spans:v('spans'),loadMode:lm};
+  const obj={L:+v('L'),N:+v('N'),Lo:+v('Lo'),defLim:v('defLim'),Lb:+v('Lb'),Cb:+v('Cb'),spans:v('spans'),loadMode:lm};
   if(lm==='udl'){obj.w_up=+v('w_up');obj.w_grav=+v('w_grav');obj.w_weak=+v('w_weak');}
   else{
     ['munit','funit','s_Mz_up','s_My_up','s_Fx_up','s_Mz_gr','s_My_gr','s_Fx_gr','s_Fy','s_Mx','s_def'].forEach(f=>{obj[f]=v(f);});
@@ -1223,35 +1224,44 @@ fv = V/(2·H·t) = ${V.fv_act.toFixed(1)} MPa;  Fv = ${V.Fv_wl.toFixed(1)} MPa
     `UR = ${pct(V.UR.bs)}`,
     V.UR.bs);
 
-  // ── Cl.6.5 Web crippling (literal MKS) ──
-  html+=drow('Web crippling — gravity bearing at supports','IS 801 Cl.6.5',
-`MKS form (t in cm, Fy in kgf/cm²), single unreinforced webs, ×2 webs:
+  // ── Cl.6.5 Web crippling — OVERHANG (cantilever end) ──
+  html+=drow(V.Lo>0?`Web crippling — OVERHANG (cantilever end, Lₒ=${(V.Lo/1000).toFixed(2)} m)`:'Web crippling — END support (no overhang)','IS 801 Cl.6.5',
+`Cantilever/end formula (MKS: t in cm, Fy in kgf/cm²), single webs ×2:
 k = Fy/2320 = ${V.kcr.toFixed(3)};  stress term = k(1.33−0.33k) = ${V.stress_cr.toFixed(3)}
+P_cant = 70·t²·[98 + 4.2(N/t) − 0.022(N/t)(h/t) − 0.011(h/t)] · k(1.33−0.33k) × (${V.rfac_end.toFixed(3)})
+       → ${V.Pend_kN.toFixed(3)} kN (2 webs)
 
-End reaction:
-P_end = 70·t²·[98 + 4.2(N/t) − 0.022(N/t)(h/t) − 0.011(h/t)] · k(1.33−0.33k) × r-factor
-      → ${V.Pend_kN.toFixed(3)} kN (2 webs, r-factor ${V.rfac_end.toFixed(3)})
-
-Interior support:
-P_int = 70·t²·[305 + 2.3(N/t) − 0.009(N/t)(h/t) − 0.5(h/t)] · k(1.22−0.22k) × r-factor
-      → ${V.Pint_kN.toFixed(3)} kN (2 webs, r-factor ${V.rfac_int.toFixed(3)})
-
-Reactions from GRAVITY load (uplift reaction goes to the foot bolts, not web bearing):
-R_end = ${V.Rend_kN.toFixed(3)} kN${V.Rint_kN>0?`;  R_int = ${V.Rint_kN.toFixed(3)} kN`:''}`,
+Gravity reaction at overhang/end support:
+${V.Lo>0?`R = w·(Lₒ+L)²/(2L) = ${V.wgrav.toFixed(4)}×(${(V.Lo/1000).toFixed(2)}+${(V.L/1000).toFixed(2)})²/(2×${(V.L/1000).toFixed(2)}) = ${V.Rend_kN.toFixed(3)} kN`:`R = end-support reaction = ${V.Rend_kN.toFixed(3)} kN (no overhang)`}`,
     [
-      ['Bearing length N',`${V.Ncrip} mm`],
-      ['Inner bend radius r',`${V.Rcrip} mm (r/t=${(V.Rcrip/V.t).toFixed(2)})`],
+      ['Overhang Lₒ',V.Lo>0?`${(V.Lo/1000).toFixed(2)} m`:'0 (none)'],
+      ['Bearing width N',`${V.Ncrip} mm`],
+      ['Inner bend radius r',`${V.Rcrip} mm (r/t=${(V.Rcrip/V.t).toFixed(2)}) → factor ${V.rfac_end.toFixed(3)}`],
       ['h/t (web slant)',`${V.wt_web.toFixed(1)}`],
-      ['k = Fy/2320 (kgf/cm²)',`${V.kcr.toFixed(3)}`],
-      ['stress term end k(1.33−0.33k)',`${V.stress_cr.toFixed(3)}`],
-      ['stress term int k(1.22−0.22k)',`${V.stress_int.toFixed(3)}`],
-      ['P_end allowable',`${V.Pend_kN.toFixed(3)} kN`],
-      ['P_int allowable',`${V.Pint_kN.toFixed(3)} kN`],
-      ['R_end (gravity)',`${V.Rend_kN.toFixed(3)} kN`],
-      ['R_int (gravity)',V.Rint_kN>0?`${V.Rint_kN.toFixed(3)} kN`:'— (simply supported)'],
+      ['P_cant allowable',`${V.Pend_kN.toFixed(3)} kN`],
+      ['R_overhang (gravity)',`${V.Rend_kN.toFixed(3)} kN`],
     ],
-    `UR = max(R_end/P_end, R_int/P_int) = ${pct(V.UR.web)}`,
-    V.UR.web);
+    `UR = R_overhang / P_cant = ${V.Rend_kN.toFixed(3)} / ${V.Pend_kN.toFixed(3)} = ${pct(V.UR_web_oh)}`,
+    isNaN(V.UR_web_oh)?0:V.UR_web_oh);
+
+  // ── Cl.6.5 Web crippling — INNER span support ──
+  html+=drow('Web crippling — INNER span support','IS 801 Cl.6.5',
+    V.Rint_kN>0?
+`Interior formula (note the DIFFERENT stress term k(1.22−0.22k)):
+stress term = ${V.stress_int.toFixed(3)}
+P_int = 70·t²·[305 + 2.3(N/t) − 0.009(N/t)(h/t) − 0.5(h/t)] · k(1.22−0.22k) × (${V.rfac_int.toFixed(3)})
+      → ${V.Pint_kN.toFixed(3)} kN (2 webs)
+Gravity reaction at inner support = ${V.Rint_kN.toFixed(3)} kN (continuous coeff.)`
+    :`N/A — simply-supported single span has no interior support.
+Select a continuous support condition (2-span / 3+ span) to activate this check.`,
+    [
+      ['Support condition',V.spans==='c2'?'2-span continuous':V.spans==='c3'?'3+ span continuous':'simply supported'],
+      ['stress term int k(1.22−0.22k)',`${V.stress_int.toFixed(3)}`],
+      ['P_int allowable',V.Rint_kN>0?`${V.Pint_kN.toFixed(3)} kN`:'—'],
+      ['R_inner (gravity)',V.Rint_kN>0?`${V.Rint_kN.toFixed(3)} kN`:'— (no inner support)'],
+    ],
+    V.Rint_kN>0?`UR = R_inner / P_int = ${V.Rint_kN.toFixed(3)} / ${V.Pint_kN.toFixed(3)} = ${pct(V.UR_web_in)}`:'UR = N/A (no inner support)',
+    isNaN(V.UR_web_in)?0:V.UR_web_in);
 
   // ── Deflection ──
   const deflFormula=V.staadDef?
@@ -1410,13 +1420,19 @@ function calculate(){
   const rfac_end=R<=t?1:(1.15-0.15*R/t), rfac_int=R<=t?1:(1.06-0.06*R/t);
   const Pend_kN=Math.max(0,70*t_cm**2*(98+4.2*N_t-0.022*N_t*h_t-0.011*h_t)*stress_cr*rfac_end)*2*9.80665/1000;
   const Pint_kN=Math.max(0,70*t_cm**2*(305+2.3*N_t-0.009*N_t*h_t-0.5*h_t)*stress_int*rfac_int)*2*9.80665/1000;
-  // Support reactions (gravity/downward bearing) by support condition:
+  // ── Support reactions (gravity bearing) — OVERHANG vs INNER SPAN ──
   const w_net_val=loadMode==='udl'?+v('w_up'):0;
   const w_grav_val=loadMode==='udl'?+v('w_grav'):0;
-  const wL=w_grav_val*L/1000; // kN total per span
-  const Rend_kN=spans==='c2'?0.375*wL:spans==='c3'?0.4*wL:0.5*wL;
-  const Rint_kN=spans==='c2'?1.25*wL:spans==='c3'?1.1*wL:0;
-  const UR_web=Math.max(Pend_kN>0?Rend_kN/Pend_kN:0, Pint_kN>0&&Rint_kN>0?Rint_kN/Pint_kN:0);
+  const Lo=(+v('Lo')||0)*1000;           // overhang length, mm
+  const wpm=w_grav_val/1000;              // kN/mm
+  // OVERHANG / END support: with a cantilever Lo past the end rafter,
+  // R_end = w·(Lo+L)²/(2L)  (back-span L, UDL over overhang+span). Lo=0 → wL/2.
+  const Rend_kN = Lo>0 ? wpm*(Lo+L)**2/(2*L) : (spans==='c2'?0.375:spans==='c3'?0.4:0.5)*w_grav_val*L/1000;
+  // INNER span support (only for continuous): interior reaction coefficient.
+  const Rint_kN = spans==='c2'?1.25*w_grav_val*L/1000 : spans==='c3'?1.1*w_grav_val*L/1000 : 0;
+  const UR_web_oh = Pend_kN>0 ? Rend_kN/Pend_kN : NaN;                 // overhang/end
+  const UR_web_in = (Rint_kN>0 && Pint_kN>0) ? Rint_kN/Pint_kN : NaN;  // inner span
+  const UR_web = Math.max(isNaN(UR_web_oh)?0:UR_web_oh, isNaN(UR_web_in)?0:UR_web_in);
   const Pwa=Pend_kN, Preact=Rend_kN;
 
   let d_s=NaN,d_w=NaN,d_t;
@@ -1517,9 +1533,11 @@ function calculate(){
     ? `<div class="check-row"><div class="cn">Uplift reaction → connection<br><small>Uplift does not bear on webs — bolted feet carry it. Check bolts/purlin-clamp for ${(+v('w_up')*L/2/1000).toFixed(2)} kN pull-out per support.</small></div>
        <div class="bw"></div><div class="uv" style="color:#aaa">N/A</div>
        <div class="st warn">INFO</div><div class="rf">connection design</div></div>`:'';
+  const ohLabel = Lo>0 ? `Web crippling — OVERHANG (cantilever end, Lₒ=${(Lo/1000).toFixed(2)} m)` : 'Web crippling — END support (no overhang)';
   const webcripRow =
-    row('Web crippling — end reaction',Pend_kN>0?Rend_kN/Pend_kN:NaN,'IS 801 Cl.6.5',`R_end=${Rend_kN.toFixed(3)} kN vs P=${Pend_kN.toFixed(3)} kN (gravity)`,'P=70t²(98+4.2N/t−0.022(N/t)(h/t)−0.011h/t)·k(1.33−0.33k), k=Fy/2320 kgf/cm²')+
-    (Rint_kN>0?row('Web crippling — interior support',Pint_kN>0?Rint_kN/Pint_kN:NaN,'IS 801 Cl.6.5',`R_int=${Rint_kN.toFixed(3)} kN vs P=${Pint_kN.toFixed(3)} kN (gravity)`,'P=70t²(305+2.3N/t−0.009(N/t)(h/t)−0.5h/t)·k(1.22−0.22k)'):'')+
+    row(ohLabel,UR_web_oh,'IS 801 Cl.6.5',`R_overhang=${Rend_kN.toFixed(3)} kN vs P_cant=${Pend_kN.toFixed(3)} kN (gravity)`,'cantilever/end: P=70t²(98+4.2N/t−0.022(N/t)(h/t)−0.011h/t)·k(1.33−0.33k), k=Fy/2320 kgf/cm²')+
+    (Rint_kN>0?row('Web crippling — INNER span support',UR_web_in,'IS 801 Cl.6.5',`R_inner=${Rint_kN.toFixed(3)} kN vs P_int=${Pint_kN.toFixed(3)} kN (gravity)`,'inner: P=70t²(305+2.3N/t−0.009(N/t)(h/t)−0.5h/t)·k(1.22−0.22k)')
+      :`<div class="check-row"><div class="cn">Web crippling — INNER span support<br><small>N/A for simply-supported single span (no interior support). Choose a continuous support condition to check inner spans.</small></div><div class="bw"></div><div class="uv" style="color:#aaa">—</div><div class="st warn">N/A</div><div class="rf">IS 801 Cl.6.5</div></div>`)+
     upliftNote;
   document.getElementById('ck-shear').innerHTML=
     row('Flange w/t ≤ 60',UR.wtmax,'IS 801 Cl.5.2.4',`w/t=${(g.F/t).toFixed(1)}`,'max flat-width ratio, stiffened flange')+
@@ -1591,7 +1609,7 @@ function calculate(){
     Fe, Fb_ltb, Fb_ltb_wl, Fb_cf, Fb63, Xltb, ltbB, ltbC, windPlus,
     // web crippling (literal Cl.6.5 MKS)
     Ncrip:N, Rcrip:R, kcr, stress_cr, rfac_end, rfac_int,
-    Pend_kN, Pint_kN, Rend_kN, Rint_kN,
+    Pend_kN, Pint_kN, Rend_kN, Rint_kN, Lo, wgrav:w_grav_val, UR_web_oh, UR_web_in,
     // edge stiffener
     Is, Imin,
     Imin_a:term>0?1.83*t**4*Math.sqrt(term):0,
