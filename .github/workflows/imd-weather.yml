@@ -1,0 +1,62 @@
+# Relays official IMD weather JSON into the orphan branch `weather-data`
+# so weather.html can read it from raw.githubusercontent.com (CORS-open)
+# when the phone cannot fetch IMD's servers directly.
+#
+# WHY A SELF-LOOPING JOB, NOT A */10 CRON:
+# GitHub's `schedule` cron is best-effort — frequent schedules (every 10 min)
+# are heavily throttled/delayed on public repos and in practice fire only every
+# ~30-90 min. So instead of asking GitHub to trigger us every 10 min, ONE run
+# stays alive and republishes every 10 min itself. GitHub only needs to *start*
+# the job occasionally; the internal loop guarantees the cadence. The hourly
+# schedule below is just a keep-alive starter (and `cancel-in-progress` makes a
+# fresh start replace any running loop). Schedules run only from the DEFAULT
+# branch, and GitHub pauses them after ~60 days without repo activity.
+name: IMD weather relay
+
+on:
+  schedule:
+    - cron: "7 * * * *"      # hourly keep-alive starter (the job loops internally)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: imd-weather
+  cancel-in-progress: true
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350        # one run publishes every 10 min for ~5.5 h, bridging
+    steps:                      # any gaps between GitHub's actual schedule firings
+      - uses: actions/checkout@v4
+
+      - name: Relay loop — publish every 10 min
+        env:
+          IMD_API_KEY: ${{ secrets.IMD_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # station/city default to 43213 (Kurnool); IMD_API_KEY (optional repo
+          # secret) unlocks api.imd.gov.in gateway data when approved.
+        run: |
+          set +e
+          REMOTE="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          WS="$GITHUB_WORKSPACE"
+          # one-time publish workspace for the orphan weather-data branch
+          mkdir -p /tmp/pub && cd /tmp/pub
+          git init -q -b weather-data
+          git config user.name  "imd-weather-relay[bot]"
+          git config user.email "actions@github.com"
+          END=$(( $(date +%s) + 330*60 ))     # loop ~5.5 h, then exit for the next start
+          while : ; do
+            echo "::group::cycle $(date -u +%FT%TZ)"
+            python3 "$WS/scripts/fetch_imd.py"      --out /tmp/pub/imd.json
+            python3 "$WS/scripts/fetch_stations.py" --out /tmp/pub/stations.json 2> /tmp/pub/stations.log
+            cd /tmp/pub
+            git add -A
+            git commit -q -m "IMD relay $(date -u +%FT%TZ)" && \
+              git push -f -q "$REMOTE" weather-data
+            echo "::endgroup::"
+            [ "$(date +%s)" -ge "$END" ] && break
+            sleep 600                            # 10 minutes
+          done

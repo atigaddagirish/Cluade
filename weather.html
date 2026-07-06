@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b2545">
+<title>Weather Watch — IMD + Windy</title>
+<link rel="manifest" href="weather.webmanifest">
+<link rel="icon" href="weather-icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --bg:#0b1424; --card:#122036; --card2:#0e1a2e; --line:#1e3350;
+  --txt:#dbe7f5; --dim:#7e93b0; --accent:#4fa3ff; --rain:#38bdf8;
+  --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --orange:#fb923c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%}
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,#0b2545,#0b1e3a);
+  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line)}
+header h1{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;padding-right:92px}
+header h1 .loc{font-size:11px;color:var(--dim);font-weight:400;display:block;margin-top:2px}
+.hbtns{position:absolute;right:10px;top:calc(10px + env(safe-area-inset-top));display:flex;gap:6px}
+.hbtns button{background:var(--card);border:1px solid var(--line);color:var(--txt);
+  border-radius:10px;width:38px;height:38px;font-size:17px;cursor:pointer}
+.hbtns button:active{background:var(--line)}
+#lastupd{font-size:10.5px;color:var(--dim);margin-top:4px}
+main{padding:12px;max-width:640px;margin:0 auto}
+#locbar{display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+#locbar input{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);
+  color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px}
+#locbar button{background:var(--card);border:1px solid var(--line);color:var(--txt);
+  border-radius:10px;padding:10px 13px;font-size:14px;cursor:pointer;white-space:nowrap}
+#locbar button.go{background:var(--accent);border-color:var(--accent);color:#04101f;font-weight:600}
+#locbar button:active{opacity:.8}
+#loc-resolved{width:100%;font-size:11.5px;color:var(--dim);margin-top:2px}
+#loc-resolved b{color:var(--rain)}
+.dist{font-size:11px;color:var(--dim)}
+#chips{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 12px}
+.chip{background:var(--card);border:1px solid var(--line);color:var(--txt);
+  border-radius:99px;padding:7px 13px;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.chip:active{opacity:.8}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#04101f;font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px;margin-bottom:12px}
+.card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+  margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.badge{font-size:9.5px;letter-spacing:.05em;padding:2px 8px;border-radius:99px;
+  border:1px solid var(--line);color:var(--dim);text-transform:none}
+.badge.live{color:var(--ok);border-color:var(--ok)}
+.badge.relay{color:var(--warn);border-color:var(--warn)}
+.badge.fail{color:var(--bad);border-color:var(--bad)}
+.rainhero{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rainhero .big{font-size:52px;font-weight:800;color:var(--rain);line-height:1}
+.rainhero .unit{font-size:16px;color:var(--dim)}
+.rainhero .sub{width:100%;font-size:12.5px;color:var(--dim);margin-top:6px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.kv .cell{background:var(--card2);border-radius:10px;padding:9px 11px}
+.kv .cell .k{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.kv .cell .v{font-size:15px;font-weight:600;margin-top:2px;word-break:break-word}
+.fcday{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.fcday:last-child{border-bottom:none}
+.fcday .ico{font-size:22px;width:32px;text-align:center;flex:none}
+.fcday .mid{flex:1;min-width:0}
+.fcday .d{font-size:13px;font-weight:700}
+.fcday .t{font-size:12px;color:var(--dim);margin-top:2px}
+.fcday .temps{font-size:13px;text-align:right;flex:none;color:var(--dim)}
+.fcday .temps b{color:var(--txt)}
+.fcday.rainy{background:linear-gradient(90deg,rgba(56,189,248,.10),transparent);border-radius:10px}
+.fcday.rainy .t{color:var(--rain)}
+.nowc{border-left:4px solid var(--dim);background:var(--card2);border-radius:8px;
+  padding:10px 12px;margin-bottom:8px;font-size:13px}
+.nowc .h{font-weight:700;font-size:12px;margin-bottom:4px}
+.nowc.sev-yellow{border-left-color:var(--warn)}
+.nowc.sev-orange{border-left-color:var(--orange)}
+.nowc.sev-red{border-left-color:var(--bad)}
+.nowc.sev-green{border-left-color:var(--ok)}
+.imgwrap{background:#000;border-radius:10px;overflow:hidden;margin-bottom:6px}
+.imgwrap img{width:100%;display:block;min-height:120px}
+.windywrap{border-radius:10px;overflow:hidden;margin-bottom:6px;background:#0e1a2e}
+.windywrap iframe{width:100%;height:360px;display:block;border:0}
+.imgcap{font-size:11px;color:var(--dim);margin-bottom:14px;display:flex;justify-content:space-between}
+.imgcap a{color:var(--accent);text-decoration:none}
+details{margin-top:10px}
+details summary{font-size:11.5px;color:var(--dim);cursor:pointer}
+table.raw{width:100%;border-collapse:collapse;margin-top:8px;font-size:11.5px}
+table.raw td{border-bottom:1px solid var(--line);padding:5px 6px;vertical-align:top;word-break:break-word}
+table.raw td:first-child{color:var(--dim);width:45%}
+.diag{font-size:11.5px}
+.diag .row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.diag .row:last-child{border-bottom:none}
+.diag .dot{width:8px;height:8px;border-radius:50%;flex:none;position:relative;top:0}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.diag .nm{font-weight:600;flex:none}
+.diag .ms{color:var(--dim);word-break:break-all}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#0b1e3a;
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav button{flex:1;background:none;border:none;color:var(--dim);font-size:10.5px;
+  padding:8px 0 9px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button .i{font-size:19px}
+nav button.on{color:var(--rain)}
+.tab{display:none}.tab.on{display:block}
+.note{font-size:11.5px;color:var(--dim);line-height:1.5}
+.note a{color:var(--accent)}
+/* settings modal */
+#settings{position:fixed;inset:0;background:rgba(4,10,20,.85);z-index:20;display:none;
+  overflow:auto;padding:20px 14px calc(20px + env(safe-area-inset-bottom))}
+#settings.on{display:block}
+#settings .panel{max-width:560px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:16px}
+#settings h2{font-size:15px;margin-bottom:12px}
+#settings label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;
+  letter-spacing:.05em;margin:12px 0 4px}
+#settings input,#settings select,#settings textarea{width:100%;background:var(--card2);
+  border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:9px 10px;font-size:14px;
+  font-family:inherit;resize:vertical}
+#settings .btns{display:flex;gap:8px;margin-top:16px}
+#settings .btns button{flex:1;border-radius:10px;padding:11px;font-size:14px;font-weight:600;
+  border:1px solid var(--line);background:var(--card2);color:var(--txt);cursor:pointer}
+#settings .btns button.save{background:var(--accent);border-color:var(--accent);color:#04101f}
+.spin{display:inline-block;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌦️ Weather Watch
+    <span class="loc" id="loctxt"></span>
+  </h1>
+  <div class="hbtns">
+    <button id="btn-refresh" title="Refresh">⟳</button>
+    <button id="btn-settings" title="Settings">⚙</button>
+  </div>
+  <div id="lastupd">Loading…</div>
+</header>
+
+<main>
+  <div id="locbar">
+    <input id="loc-input" inputmode="decimal" placeholder="lat, lon  e.g. 16.088, 78.100">
+    <button class="go" id="loc-go">Go</button>
+    <button id="loc-gps" title="Use my current location">📍</button>
+    <div id="loc-resolved"></div>
+  </div>
+  <div id="chips"></div>
+
+  <!-- NOW -->
+  <section class="tab on" id="tab-now">
+    <div class="card">
+      <h2>Rainfall — past 24 h <span class="badge" id="src-current">…</span></h2>
+      <div class="rainhero">
+        <span class="big" id="rain24">–</span><span class="unit">mm</span>
+        <span class="sub" id="rainsub">Observation station: –</span>
+      </div>
+      <div class="kv" id="nowkv"></div>
+      <details><summary>All reported fields (raw IMD data)</summary>
+        <table class="raw" id="nowraw"></table>
+      </details>
+    </div>
+    <div class="card">
+      <h2>Today's outlook — <span id="fc-place">home</span></h2>
+      <div id="todayfc" style="font-size:14px;line-height:1.5">–</div>
+    </div>
+  </section>
+
+  <!-- 7 DAY -->
+  <section class="tab" id="tab-fc">
+    <div class="card">
+      <h2>7-day forecast <span class="badge" id="src-forecast">…</span></h2>
+      <div id="fclist"></div>
+      <p class="note" style="margin-top:8px">Point forecast for the selected location from
+      <b>Open-Meteo</b> (ECMWF-IFS + GFS + ICON global models) — updates with the coordinate/chip
+      you pick. IMD's official <b>observations &amp; severe-weather warnings</b> are on the Now &amp;
+      Nowcast tabs. Official per-coordinate IMD forecast unlocks with the api.imd.gov.in key.</p>
+      <details><summary>Raw forecast data</summary><table class="raw" id="fcraw"></table></details>
+    </div>
+  </section>
+
+  <!-- NOWCAST -->
+  <section class="tab" id="tab-nc">
+    <div class="card">
+      <h2>Nowcast / warnings (next 3 h) <span class="badge" id="src-nowcast">…</span></h2>
+      <div id="nclist"><p class="note">Loading…</p></div>
+    </div>
+    <div class="card">
+      <h2>About nowcasts</h2>
+      <p class="note">IMD nowcasts are 3-hourly severe-weather alerts (thunderstorm, rain,
+      squall, hail…) issued per station. Colour code: <b>yellow</b> = watch, <b>orange</b> =
+      alert, <b>red</b> = warning (green/no-warning stations are omitted). This panel shows any
+      active warning within 200 km of the location in the bar above, nearest first — change the
+      coordinate and it recomputes instantly. Hazard-category labels are best-effort; the exact
+      IMD legend confirms with the gateway key.</p>
+    </div>
+  </section>
+
+  <!-- MAPS -->
+  <section class="tab" id="tab-maps">
+    <div class="card">
+      <h2>Windy — live layers (wind · rain · temp · clouds)</h2>
+      <div class="windywrap"><iframe id="windy" title="Windy map" loading="lazy"
+        frameborder="0"></iframe></div>
+      <div class="imgcap"><span>Animated forecast — tap layers inside to switch (wind, rain, temp,
+        clouds, gusts, humidity…)</span>
+        <a id="lnk-windy" target="_blank" rel="noopener">open ↗</a></div>
+      <p class="note" style="margin:6px 0 0">Centred on the location in the bar above; change the
+        coordinate/chip and it recentres. Great for tracking approaching rain, wind for spraying,
+        and general conditions. Data: multi-model (ECMWF, GFS, ICON) via Windy.</p>
+    </div>
+
+    <div class="card">
+      <h2>Doppler radar — Hyderabad (nearest, ~150 km)</h2>
+      <div class="imgwrap"><img id="img-radar" alt="IMD Hyderabad radar" loading="lazy"></div>
+      <div class="imgcap"><span id="cap-radar">Max-Z composite</span>
+        <a id="lnk-radar" target="_blank" rel="noopener">open ↗</a></div>
+
+      <h2>Daily rainfall map — India (IMD, observed)</h2>
+      <div class="imgwrap"><img id="img-hem" alt="IMD daily observed rainfall map" loading="lazy"></div>
+      <div class="imgcap"><span>Measured rainfall, IMD rain-gauge network</span>
+        <a id="lnk-hem" target="_blank" rel="noopener">open ↗</a></div>
+
+      <h2>Satellite IR (clouds)</h2>
+      <div class="imgwrap"><img id="img-ir" alt="INSAT infrared imagery" loading="lazy"></div>
+      <div class="imgcap"><span>INSAT IR — Asia sector</span>
+        <a id="lnk-ir" target="_blank" rel="noopener">open ↗</a></div>
+
+      <p class="note">Images are IMD operational products, hot-linked from mausam.imd.gov.in.
+      The <b>Hyderabad Doppler radar</b> is the best "is it raining now" view (live precipitation
+      echoes, ~150 km range — nearest radar to central Telangana/AP). Note: IMD <b>retired its
+      public satellite hydro-estimator (rain-rate) image</b> in 2026, so this shows the
+      <b>observed daily rainfall map</b> instead — real gauge-measured rainfall across India
+      (updates once daily). If an image fails to load, IMD may have renamed the product — tap
+      "open ↗" to check, then update the URL in Settings.</p>
+    </div>
+  </section>
+
+  <!-- INFO / DIAGNOSTICS -->
+  <section class="tab" id="tab-info">
+    <div class="card">
+      <h2>Data source diagnostics</h2>
+      <div class="diag" id="diag"></div>
+    </div>
+    <div class="card">
+      <h2>Where this data comes from</h2>
+      <p class="note">
+        All weather data is from the <b>India Meteorological Department (IMD)</b>, Ministry of
+        Earth Sciences. <b>Observations &amp; warnings (any coordinate):</b> a GitHub Action in
+        this repo pulls IMD's nationwide GeoServer feed (reactjs.imd.gov.in/geoserver —
+        2,000+ Automatic Weather Stations, 400+ SYNOP stations, plus live nowcast warnings)
+        every 30 min and republishes it CORS-open, so your phone can find the nearest station
+        to <i>any</i> point you type — instantly, no third-party proxy, no key. <b>7-day
+        forecast:</b> per-coordinate point forecast from <b>Open-Meteo</b> (a free,
+        CORS-open blend of the ECMWF-IFS, NOAA-GFS and DWD-ICON global models — the same
+        gold-standard NWP that underpins most forecasts). It changes with the location you pick.
+        IMD's own per-coordinate forecast unlocks with the api.imd.gov.in key. Badges show data
+        age. Since mid-2026 IMD's simple JSON APIs answer only whitelisted IPs (HTTP 401), which
+        is why the observation relay exists. <b>Maps:</b> IMD radar &amp; rainfall map, plus a
+        <b>Windy</b> embed (animated wind / rain / temperature / cloud layers, multi-model).<br><br>
+        A general-purpose weather tool for <b>any location in India</b> — useful for agriculture
+        (rain, wind for spraying, temperature), field work, travel and everyday planning.<br><br>
+        Official IMD channels for the same data:
+        <a href="https://mausam.imd.gov.in" target="_blank" rel="noopener">mausam.imd.gov.in</a> ·
+        <a href="https://city.imd.gov.in" target="_blank" rel="noopener">city.imd.gov.in</a> ·
+        the <b>"Mausam"</b> app (IMD's official app) · <b>"Meghdoot"</b> (agromet advisories for
+        farmers) · <b>"Damini"</b> (lightning alerts).
+      </p>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="now" class="on"><span class="i">☔</span>Now</button>
+  <button data-tab="fc"><span class="i">📅</span>7-Day</button>
+  <button data-tab="nc"><span class="i">⚠️</span>Nowcast</button>
+  <button data-tab="maps"><span class="i">🛰️</span>Maps</button>
+  <button data-tab="info"><span class="i">ℹ️</span>Info</button>
+</nav>
+
+<!-- SETTINGS -->
+<div id="settings">
+  <div class="panel">
+    <h2>⚙ Settings</h2>
+    <label>Site latitude</label><input id="s-lat" inputmode="decimal">
+    <label>Site longitude</label><input id="s-lon" inputmode="decimal">
+    <label>IMD observation station ID (current wx + 24 h rain)</label>
+    <input id="s-station" inputmode="numeric" placeholder="43213 = Kurnool">
+    <label>IMD city forecast ID (7-day)</label>
+    <input id="s-city" inputmode="numeric" placeholder="43213 = Kurnool">
+    <label>IMD district nowcast ID (optional — Jogulamba Gadwal)</label>
+    <input id="s-district" inputmode="numeric" placeholder="leave blank to use station nowcast">
+    <label>Relay JSON URL (GitHub Action fallback)</label>
+    <input id="s-relay">
+    <label>Auto-refresh (minutes, 0 = off)</label>
+    <input id="s-refresh" inputmode="numeric">
+    <label>Quick-tap location chips (one per line: <b>Name | lat, lon</b>)</label>
+    <textarea id="s-presets" rows="4" placeholder="Home town | 16.089037, 78.098962"></textarea>
+    <label>Radar image URL</label><input id="s-radarurl">
+    <div class="btns">
+      <button id="s-cancel">Cancel</button>
+      <button class="save" id="s-save">Save &amp; reload</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= config ================= */
+const DEFAULTS = {
+  lat: 16.08790535475237,
+  lon: 78.09998163768542,
+  station: '43213',            // Kurnool — nearest IMD obs/forecast city (~29 km S of site)
+  city: '43213',
+  district: '',                // Jogulamba Gadwal district nowcast id — set when known
+  relay: 'https://raw.githubusercontent.com/atigaddagirish/Cluade/weather-data/imd.json',
+  stations: 'https://raw.githubusercontent.com/atigaddagirish/Cluade/weather-data/stations.json',
+  refresh: 10,
+  radarurl: 'https://mausam.imd.gov.in/Radar/caz_hyd.gif'
+};
+// IMD retired the public satellite hydro-estimator image (3Dasiasec_hem.jpg → 404);
+// use the observed daily rainfall map instead (gauge-measured, updates daily).
+const IMG_HEM = 'https://mausam.imd.gov.in/Rainfall/SUBDIVISION_RAINFALL_MAP_COUNTRY_INDIA_cd.JPG';
+const IMG_IR  = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_ir1.jpg';
+
+// Quick-tap location chips. Edit in ⚙ Settings (one "Name | lat, lon" per line).
+const DEFAULT_PRESETS = [
+  {name:'Home town', lat:16.089037, lon:78.098962},
+  {name:'Manikonda', lat:17.400695, lon:78.365313},
+  {name:'Nagole',    lat:17.381586, lon:78.566168}
+];
+function presets(){
+  try{ const p=JSON.parse(localStorage.getItem('rw-presets')); if(Array.isArray(p)&&p.length) return p; }catch(e){}
+  return DEFAULT_PRESETS;
+}
+
+function cfg(){
+  try{ return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('rw-cfg')||'{}')); }
+  catch(e){ return Object.assign({}, DEFAULTS); }
+}
+let C = cfg();
+
+function endpoints(){
+  return {
+    current:  `https://mausam.imd.gov.in/api/current_wx_api.php?id=${C.station}`,
+    forecast: `https://city.imd.gov.in/api/cityweather.php?id=${C.city}`,
+    nowcast:  C.district
+      ? `https://mausam.imd.gov.in/api/nowcast_district_api.php?id=${C.district}`
+      : `https://mausam.imd.gov.in/api/nowcastapi.php?id=${C.station}`
+  };
+}
+
+/* ================= state ================= */
+const S = { relayDoc:null, stationsDoc:null, diag:{}, omCache:{}, omForecast:null,
+            data:{current:null, forecast:null, nowcast:null},
+            src:{current:null, forecast:null, nowcast:null} };
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* active location = the coordinate the user is looking at (defaults to home site).
+   Observations + warnings are computed for the nearest IMD station to this point. */
+function activeLoc(){
+  try{
+    const l = JSON.parse(localStorage.getItem('rw-loc')||'null');
+    if(l && isFinite(l.lat) && isFinite(l.lon)) return l;
+  }catch(e){}
+  return {lat:+C.lat, lon:+C.lon, name:'home · Jogulamba Gadwal (TG)'};
+}
+function setActiveLoc(lat, lon, name){
+  localStorage.setItem('rw-loc', JSON.stringify({lat, lon, name:name||''}));
+}
+function isHomeSite(){ return !localStorage.getItem('rw-loc'); }
+
+/* great-circle distance in km */
+function haversine(aLat, aLon, bLat, bLon){
+  const R=6371, d2r=Math.PI/180;
+  const dLat=(bLat-aLat)*d2r, dLon=(bLon-aLon)*d2r;
+  const s=Math.sin(dLat/2)**2 + Math.cos(aLat*d2r)*Math.cos(bLat*d2r)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));
+}
+/* nearest row [lat,lon,...] whose column `metricIdx` is a finite number */
+function nearestWith(rows, lat, lon, metricIdx){
+  let best=null, bd=Infinity;
+  for(const r of (rows||[])){
+    if(metricIdx!=null && !(typeof r[metricIdx]==='number' && isFinite(r[metricIdx]))) continue;
+    const d=haversine(lat, lon, r[0], r[1]);
+    if(d<bd){ bd=d; best=r; }
+  }
+  return best ? {row:best, dist:bd} : null;
+}
+const km = d => d<10 ? d.toFixed(1)+' km' : Math.round(d)+' km';
+
+function pick(obj, patterns, exclude){
+  // find first key matching any regex in patterns (and not matching exclude)
+  for(const p of patterns){
+    for(const k of Object.keys(obj)){
+      if(p.test(k) && !(exclude && exclude.test(k))){
+        const v = obj[k];
+        if(v !== null && v !== undefined && String(v).trim() !== '') return {k, v:String(v).trim()};
+      }
+    }
+  }
+  return null;
+}
+const isNA = v => !v || /^(na|nil|n\/a|-+|null)$/i.test(String(v).trim());
+
+function fetchJSON(url, timeoutMs=12000){
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), timeoutMs);
+  return fetch(url, {signal: ctl.signal, cache:'no-store'})
+    .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .finally(()=>clearTimeout(t));
+}
+
+function setBadge(id, mode, title){
+  const el = $(id); if(!el) return;
+  el.className = 'badge ' + (mode==='live'?'live':mode==='relay'?'relay':'fail');
+  el.textContent = mode==='live' ? 'LIVE · IMD' : mode==='relay' ? ('RELAY'+(title?' · '+title:'')) : 'NO DATA';
+}
+
+/* ================= data loading ================= */
+async function loadRelay(){
+  if(!C.relay) return null;
+  try{
+    const doc = await fetchJSON(C.relay + (C.relay.includes('?')?'&':'?') + 't=' + Date.now());
+    S.relayDoc = doc;
+    S.diag.relay = {ok:true, msg:'fetched, data from ' + (doc.fetched_utc || 'unknown time')};
+    return doc;
+  }catch(e){
+    S.diag.relay = {ok:false, msg:String(e.message||e)};
+    return null;
+  }
+}
+
+function relayAge(){
+  if(!S.relayDoc || !S.relayDoc.fetched_utc) return '';
+  const mins = Math.round((Date.now() - Date.parse(S.relayDoc.fetched_utc))/60000);
+  return mins < 90 ? mins + ' min old' : Math.round(mins/60*10)/10 + ' h old';
+}
+function ageOf(iso){
+  if(!iso) return '';
+  const mins = Math.round((Date.now() - Date.parse(iso))/60000);
+  return mins < 90 ? mins + ' min old' : Math.round(mins/60*10)/10 + ' h old';
+}
+
+async function loadStations(){
+  if(!C.stations) return null;
+  try{
+    const doc = await fetchJSON(C.stations + (C.stations.includes('?')?'&':'?') + 't=' + Date.now(), 20000);
+    S.stationsDoc = doc;
+    const n = (doc.aws?doc.aws.length:0) + (doc.synop?doc.synop.length:0);
+    S.diag.stations = {ok:true, msg:`${n} stations, ${doc.warnings?doc.warnings.length:0} active warnings — ${ageOf(doc.fetched_utc)}`};
+    return doc;
+  }catch(e){
+    S.diag.stations = {ok:false, msg:String(e.message||e)};
+    return null;
+  }
+}
+
+async function loadSource(name){
+  const url = endpoints()[name];
+  try{
+    const data = await fetchJSON(url);
+    S.data[name] = data; S.src[name] = 'live';
+    S.diag[name] = {ok:true, msg:'direct from IMD — ' + url};
+    return;
+  }catch(e){
+    S.diag[name] = {ok:false, msg:'direct fetch failed ('+String(e.message||e)+') — ' + url};
+  }
+  // fallback: relay copy (fetch already started in parallel by refreshAll)
+  const doc = S.relayDoc || await (S.relayPromise || loadRelay());
+  const rel = doc && doc.sources && doc.sources[name];
+  if(rel && rel.ok && rel.data){
+    S.data[name] = rel.data; S.src[name] = 'relay';
+    S.diag[name].msg += ' → using relay copy (' + relayAge() + ')';
+    S.diag[name].warn = true;
+  }else{
+    S.data[name] = null; S.src[name] = null;
+  }
+}
+
+async function refreshAll(){
+  $('lastupd').innerHTML = '<span class="spin">⟳</span> refreshing…';
+  C = cfg();
+  const loc = activeLoc();
+  $('loctxt').textContent =
+    `${loc.lat.toFixed(4)}°N ${loc.lon.toFixed(4)}°E · ${loc.name || 'custom location'}`;
+  $('loc-input').value = isHomeSite() ? '' : `${loc.lat}, ${loc.lon}`;
+  S.relayPromise = loadRelay();            // start relay fetch in parallel; sources await it only on failure
+  await Promise.all([loadStations(), loadSource('current'), loadSource('forecast'),
+                     loadSource('nowcast'), S.relayPromise]);
+  renderAll();
+  $('lastupd').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN',
+    {hour:'2-digit',minute:'2-digit'}) + ' · data © IMD, Govt. of India';
+}
+
+/* re-render everything for the current active location (no network needed —
+   station data is already downloaded, so switching coordinates is instant) */
+function renderAll(){
+  const loc = activeLoc();
+  $('loctxt').textContent =
+    `${loc.lat.toFixed(4)}°N ${loc.lon.toFixed(4)}°E · ${loc.name || 'custom location'}`;
+  $('loc-resolved').innerHTML = isHomeSite()
+    ? 'Showing <b>home</b> (16.088°N, 78.100°E). Type any coordinate, tap a chip, or 📍.'
+    : `Showing <b>${esc(loc.name || (loc.lat.toFixed(4)+', '+loc.lon.toFixed(4)))}</b> — nearest IMD stations. Clear the box + Go to return home.`;
+  renderChips();
+  renderNow(); ensureForecast(); renderNowcast(); renderMaps(); renderDiag();
+}
+
+function renderChips(){
+  const box = $('chips'); if(!box) return;
+  const loc = activeLoc();
+  box.innerHTML = '';
+  presets().forEach(p => {
+    const on = Math.abs(p.lat-loc.lat) < 5e-4 && Math.abs(p.lon-loc.lon) < 5e-4;
+    const b = document.createElement('button');
+    b.className = 'chip' + (on?' on':'');
+    b.textContent = p.name;
+    b.addEventListener('click', () => {
+      setActiveLoc(+(+p.lat).toFixed(6), +(+p.lon).toFixed(6), p.name);
+      $('loc-input').value = `${(+p.lat).toFixed(6)}, ${(+p.lon).toFixed(6)}`;
+      renderAll();
+    });
+    box.appendChild(b);
+  });
+}
+
+/* ================= renderers ================= */
+function firstRecord(d){
+  if(Array.isArray(d)) return d.length ? d[0] : null;
+  if(d && typeof d === 'object') return d;
+  return null;
+}
+
+function cell(label, val, extra){
+  return `<div class="cell"><div class="k">${esc(label)}</div>`+
+         `<div class="v">${esc(val)}${extra?` <span class="dist">${esc(extra)}</span>`:''}</div></div>`;
+}
+
+function renderNow(){
+  const loc = activeLoc();
+  const kv = $('nowkv'), raw = $('nowraw');
+  kv.innerHTML=''; raw.innerHTML='';
+  const d = S.stationsDoc;
+
+  // Preferred path: nationwide IMD station data → nearest station to active point.
+  if(d && (d.synop || d.aws)){
+    setBadge('src-current', 'relay', ageOf(d.fetched_utc));
+    const synopRain = nearestWith(d.synop, loc.lat, loc.lon, 3);   // 24-hr rain (mm)
+    const awsRain   = nearestWith(d.aws,   loc.lat, loc.lon, 3);   // AWS rainfall (mm)
+    const awsTemp   = nearestWith(d.aws,   loc.lat, loc.lon, 4);   // temp → live obs
+    const awsRH     = nearestWith(d.aws,   loc.lat, loc.lon, 5);
+    const awsWind   = nearestWith(d.aws,   loc.lat, loc.lon, 6);
+
+    // headline = SYNOP 24-h rainfall if a SYNOP station is reasonably near, else AWS
+    let rainVal=null, rainSrc='';
+    if(synopRain && synopRain.dist <= 150){
+      rainVal = synopRain.row[3];
+      rainSrc = `SYNOP station ${synopRain.row[2]} · ${km(synopRain.dist)} away · last 24 h`;
+    }else if(awsRain){
+      rainVal = awsRain.row[3];
+      rainSrc = `AWS ${awsRain.row[2]||''} · ${km(awsRain.dist)} away · since 0300 UTC`;
+    }else if(synopRain){
+      rainVal = synopRain.row[3];
+      rainSrc = `SYNOP station ${synopRain.row[2]} · ${km(synopRain.dist)} away · last 24 h`;
+    }
+    $('rain24').textContent = (rainVal==null) ? '–' : rainVal;
+    $('rainsub').textContent = rainSrc || 'No station reporting rainfall near this point.';
+
+    if(awsTemp) kv.insertAdjacentHTML('beforeend', cell('Temperature', awsTemp.row[4]+' °C',
+      (awsTemp.row[2]||'AWS')+' · '+km(awsTemp.dist)));
+    if(awsRH && awsRH.row[5]!=null)  kv.insertAdjacentHTML('beforeend', cell('Humidity', awsRH.row[5]+' %'));
+    if(awsWind && awsWind.row[6]!=null) kv.insertAdjacentHTML('beforeend', cell('Wind', awsWind.row[6]+' km/h'));
+    if(awsRain && awsRain.row[3]!=null && awsRain!==synopRain)
+      kv.insertAdjacentHTML('beforeend', cell('AWS rain (short)', awsRain.row[3]+' mm', km(awsRain.dist)));
+    if(synopRain) kv.insertAdjacentHTML('beforeend', cell('SYNOP 24 h rain',
+      (synopRain.row[3]==null?'–':synopRain.row[3]+' mm'), 'stn '+synopRain.row[2]+' · '+km(synopRain.dist)));
+
+    // raw table = the nearest stations used
+    const rows = [];
+    if(synopRain) rows.push(['Nearest SYNOP', `id ${synopRain.row[2]} @ ${synopRain.row[0]},${synopRain.row[1]} (${km(synopRain.dist)}) rain24=${synopRain.row[3]} temp=${synopRain.row[4]} rh=${synopRain.row[5]}`]);
+    if(awsTemp)   rows.push(['Nearest AWS', `${awsTemp.row[2]} @ ${awsTemp.row[0]},${awsTemp.row[1]} (${km(awsTemp.dist)}) rain=${awsTemp.row[3]} temp=${awsTemp.row[4]} rh=${awsTemp.row[5]} wind=${awsTemp.row[6]}`]);
+    for(const [k,v] of rows) raw.insertAdjacentHTML('beforeend', `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`);
+    return;
+  }
+
+  // Fallback: the older Kurnool relay record (home site only)
+  setBadge('src-current', S.src.current, S.src.current==='relay'?relayAge():'');
+  const rec = firstRecord(S.data.current);
+  if(!rec){
+    $('rain24').textContent='–';
+    $('rainsub').textContent='No data — check Info tab diagnostics.';
+    return;
+  }
+  const rain = pick(rec, [/past.*24.*rain/i, /rain.?fall/i, /\brain\b/i]);
+  $('rain24').textContent = rain ? (isNA(rain.v) ? '0' : rain.v.replace(/[^\d.]/g,'')||rain.v) : '–';
+  const st = pick(rec, [/station/i]); const dt = pick(rec, [/date/i]);
+  $('rainsub').textContent = 'Station: ' + (st?st.v:C.station) + (dt ? ' · obs ' + dt.v : '') +
+      (rain && isNA(rain.v) ? ' · rainfall reported NIL/NA' : '');
+  const mx = pick(rec,[/max.*temp/i]), mn = pick(rec,[/min.*temp/i]);
+  const cells = [['Max / Min', (mx||mn)?((mx?mx.v:'–')+' / '+(mn?mn.v:'–')+' °C'):null],
+    ['Humidity', pick(rec,[/humid/i])?pick(rec,[/humid/i]).v:null],
+    ['Sunset', pick(rec,[/sunset/i])?pick(rec,[/sunset/i]).v:null]];
+  for(const [label,v] of cells) if(v) kv.insertAdjacentHTML('beforeend', cell(label, v));
+  for(const k of Object.keys(rec))
+    raw.insertAdjacentHTML('beforeend', `<tr><td>${esc(k)}</td><td>${esc(rec[k])}</td></tr>`);
+}
+
+const RAIN_RE = /rain|shower|thunder|drizzle|storm/i;
+
+// ---- Per-coordinate 7-day forecast via Open-Meteo (ECMWF-IFS + GFS + ICON
+//      blend; free, no key, CORS-open, works for ANY lat/lon). Observations &
+//      warnings stay IMD; this is the point-forecast layer. ----
+const WMO = {
+  0:['Clear sky','☀️',0],1:['Mainly clear','🌤️',0],2:['Partly cloudy','⛅',0],3:['Overcast','☁️',0],
+  45:['Fog','🌫️',0],48:['Rime fog','🌫️',0],
+  51:['Light drizzle','🌦️',1],53:['Drizzle','🌦️',1],55:['Heavy drizzle','🌧️',1],
+  56:['Freezing drizzle','🌧️',1],57:['Freezing drizzle','🌧️',1],
+  61:['Light rain','🌧️',1],63:['Rain','🌧️',1],65:['Heavy rain','🌧️',1],
+  66:['Freezing rain','🌧️',1],67:['Freezing rain','🌧️',1],
+  71:['Light snow','🌨️',1],73:['Snow','🌨️',1],75:['Heavy snow','🌨️',1],77:['Snow grains','🌨️',1],
+  80:['Light showers','🌦️',1],81:['Showers','🌧️',1],82:['Violent showers','⛈️',1],
+  85:['Snow showers','🌨️',1],86:['Snow showers','🌨️',1],
+  95:['Thunderstorm','⛈️',1],96:['Thunderstorm + hail','⛈️',1],99:['Thunderstorm + hail','⛈️',1]
+};
+const wmo = c => WMO[c] || ['—','🌡️',0];
+const fcKey = loc => (+loc.lat).toFixed(3)+','+(+loc.lon).toFixed(3);
+
+function ensureForecast(){
+  const loc = activeLoc(), key = fcKey(loc);
+  if(S.omCache[key]){ S.omForecast = S.omCache[key]; renderForecast(); return; }
+  S.omForecast = 'loading'; renderForecast();
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}`+
+    `&daily=weathercode,precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min`+
+    `&forecast_days=7&timezone=auto`;
+  fetchJSON(url, 12000).then(d=>{
+    S.omCache[key]=d;
+    if(fcKey(activeLoc())===key){ S.omForecast=d; S.diag.forecast={ok:true,msg:'Open-Meteo ECMWF/GFS @ '+key}; renderForecast(); }
+  }).catch(e=>{
+    if(fcKey(activeLoc())===key){ S.omForecast=null; S.diag.forecast={ok:false,msg:'Open-Meteo: '+String(e.message||e)}; renderForecast(); }
+  });
+}
+
+function renderForecast(){
+  const loc = activeLoc();
+  const list = $('fclist'), raw = $('fcraw'), badge = $('src-forecast');
+  list.innerHTML=''; raw.innerHTML='';
+  $('fc-place').textContent = loc.name || (loc.lat.toFixed(3)+', '+loc.lon.toFixed(3));
+
+  const F = S.omForecast;
+  if(F === 'loading'){
+    badge.className='badge'; badge.textContent='…';
+    $('todayfc').textContent='Loading forecast…';
+    list.innerHTML='<p class="note">Loading 7-day forecast…</p>'; return;
+  }
+  if(F && F.daily && F.daily.time){
+    const dl=F.daily, N=dl.time.length;
+    badge.className='badge live'; badge.textContent='ECMWF/GFS';
+    const w0=wmo(dl.weathercode[0]);
+    $('todayfc').innerHTML = `${w0[1]} <b>${esc(w0[0])}</b> · rain ${esc(dl.precipitation_sum[0])} mm`+
+      ` (${dl.precipitation_probability_max[0]??'–'}% chance) · `+
+      `${Math.round(dl.temperature_2m_min[0])}–${Math.round(dl.temperature_2m_max[0])} °C`;
+    for(let i=0;i<N;i++){
+      const w=wmo(dl.weathercode[i]);
+      const dt=new Date(dl.time[i]+'T00:00').toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+      const mm=dl.precipitation_sum[i], pr=dl.precipitation_probability_max[i];
+      const sub=`${w[0]}${mm>0?` · ${mm} mm`:''}${pr!=null?` · ${pr}% chance`:''}`;
+      addDay(list, dt, sub, Math.round(dl.temperature_2m_max[i]), Math.round(dl.temperature_2m_min[i]), w[1], w[2]);
+    }
+    raw.insertAdjacentHTML('beforeend',
+      `<tr><td>source</td><td>Open-Meteo /v1/forecast — ECMWF-IFS + GFS + ICON blend @ ${esc(loc.lat)}, ${esc(loc.lon)}</td></tr>`);
+    for(let i=0;i<N;i++) raw.insertAdjacentHTML('beforeend',
+      `<tr><td>${esc(dl.time[i])}</td><td>wmo ${esc(dl.weathercode[i])} · ${esc(dl.precipitation_sum[i])} mm · ${dl.precipitation_probability_max[i]??'–'}% · ${esc(dl.temperature_2m_min[i])}–${esc(dl.temperature_2m_max[i])} °C</td></tr>`);
+    return;
+  }
+
+  // fallback: IMD relay home-site forecast text (only if Open-Meteo unreachable)
+  badge.className='badge relay'; badge.textContent='IMD home';
+  const d=S.data.forecast, rows=Array.isArray(d)?d:(d&&typeof d==='object'?[d]:[]);
+  const today = rows[0] && (pick(rows[0],[/today.*forecast/i])||pick(rows[0],[/forecast/i,/weather/i]));
+  $('todayfc').textContent = today && !isNA(today.v) ? today.v : 'Forecast unavailable — check Info diagnostics.';
+  if(!rows.length){ list.innerHTML='<p class="note">Forecast source unreachable — check Info tab.</p>'; return; }
+  rows.slice(0,10).forEach(r=>{
+    const dt=pick(r,[/date/i]), fc=pick(r,[/forecast/i,/weather/i]);
+    const mx=pick(r,[/max/i]), mn=pick(r,[/min/i]);
+    addDay(list, dt?dt.v:'', fc?fc.v:'', mx?mx.v:null, mn?mn.v:null);
+  });
+}
+
+function addDay(list, date, txt, mx, mn, icon, rainy){
+  if(rainy===undefined) rainy = RAIN_RE.test(txt);
+  if(!icon) icon = rainy ? (/thunder|storm/i.test(txt)?'⛈️':'🌧️')
+            : /cloud/i.test(txt)?'☁️':/clear|sunny|fair/i.test(txt)?'☀️':'🌤️';
+  list.insertAdjacentHTML('beforeend',
+    `<div class="fcday${rainy?' rainy':''}">
+       <div class="ico">${icon}</div>
+       <div class="mid"><div class="d">${esc(date||'')}</div><div class="t">${esc(txt||'–')}</div></div>
+       ${(mx!=null||mn!=null)?`<div class="temps"><b>${esc(mx??'–')}°</b><br>${esc(mn??'–')}°</div>`:''}
+     </div>`);
+}
+
+const WARN_COLOR = {2:['yellow','sev-yellow','Yellow — watch'],
+                    3:['orange','sev-orange','Orange — alert'],
+                    4:['red','sev-red','Red — warning']};
+// IMD nowcast hazard categories (cat1..cat19). Best-effort labels.
+const WARN_CAT = {1:'Thunderstorm & lightning',2:'Gusty winds',3:'Squall',4:'Duststorm',
+  5:'Hailstorm',6:'Heavy rain',7:'Dust/raising winds',8:'Heat wave',9:'Cold wave',
+  10:'Ground frost',11:'Fog',12:'Cold day',13:'Hot day',14:'Strong surface winds',
+  15:'Snow',16:'Other',17:'Heavy snow',18:'Warm night',19:'Cold night'};
+
+function renderNowcast(){
+  const box = $('nclist'); box.innerHTML='';
+  const loc = activeLoc();
+  const d = S.stationsDoc;
+
+  if(d && Array.isArray(d.warnings)){
+    setBadge('src-nowcast', 'relay', ageOf(d.fetched_utc));
+    // active warnings within 200 km of the point, nearest first
+    const near = d.warnings
+      .map(w => ({w, dist: haversine(loc.lat, loc.lon, w[0], w[1])}))
+      .filter(x => x.dist <= 200)
+      .sort((a,b) => a.dist - b.dist)
+      .slice(0, 12);
+    if(!near.length){
+      box.innerHTML = '<p class="note">✅ No active IMD nowcast warning within 200 km of this '+
+        'point right now. (IMD issues nowcasts only when severe weather is expected in the next '+
+        '~3 h.) '+ (d.warnings.length ? d.warnings.length+' warning(s) active elsewhere in India.' : '') +'</p>';
+      return;
+    }
+    near.forEach(({w, dist}) => {
+      const [,, station, color, cats, msg, vupto] = w;
+      const meta = WARN_COLOR[color] || ['','','level '+color];
+      const catTxt = (cats||[]).map(c => WARN_CAT[c] || ('cat'+c)).join(', ');
+      box.insertAdjacentHTML('beforeend',
+        `<div class="nowc ${meta[1]}">
+           <div class="h">${esc(station||'station')} · ${esc(km(dist))} away · ${esc(meta[2])}${vupto?' · valid upto '+esc(vupto)+' UTC':''}</div>
+           <div>${esc(catTxt || msg || 'IMD nowcast warning active')}</div>
+         </div>`);
+    });
+    return;
+  }
+
+  // fallback: old relay nowcast (usually empty since IMD APIs are IP-locked)
+  setBadge('src-nowcast', S.src.nowcast, S.src.nowcast==='relay'?relayAge():'');
+  box.innerHTML = '<p class="note">Warning data not loaded — check the Info tab diagnostics.</p>';
+}
+
+let lastWindyKey = '';
+function renderMaps(){
+  const bust = '?t=' + Math.floor(Date.now()/60000);   // refresh at most once/min
+  $('img-radar').src = C.radarurl + bust; $('lnk-radar').href = C.radarurl;
+  $('img-hem').src = IMG_HEM + bust;      $('lnk-hem').href = IMG_HEM;
+  $('img-ir').src  = IMG_IR + bust;       $('lnk-ir').href  = IMG_IR;
+  // Windy embed — only reload the iframe when the location actually changes
+  const loc = activeLoc(), wkey = loc.lat.toFixed(3)+','+loc.lon.toFixed(3);
+  if(wkey !== lastWindyKey){
+    lastWindyKey = wkey;
+    $('windy').src = `https://embed.windy.com/embed2.html?lat=${loc.lat}&lon=${loc.lon}`+
+      `&detailLat=${loc.lat}&detailLon=${loc.lon}&zoom=7&level=surface&overlay=rain&menu=&message=`+
+      `&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=`+
+      `&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
+    $('lnk-windy').href = `https://www.windy.com/?${loc.lat},${loc.lon},8`;
+  }
+}
+
+function renderDiag(){
+  const box = $('diag'); box.innerHTML='';
+  const rows = [
+    ['Stations (nationwide obs + warnings)','stations'],
+    ['7-day forecast (Open-Meteo)','forecast'],
+    ['Legacy current wx','current'],
+    ['Legacy nowcast','nowcast'],
+    ['Relay (GitHub copy)','relay']
+  ];
+  for(const [name,key] of rows){
+    const d = S.diag[key] || {ok:false, msg:'not attempted'};
+    const cls = d.ok ? (d.warn?'warn':'ok') : (key==='relay' && d.ok===false ? 'bad' : d.warn?'warn':(d.ok?'ok':'bad'));
+    box.insertAdjacentHTML('beforeend',
+      `<div class="row"><span class="dot ${d.ok?(d.warn?'warn':'ok'):(S.src[key]==='relay'?'warn':'bad')}"></span>
+        <span class="nm">${esc(name)}</span><span class="ms">${esc(d.msg)}</span></div>`);
+  }
+}
+
+/* ================= UI wiring ================= */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.id==='tab-'+b.dataset.tab));
+    if(b.dataset.tab==='maps') renderMaps();
+  });
+});
+$('btn-refresh').addEventListener('click', refreshAll);
+
+/* ---- location bar: type "lat, lon" (or drop a Google-Maps style pair) ---- */
+function applyLocation(text){
+  const m = String(text).match(/(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
+  if(!m){ alert('Enter coordinates as:  lat, lon\n e.g.  16.088, 78.100'); return; }
+  const lat=+m[1], lon=+m[2];
+  if(lat<6 || lat>38 || lon<66 || lon>98){
+    if(!confirm('That point looks outside India — IMD stations may be far away. Use it anyway?')) return;
+  }
+  setActiveLoc(lat, lon, `${lat.toFixed(3)}, ${lon.toFixed(3)}`);
+  renderAll();                       // instant — station data already downloaded
+}
+$('loc-go').addEventListener('click', ()=>{
+  const v = $('loc-input').value.trim();
+  if(v===''){ localStorage.removeItem('rw-loc'); renderAll(); }   // empty = home site
+  else applyLocation(v);
+});
+$('loc-input').addEventListener('keydown', e=>{ if(e.key==='Enter') $('loc-go').click(); });
+$('loc-gps').addEventListener('click', ()=>{
+  if(!navigator.geolocation){ alert('This device has no geolocation.'); return; }
+  $('loc-resolved').textContent = 'Getting your location…';
+  navigator.geolocation.getCurrentPosition(
+    p=>{ setActiveLoc(+p.coords.latitude.toFixed(4), +p.coords.longitude.toFixed(4), 'my location');
+         $('loc-input').value = `${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`;
+         renderAll(); },
+    err=>{ $('loc-resolved').textContent = 'Location denied/unavailable ('+err.message+'). Type coordinates instead.'; },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:60000});
+});
+
+$('btn-settings').addEventListener('click', ()=>{
+  const c = cfg();
+  $('s-lat').value=c.lat; $('s-lon').value=c.lon; $('s-station').value=c.station;
+  $('s-city').value=c.city; $('s-district').value=c.district; $('s-relay').value=c.relay;
+  $('s-refresh').value=c.refresh; $('s-radarurl').value=c.radarurl;
+  $('s-presets').value = presets().map(p=>`${p.name} | ${p.lat}, ${p.lon}`).join('\n');
+  $('settings').classList.add('on');
+});
+$('s-cancel').addEventListener('click', ()=>$('settings').classList.remove('on'));
+$('s-save').addEventListener('click', ()=>{
+  localStorage.setItem('rw-cfg', JSON.stringify({
+    lat:+$('s-lat').value||DEFAULTS.lat, lon:+$('s-lon').value||DEFAULTS.lon,
+    station:$('s-station').value.trim()||DEFAULTS.station,
+    city:$('s-city').value.trim()||DEFAULTS.city,
+    district:$('s-district').value.trim(),
+    relay:$('s-relay').value.trim(),
+    refresh:Math.max(0, +$('s-refresh').value||0),
+    radarurl:$('s-radarurl').value.trim()||DEFAULTS.radarurl
+  }));
+  // parse "Name | lat, lon" lines into the chip presets
+  const rows = $('s-presets').value.split('\n').map(line=>{
+    const m = line.match(/^\s*(.+?)\s*\|\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    return m ? {name:m[1], lat:+m[2], lon:+m[3]} : null;
+  }).filter(Boolean);
+  if(rows.length) localStorage.setItem('rw-presets', JSON.stringify(rows));
+  else localStorage.removeItem('rw-presets');
+  $('settings').classList.remove('on');
+  refreshAll();
+  armTimer();
+});
+
+let timer=null;
+function armTimer(){
+  if(timer) clearInterval(timer);
+  const m = +cfg().refresh;
+  if(m>0) timer = setInterval(refreshAll, m*60000);
+}
+
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+refreshAll();
+armTimer();
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAll(); });
+</script>
+</body>
+</html>

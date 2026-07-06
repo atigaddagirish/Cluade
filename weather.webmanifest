@@ -1,0 +1,19 @@
+{
+  "name": "Weather Watch — IMD + Windy",
+  "short_name": "Weather Watch",
+  "description": "Multi-purpose weather for any location in India — official IMD observations (nearest-station rainfall, temperature, humidity, wind), severe-weather nowcast warnings, ECMWF/GFS 7-day forecast, IMD radar/rainfall maps and Windy layers. For agriculture, field work and general use.",
+  "start_url": "weather.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1424",
+  "theme_color": "#0b2545",
+  "icons": [
+    {
+      "src": "weather-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
