@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b2545">
-<title>Site Rain Watch — IMD</title>
+<title>Weather Watch — IMD + Windy</title>
 <link rel="manifest" href="weather.webmanifest">
 <link rel="icon" href="weather-icon.svg" type="image/svg+xml">
 <style>
@@ -79,6 +79,8 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .nowc.sev-green{border-left-color:var(--ok)}
 .imgwrap{background:#000;border-radius:10px;overflow:hidden;margin-bottom:6px}
 .imgwrap img{width:100%;display:block;min-height:120px}
+.windywrap{border-radius:10px;overflow:hidden;margin-bottom:6px;background:#0e1a2e}
+.windywrap iframe{width:100%;height:360px;display:block;border:0}
 .imgcap{font-size:11px;color:var(--dim);margin-bottom:14px;display:flex;justify-content:space-between}
 .imgcap a{color:var(--accent);text-decoration:none}
 details{margin-top:10px}
@@ -125,7 +127,7 @@ nav button.on{color:var(--rain)}
 <body>
 
 <header>
-  <h1>☔ Site Rain Watch
+  <h1>🌦️ Weather Watch
     <span class="loc" id="loctxt"></span>
   </h1>
   <div class="hbtns">
@@ -158,7 +160,7 @@ nav button.on{color:var(--rain)}
       </details>
     </div>
     <div class="card">
-      <h2>Today's outlook — <span id="fc-place">home site</span></h2>
+      <h2>Today's outlook — <span id="fc-place">home</span></h2>
       <div id="todayfc" style="font-size:14px;line-height:1.5">–</div>
     </div>
   </section>
@@ -196,6 +198,18 @@ nav button.on{color:var(--rain)}
   <!-- MAPS -->
   <section class="tab" id="tab-maps">
     <div class="card">
+      <h2>Windy — live layers (wind · rain · temp · clouds)</h2>
+      <div class="windywrap"><iframe id="windy" title="Windy map" loading="lazy"
+        frameborder="0"></iframe></div>
+      <div class="imgcap"><span>Animated forecast — tap layers inside to switch (wind, rain, temp,
+        clouds, gusts, humidity…)</span>
+        <a id="lnk-windy" target="_blank" rel="noopener">open ↗</a></div>
+      <p class="note" style="margin:6px 0 0">Centred on the location in the bar above; change the
+        coordinate/chip and it recentres. Great for tracking approaching rain, wind for spraying,
+        and general conditions. Data: multi-model (ECMWF, GFS, ICON) via Windy.</p>
+    </div>
+
+    <div class="card">
       <h2>Doppler radar — Hyderabad (nearest, ~150 km)</h2>
       <div class="imgwrap"><img id="img-radar" alt="IMD Hyderabad radar" loading="lazy"></div>
       <div class="imgcap"><span id="cap-radar">Max-Z composite</span>
@@ -213,10 +227,11 @@ nav button.on{color:var(--rain)}
 
       <p class="note">Images are IMD operational products, hot-linked from mausam.imd.gov.in.
       The <b>Hyderabad Doppler radar</b> is the best "is it raining now" view (live precipitation
-      echoes, ~150 km from the site). Note: IMD <b>retired its public satellite hydro-estimator
-      (rain-rate) image</b> in 2026, so this shows the <b>observed daily rainfall map</b> instead —
-      real gauge-measured rainfall across India (updates once daily). If an image fails to load,
-      IMD may have renamed the product — tap "open ↗" to check, then update the URL in Settings.</p>
+      echoes, ~150 km range — nearest radar to central Telangana/AP). Note: IMD <b>retired its
+      public satellite hydro-estimator (rain-rate) image</b> in 2026, so this shows the
+      <b>observed daily rainfall map</b> instead — real gauge-measured rainfall across India
+      (updates once daily). If an image fails to load, IMD may have renamed the product — tap
+      "open ↗" to check, then update the URL in Settings.</p>
     </div>
   </section>
 
@@ -235,17 +250,20 @@ nav button.on{color:var(--rain)}
         2,000+ Automatic Weather Stations, 400+ SYNOP stations, plus live nowcast warnings)
         every 30 min and republishes it CORS-open, so your phone can find the nearest station
         to <i>any</i> point you type — instantly, no third-party proxy, no key. <b>7-day
-        forecast (7-day):</b> per-coordinate point forecast from <b>Open-Meteo</b> (a free,
+        forecast:</b> per-coordinate point forecast from <b>Open-Meteo</b> (a free,
         CORS-open blend of the ECMWF-IFS, NOAA-GFS and DWD-ICON global models — the same
         gold-standard NWP that underpins most forecasts). It changes with the location you pick.
         IMD's own per-coordinate forecast unlocks with the api.imd.gov.in key. Badges show data
         age. Since mid-2026 IMD's simple JSON APIs answer only whitelisted IPs (HTTP 401), which
-        is why the observation relay exists.<br><br>
+        is why the observation relay exists. <b>Maps:</b> IMD radar &amp; rainfall map, plus a
+        <b>Windy</b> embed (animated wind / rain / temperature / cloud layers, multi-model).<br><br>
+        A general-purpose weather tool for <b>any location in India</b> — useful for agriculture
+        (rain, wind for spraying, temperature), field work, travel and everyday planning.<br><br>
         Official IMD channels for the same data:
         <a href="https://mausam.imd.gov.in" target="_blank" rel="noopener">mausam.imd.gov.in</a> ·
         <a href="https://city.imd.gov.in" target="_blank" rel="noopener">city.imd.gov.in</a> ·
-        the <b>"Mausam"</b> app (IMD's official mobile app) ·
-        <b>"Meghdoot"</b> (agromet advisories) · <b>"Damini"</b> (lightning alerts).
+        the <b>"Mausam"</b> app (IMD's official app) · <b>"Meghdoot"</b> (agromet advisories for
+        farmers) · <b>"Damini"</b> (lightning alerts).
       </p>
     </div>
   </section>
@@ -347,7 +365,7 @@ function activeLoc(){
     const l = JSON.parse(localStorage.getItem('rw-loc')||'null');
     if(l && isFinite(l.lat) && isFinite(l.lon)) return l;
   }catch(e){}
-  return {lat:+C.lat, lon:+C.lon, name:'home site · Jogulamba Gadwal (TG)'};
+  return {lat:+C.lat, lon:+C.lon, name:'home · Jogulamba Gadwal (TG)'};
 }
 function setActiveLoc(lat, lon, name){
   localStorage.setItem('rw-loc', JSON.stringify({lat, lon, name:name||''}));
@@ -484,7 +502,7 @@ function renderAll(){
   $('loctxt').textContent =
     `${loc.lat.toFixed(4)}°N ${loc.lon.toFixed(4)}°E · ${loc.name || 'custom location'}`;
   $('loc-resolved').innerHTML = isHomeSite()
-    ? 'Showing <b>home site</b> (16.088°N, 78.100°E). Type any coordinate, tap a chip, or 📍.'
+    ? 'Showing <b>home</b> (16.088°N, 78.100°E). Type any coordinate, tap a chip, or 📍.'
     : `Showing <b>${esc(loc.name || (loc.lat.toFixed(4)+', '+loc.lon.toFixed(4)))}</b> — nearest IMD stations. Clear the box + Go to return home.`;
   renderChips();
   renderNow(); ensureForecast(); renderNowcast(); renderMaps(); renderDiag();
@@ -728,11 +746,22 @@ function renderNowcast(){
   box.innerHTML = '<p class="note">Warning data not loaded — check the Info tab diagnostics.</p>';
 }
 
+let lastWindyKey = '';
 function renderMaps(){
   const bust = '?t=' + Math.floor(Date.now()/60000);   // refresh at most once/min
   $('img-radar').src = C.radarurl + bust; $('lnk-radar').href = C.radarurl;
   $('img-hem').src = IMG_HEM + bust;      $('lnk-hem').href = IMG_HEM;
   $('img-ir').src  = IMG_IR + bust;       $('lnk-ir').href  = IMG_IR;
+  // Windy embed — only reload the iframe when the location actually changes
+  const loc = activeLoc(), wkey = loc.lat.toFixed(3)+','+loc.lon.toFixed(3);
+  if(wkey !== lastWindyKey){
+    lastWindyKey = wkey;
+    $('windy').src = `https://embed.windy.com/embed2.html?lat=${loc.lat}&lon=${loc.lon}`+
+      `&detailLat=${loc.lat}&detailLon=${loc.lon}&zoom=7&level=surface&overlay=rain&menu=&message=`+
+      `&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=`+
+      `&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
+    $('lnk-windy').href = `https://www.windy.com/?${loc.lat},${loc.lon},8`;
+  }
 }
 
 function renderDiag(){

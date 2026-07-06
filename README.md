@@ -24,10 +24,13 @@ Confirms A=224.0, Ixx=161637, Ztop=4244, Zbot=5065 mm and the verdict
 (bending 63% PASS, shear 14% PASS, LTB no-govern, deflection L/85 **FAIL**).
 Run this after any change to `index.html`'s `computeProps`.
 
-## Site rain watch (weather.html)
-Mobile weather app for the solar site at **16.0879°N 78.1000°E** (Jogulamba Gadwal, TG),
-showing **official IMD data only** — past-24 h rainfall, 7-day forecast, 3-h nowcast
-warnings, Hyderabad Doppler radar and INSAT satellite rain imagery.
+## Weather Watch (weather.html)
+Multi-purpose mobile weather app for **any location in India** — for agriculture, field
+work, travel and general use. Default/home coordinate is **16.0879°N 78.1000°E**
+(Jogulamba Gadwal, TG). Shows: nearest-IMD-station past-24 h rainfall + temp/humidity/wind,
+3-h nowcast severe-weather warnings, a per-coordinate **ECMWF/GFS 7-day forecast**
+(Open-Meteo), IMD Doppler radar + observed rainfall map + INSAT IR, and a **Windy** embed
+(animated wind/rain/temp/cloud layers). Type a `lat, lon`, tap a saved chip, or use GPS.
 
 **Data path (all numbers originate from IMD):**
 Since mid-2026 IMD's JSON APIs (`mausam.imd.gov.in/api`, `city.imd.gov.in/api`) return

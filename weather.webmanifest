@@ -1,7 +1,7 @@
 {
-  "name": "Site Rain Watch — IMD",
-  "short_name": "IMD Rain",
-  "description": "Rain and weather for solar site 16.0879N 78.1000E (Jogulamba Gadwal) from official IMD data: 24-h rainfall, 7-day forecast, nowcast warnings, radar and satellite.",
+  "name": "Weather Watch — IMD + Windy",
+  "short_name": "Weather Watch",
+  "description": "Multi-purpose weather for any location in India — official IMD observations (nearest-station rainfall, temperature, humidity, wind), severe-weather nowcast warnings, ECMWF/GFS 7-day forecast, IMD radar/rainfall maps and Windy layers. For agriculture, field work and general use.",
   "start_url": "weather.html",
   "scope": ".",
   "display": "standalone",
