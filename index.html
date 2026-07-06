@@ -332,7 +332,7 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
         <div class="field"><label>Fx (axial, +tens)</label><input id="s_Fx_up" type="number" value="0" step="any"></div>
       </div>
       <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;margin:2px 0 10px">
-        <input type="checkbox" id="s_wind" checked style="width:auto"> Wind/seismic combo &rarr; +&frac13; allowable (WSM wind practice, per IS 800/875 — not an IS 801 clause)
+        <input type="checkbox" id="s_wind" style="width:auto;display:none"> <span style="color:#888">Allowables at 0.6Fy — no 33% wind increase applied (removed per project practice).</span>
       </label>
       <div class="subh">&#8595; Gravity combination (DL / DL+LL)</div>
       <div class="g3">
@@ -1066,7 +1066,6 @@ Imin = max( 1.83·t⁴·√[(w/t)²−4000/Fy_ksi] , 9.2·t⁴ )
   // ── Cl.6.1 Bending ──
   html+=drow('Bending — uplift (biaxial)','IS 801 Cl.6.1.1',
 `Fb     = 0.6 × Fy = 0.6 × ${V.Fy} = ${V.Fb.toFixed(0)} MPa
-Fb(+⅓) = Fb × 4/3  = ${V.Fb_wl.toFixed(0)} MPa  [wind/seismic +33% — WSM practice per IS 800/875; not an IS 801 clause]
 
 Under uplift (purlin hogs):
   Top flange  → TENSION   f_top = M / Ztop
@@ -1076,7 +1075,7 @@ f_top  = ${V.M_up_Nmm.toFixed(0)} / ${V.Ztop.toFixed(0)} = ${V.f_top_up.toFixed(
 f_bot  = ${V.M_up_Nmm.toFixed(0)} / ${V.Zbot.toFixed(0)} = ${V.f_comp_up.toFixed(1)} MPa
 f_weak = M_weak / Zweak = ${V.f_weak.toFixed(1)} MPa
 
-Interaction: (f_strong + f_weak) / Fb(+⅓) ≤ 1.0`,
+Interaction: (f_strong + f_weak) / Fb ≤ 1.0`,
     [
       ['M_uplift',`${V.M_up.toFixed(4)} kN·m = ${V.M_up_Nmm.toFixed(0)} N·mm`],
       ['M_weak (minor)',`${V.M_weak.toFixed(4)} kN·m`],
@@ -1087,9 +1086,8 @@ Interaction: (f_strong + f_weak) / Fb(+⅓) ≤ 1.0`,
       ['f_strong (governing)',`${V.f_strong_up.toFixed(1)} MPa`],
       ['f_weak',`${V.f_weak.toFixed(1)} MPa`],
       ['Fb = 0.6Fy',`${V.Fb.toFixed(0)} MPa`],
-      ['Fb × 4/3 (wind, WSM practice)',`${V.Fb_wl.toFixed(0)} MPa`],
-      ['r_strong = f_strong / Fb(+⅓)',`${V.r_s.toFixed(4)}`],
-      ['r_weak   = f_weak   / Fb(+⅓)',`${V.r_w.toFixed(4)}`],
+      ['r_strong = f_strong / Fb',`${V.r_s.toFixed(4)}`],
+      ['r_weak   = f_weak   / Fb',`${V.r_w.toFixed(4)}`],
     ],
     `UR = r_strong + r_weak = ${V.r_s.toFixed(3)} + ${V.r_w.toFixed(3)} = ${pct(V.UR.biaxial)}`,
     V.UR.biaxial);
@@ -1142,7 +1140,7 @@ ${V.Xltb<=V.ltbB?'X ≤ B → Fb = 0.6·Fy':V.Xltb<V.ltbC?'B < X < C → Fb = �
 → Fb(b) = ${V.Fb63.toFixed(1)} MPa   [capped at 0.6Fy]
 
 Governing: Fb_LTB = min(a, b) = ${V.Fb_ltb.toFixed(1)} MPa${V.windPlus?`
-Fb_LTB(+⅓) = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`:''}`,
+Fb_LTB = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`:''}`,
     [
       ['Lb (unbraced length)',`${V.Lb} mm`],
       ['Cb (moment gradient)',`${V.Cb}`],
@@ -1162,10 +1160,10 @@ Fb_LTB(+⅓) = ${V.Fb_ltb.toFixed(1)} × 4/3 = ${V.Fb_ltb_wl.toFixed(1)} MPa`:''
       ['C = 1.8π²ECb/Fy',`${V.ltbC.toFixed(0)}`],
       ['Fb(b) — literal Cl.6.3',`${V.Fb63.toFixed(1)} MPa`],
       ['Fb_LTB = min(a,b)',`${V.Fb_ltb.toFixed(1)} MPa`],
-      ['Fb_LTB × 4/3 (wind)',`${V.Fb_ltb_wl.toFixed(1)} MPa`],
+      ['Fb_LTB (no wind increase)',`${V.Fb_ltb_wl.toFixed(1)} MPa`],
       ['f_comp_up (demand)',`${V.f_comp_up.toFixed(1)} MPa`],
     ],
-    `UR = f_comp_up / Fb_LTB(+⅓) = ${V.f_comp_up.toFixed(1)} / ${V.Fb_ltb_wl.toFixed(1)} = ${pct(V.UR.ltb)}`,
+    `UR = f_comp_up / Fb_LTB = ${V.f_comp_up.toFixed(1)} / ${V.Fb_ltb_wl.toFixed(1)} = ${pct(V.UR.ltb)}`,
     V.UR.ltb);
 
   // ── Cl.7 Shear ──
@@ -1203,7 +1201,7 @@ Vcap = 2 × Fv × H_vert × t          [vertical projection]
   html+=drow('Web bending stress','IS 801 Cl.6.4.2',
 `Fbw = min( 36,560,000/(h/t)² kgf/cm² , 0.6·Fy )
     = min( ${(36560000/V.wt_web**2*0.0980665).toFixed(0)} , ${(0.6*V.Fy).toFixed(0)} ) = ${V.Fbw.toFixed(0)} MPa${V.windPlus?`
-Fbw(+⅓) = ${V.Fbw_wl.toFixed(0)} MPa`:''}`,
+`:''}`,
     [
       ['h/t',`${V.wt_web.toFixed(2)}`],
       ['36.56×10⁶/(h/t)² → MPa',`${(36560000/V.wt_web**2*0.0980665).toFixed(0)} MPa`],
@@ -1211,12 +1209,12 @@ Fbw(+⅓) = ${V.Fbw_wl.toFixed(0)} MPa`:''}`,
       ['Fbw governing',`${V.Fbw.toFixed(0)} MPa`],
       ['f (max flexural, uplift)',`${V.f_strong_up.toFixed(1)} MPa`],
     ],
-    `UR = f / Fbw${V.windPlus?'(+⅓)':''} = ${V.f_strong_up.toFixed(1)} / ${V.Fbw_wl.toFixed(0)} = ${pct(V.UR.webbend)}`,
+    `UR = f / Fbw = ${V.f_strong_up.toFixed(1)} / ${V.Fbw_wl.toFixed(0)} = ${pct(V.UR.webbend)}`,
     V.UR.webbend);
 
   html+=drow('Combined bending + shear in web','IS 801 Cl.6.4.3',
 `√( (fbw/Fbw)² + (fv/Fv)² ) ≤ 1.0
-fv = V/(2·H·t) = ${V.fv_act.toFixed(1)} MPa;  Fv${V.windPlus?'(+⅓)':''} = ${V.Fv_wl.toFixed(1)} MPa
+fv = V/(2·H·t) = ${V.fv_act.toFixed(1)} MPa;  Fv = ${V.Fv_wl.toFixed(1)} MPa
 = √( ${(V.f_strong_up/V.Fbw_wl).toFixed(3)}² + ${(V.fv_act/V.Fv_wl).toFixed(3)}² )`,
     [
       ['fbw / Fbw',`${(V.f_strong_up/V.Fbw_wl).toFixed(4)}`],
@@ -1303,12 +1301,12 @@ function calculate(){
     Mx_Nmm = Math.abs(+v('s_Mx'))*mu;
     V      = Math.abs(+v('s_Fy'))*fu/1000;
     def_staad = +v('s_def');
-    windPlus = document.getElementById('s_wind').checked;
+    windPlus = false; // +1/3 wind increase removed per project practice
   } else {
     const w_net=+v('w_up'), w_grav=+v('w_grav'), w_dpa=+v('w_weak');
     M_up=w_net*L**2/8/1e6; M_sg=w_grav*L**2/8/1e6; M_weak=w_dpa*L**2/8/1e6;
     V=Math.max(Math.abs(w_net),w_grav)*L/2/1000;
-    Fx_up_N=0; Fx_gr_N=0; Mx_Nmm=0; def_staad=0; windPlus=true;
+    Fx_up_N=0; Fx_gr_N=0; Mx_Nmm=0; def_staad=0; windPlus=false; // +1/3 removed
   }
 
   const Fb=0.6*Fy, Fb_wl=windPlus?Fb*4/3:Fb;
@@ -1487,7 +1485,7 @@ function calculate(){
   document.getElementById('biaxial-note').innerHTML=
     `<strong>Effective section:</strong> `+(allEff?'All compression elements FULLY EFFECTIVE at service stress → gross section governs.':
     '⚠ An element exceeds λ=0.673 — bending UR uses GROSS Z; full effective-section iteration required.')+
-    ` Uplift fibres: comp(foot)=${f_comp_up.toFixed(0)} MPa, tens(top)=${f_top_up.toFixed(0)} MPa → governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb(+⅓)=${Fb_wl.toFixed(0)} MPa`;
+    ` Uplift fibres: comp(foot)=${f_comp_up.toFixed(0)} MPa, tens(top)=${f_top_up.toFixed(0)} MPa → governs ${f_top_up>f_comp_up?'TOP (tension)':'BOTTOM (comp)'}; Fb=${Fb_wl.toFixed(0)} MPa`;
   document.getElementById('ltb-note').innerHTML=
     `<strong>LTB (Cl.6.3, two methods — governing taken):</strong><br>`+
     `(a) Compression-flange: r_y(feet+lips)=${p.rycf.toFixed(1)} mm, Lb/r_y=${(Lb/p.rycf).toFixed(0)} → Fe=${Fe.toFixed(0)} MPa → Fb=${Fb_cf.toFixed(0)} MPa.<br>`+
@@ -1506,7 +1504,7 @@ function calculate(){
     row('Lip provides min stiffener I',UR.lip,'IS 801 Cl.5.2.2.1',`Is=${Is.toFixed(1)} mm⁴ vs Imin=${Imin.toFixed(1)} mm⁴`,'Is=Lp³·t·sin²β/12; Imin=max(1.83t⁴√((w/t)²−4000/Fy), 9.2t⁴); UR=Imin/Is');
 
   document.getElementById('ck-flex').innerHTML=
-    row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`,'UR=f_bz/Fbz + f_by/Fby;  f=M/Z,  Fb=0.6Fy (+⅓ for wind)')+
+    row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`,'UR=f_bz/Fbz + f_by/Fby;  f=M/Z,  Fb=0.6Fy')+
     row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)} MPa`,'f_top=M_grav/Ztop;  UR=f_top/Fb,  Fb=0.6Fy')+
     (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.2',axialNote,'fa/Fa + fbz/Fbz + fby/Fby ≤ 1'):'');
 
@@ -1527,7 +1525,7 @@ function calculate(){
     row('Flange w/t ≤ 60',UR.wtmax,'IS 801 Cl.5.2.4',`w/t=${(g.F/t).toFixed(1)}`,'max flat-width ratio, stiffened flange')+
     row('Web h/t ≤ 150',UR.htmax,'IS 801 Cl.5.2.4',`h/t=${wt_web.toFixed(1)}`,'max web slenderness')+
     row('Shear (2 webs)',UR.shear,'IS 801 Cl.6.4.1',`Fv=${Fv.toFixed(1)} MPa, V=${V.toFixed(3)} vs Vc=${Vcap.toFixed(2)} kN`,'Fv=min(0.4Fy, 1275√Fy/(h/t)) kgf/cm² [h/t≤4590/√Fy]; else 5.85×10⁶/(h/t)²')+
-    row('Web bending',UR.webbend,'IS 801 Cl.6.4.2',`f=${f_strong_up.toFixed(1)} MPa vs Fbw${windPlus?'(+⅓)':''}=${Fbw_wl.toFixed(0)} MPa`,'Fbw=min(36.56×10⁶/(h/t)² kgf/cm², 0.6Fy)')+
+    row('Web bending',UR.webbend,'IS 801 Cl.6.4.2',`f=${f_strong_up.toFixed(1)} MPa vs Fbw=${Fbw_wl.toFixed(0)} MPa`,'Fbw=min(36.56×10⁶/(h/t)² kgf/cm², 0.6Fy)')+
     row('Combined bending + shear',UR.bs,'IS 801 Cl.6.4.3',`fbw ratio=${(f_strong_up/Fbw_wl).toFixed(3)}, fv ratio=${(fv_act/Fv_wl).toFixed(3)}`,'√((fbw/Fbw)² + (fv/Fv)²) ≤ 1')+
     webcripRow+
     (hasTor?row('Torsion (St-Venant)',UR.tor,'— not in IS 801',torNote,'τ=Mx·t/J,  J=Σ(L·t³)/3'):'');

@@ -71,7 +71,7 @@ put(20, "Deflection limit divisor (L/x)", 180, "", inp=True)     # B20
 put(21, "w net uplift (working)", 0.981, "kN/m", "WL−DL, service", inp=True)  # B21
 put(22, "w gravity (working)", 0.147, "kN/m", inp=True)          # B22
 put(23, "w weak-axis", 0.0, "kN/m", inp=True)                    # B23
-put(24, "Wind/seismic combo? (1=yes → +⅓ allowable)", 1, "", "IS 800/875 WSM practice", inp=True)  # B24
+put(24, "Wind +33% allowable increase", 0, "", "REMOVED per project practice — allowables at 0.6Fy", inp=True)  # B24 (kept at 0)
 
 # ── DERIVED GEOMETRY ──
 head(26, "2. DERIVED GEOMETRY")
@@ -136,12 +136,12 @@ put(62, "M uplift = w·L²/8", "=B21*B14^2/8", "kN·m", "wL²/8: exact 2-span su
 put(63, "M gravity = w·L²/8", "=B22*B14^2/8", "kN·m")                          # B63
 put(64, "M weak = w·L²/8", "=B23*B14^2/8", "kN·m")                             # B64
 put(65, "Fb = 0.6·Fy", "=0.6*B12", "MPa", "Cl.6.1.1")                          # B65
-put(66, "Fb(+⅓ if wind) ", "=B65*IF(B24=1,4/3,1)", "MPa", "IS 800/875 WSM")    # B66
+put(66, "Fb design (no wind increase)", "=B65", "MPa")                            # B66
 put(67, "f_top (tension, uplift) = M/Ztop", "=B62*10^6/B53", "MPa")            # B67
 put(68, "f_bot (compression, uplift) = M/Zbot", "=B62*10^6/B54", "MPa")        # B68
 put(69, "f_strong = max(f_top, f_bot)", "=MAX(B67,B68)", "MPa")                # B69
 put(70, "f_weak = M_weak/Zweak", "=B64*10^6/B55", "MPa")                       # B70
-put(71, "UR bending (biaxial) = (f_strong+f_weak)/Fb(+⅓)", "=(B69+B70)/B66", "", "Cl.6.1.1")  # B71
+put(71, "UR bending (biaxial) = (f_strong+f_weak)/Fb", "=(B69+B70)/B66", "", "Cl.6.1.1")  # B71
 put(72, "f_top gravity = M_grav/Ztop", "=B63*10^6/B53", "MPa")                 # B72
 put(73, "UR gravity bending = f/Fb", "=B72/B65", "", "no +⅓ (DL+LL)")          # B73
 
@@ -184,8 +184,8 @@ put(99, "(b) Fb: X≤B→0.6Fy; B<X<C→⅔Fy−Fy²X/(5.4π²ECb); X≥C→0.6�
         "=MIN(0.6*B12,IF(B96<=B97,0.6*B12,IF(B96<B98,(2/3)*B12-(B12^2/(5.4*PI()^2*B13*B17))*B96,0.6*PI()^2*B13*B17/B96)))",
         "MPa")                                                                  # B99
 put(100, "Fb_LTB = min(a,b)", "=MIN(B93,B99)", "MPa")                          # B100
-put(101, "Fb_LTB(+⅓ if wind)", "=B100*IF(B24=1,4/3,1)", "MPa")                 # B101
-put(102, "UR LTB = f_bot/Fb_LTB(+⅓)", "=B68/B101", "")                         # B102
+put(101, "Fb_LTB design (no wind increase)", "=B100", "MPa")                      # B101
+put(102, "UR LTB = f_bot/Fb_LTB", "=B68/B101", "")                                # B102
 
 # ── SHEAR ──
 head(104, "9. SHEAR — Cl.6.4.1")
@@ -233,10 +233,10 @@ put(132, "UR deflection = δ/δ_allow", "=B130/B131", "")                       
 # ── ADDITIONAL WEB & RATIO CHECKS ──
 head(134, "12. WEB BENDING Cl.6.4.2 / COMBINED Cl.6.4.3 / FLAT-WIDTH Cl.5.2.4")
 put(135, "Fbw = min(36.56e6/(h/t)² kgf/cm², 0.6Fy)", "=MIN(36560000/B105^2*0.0980665,0.6*B12)", "MPa", "Cl.6.4.2")  # B135
-put(136, "Fbw(+⅓ if wind)", "=B135*IF(B24=1,4/3,1)", "MPa")                     # B136
+put(136, "Fbw design (no wind increase)", "=B135", "MPa")                          # B136
 put(137, "UR web bending = f_strong/Fbw", "=B69/B136", "")                      # B137
 put(138, "fv actual = V/(2·H·t)", "=B110*1000/(2*B6*B11)", "MPa")               # B138
-put(139, "UR combined = √((f/Fbw)²+(fv/Fv)²)", "=SQRT((B69/B136)^2+(B138/(B108*IF(B24=1,4/3,1)))^2)", "", "Cl.6.4.3")  # B139
+put(139, "UR combined = √((f/Fbw)²+(fv/Fv)²)", "=SQRT((B69/B136)^2+(B138/B108)^2)", "", "Cl.6.4.3")  # B139
 put(140, "UR flange w/t ≤ 60", "=(B8/B11)/60", "", "Cl.5.2.4")                  # B140
 put(141, "UR web h/t ≤ 150", "=B105/150", "", "Cl.5.2.4")                       # B141
 
