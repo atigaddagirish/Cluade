@@ -81,6 +81,7 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .imgwrap img{width:100%;display:block;min-height:120px}
 .windywrap{border-radius:10px;overflow:hidden;margin-bottom:6px;background:#0e1a2e}
 .windywrap iframe{width:100%;height:360px;display:block;border:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .hourly{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
 .hr{flex:0 0 auto;width:64px;background:var(--card2);border-radius:10px;padding:8px 6px;text-align:center}
 .hr .t{font-size:11px;color:var(--dim)}
@@ -187,7 +188,8 @@ nav button.on{color:var(--rain)}
   <!-- 7 DAY -->
   <section class="tab" id="tab-fc">
     <div class="card">
-      <h2>Next 24 hours</h2>
+      <h2>Hourly forecast</h2>
+      <div id="hourly-days" class="chips"></div>
       <div id="hourly" class="hourly"><p class="note">Loading…</p></div>
     </div>
     <div class="card">
@@ -349,7 +351,8 @@ const IMG_IR  = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_ir1.jpg';
 const DEFAULT_PRESETS = [
   {name:'Home town', lat:16.089037, lon:78.098962},
   {name:'Manikonda', lat:17.400695, lon:78.365313},
-  {name:'Nagole',    lat:17.381586, lon:78.566168}
+  {name:'Nagole',    lat:17.381586, lon:78.566168},
+  {name:'Office',    lat:17.444606, lon:78.465291}
 ];
 function presets(){
   try{ const p=JSON.parse(localStorage.getItem('rw-presets')); if(Array.isArray(p)&&p.length) return p; }catch(e){}
@@ -374,7 +377,7 @@ function endpoints(){
 
 /* ================= state ================= */
 const S = { relayDoc:null, stationsDoc:null, diag:{}, omCache:{}, omForecast:null,
-            aqiCache:{}, aqi:null,
+            aqiCache:{}, aqi:null, hourlyDay:0,
             data:{current:null, forecast:null, nowcast:null},
             src:{current:null, forecast:null, nowcast:null} };
 
@@ -697,7 +700,7 @@ function renderForecast(){
       `<tr><td>source</td><td>Open-Meteo /v1/forecast — ECMWF-IFS + GFS + ICON blend @ ${esc(loc.lat)}, ${esc(loc.lon)}</td></tr>`);
     for(let i=0;i<N;i++) raw.insertAdjacentHTML('beforeend',
       `<tr><td>${esc(dl.time[i])}</td><td>wmo ${esc(dl.weathercode[i])} · ${esc(dl.precipitation_sum[i])} mm · ${dl.precipitation_probability_max[i]??'–'}% · ${esc(dl.temperature_2m_min[i])}–${esc(dl.temperature_2m_max[i])} °C</td></tr>`);
-    renderHourly(F);
+    renderHourlyDays(F); renderHourly(F);
     return;
   }
 
@@ -726,16 +729,33 @@ function addDay(list, date, txt, mx, mn, icon, rainy){
      </div>`);
 }
 
-// ---- Next-24 h strip from the same Open-Meteo response ----
+// ---- Hourly forecast, selectable by day (Today + next 2), same Open-Meteo response ----
+function renderHourlyDays(F){
+  const box=$('hourly-days'); if(!box || !F.daily) return;
+  box.innerHTML='';
+  const days=Math.min(3, F.daily.time.length);
+  if(S.hourlyDay>=days) S.hourlyDay=0;
+  for(let i=0;i<days;i++){
+    const d=new Date(F.daily.time[i]+'T00:00');
+    const label = i===0 ? 'Today' : d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+    const btn=document.createElement('button');
+    btn.className='chip'+(S.hourlyDay===i?' on':'');
+    btn.textContent=label;
+    btn.addEventListener('click',()=>{ S.hourlyDay=i; renderHourlyDays(F); renderHourly(F); });
+    box.appendChild(btn);
+  }
+}
 function renderHourly(F){
   const box=$('hourly'); if(!box) return;
   const h=F.hourly;
   if(!h || !h.time){ box.innerHTML='<p class="note">Hourly data unavailable.</p>'; return; }
+  const dayIdx=Math.min(S.hourlyDay||0, F.daily.time.length-1);
+  const date=F.daily.time[dayIdx];       // YYYY-MM-DD for the selected day
   const now=Date.now();
-  let start=h.time.findIndex(t=>new Date(t).getTime()>=now-3600000);
-  if(start<0) start=0;
-  box.innerHTML='';
-  for(let i=start;i<Math.min(start+24,h.time.length);i++){
+  box.innerHTML=''; let count=0;
+  for(let i=0;i<h.time.length;i++){
+    if(!h.time[i].startsWith(date)) continue;
+    if(dayIdx===0 && new Date(h.time[i]).getTime() < now-3600000) continue;  // today: from current hour
     const w=wmo(h.weathercode[i]);
     const hr=new Date(h.time[i]).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
     const mm=h.precipitation[i], pr=h.precipitation_probability?h.precipitation_probability[i]:null;
@@ -746,7 +766,9 @@ function renderHourly(F){
          <div class="rn">${(mm>0||pr>=30)?((mm>0?mm+'mm':'')+(pr!=null?' '+pr+'%':'')).trim():''}</div>
          <div class="wd">${Math.round(h.wind_speed_10m[i])} km/h</div>
        </div>`);
+    count++;
   }
+  if(!count) box.innerHTML='<p class="note">No further hourly data for this day.</p>';
 }
 
 // ---- Air quality (Open-Meteo Air-Quality API — free, per-coordinate, CORS-open) ----
