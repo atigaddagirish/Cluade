@@ -7,6 +7,8 @@
 <title>Weather Watch — IMD + Windy</title>
 <link rel="manifest" href="weather.webmanifest">
 <link rel="icon" href="weather-icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 :root{
   --bg:#0b1424; --card:#122036; --card2:#0e1a2e; --line:#1e3350;
@@ -81,6 +83,15 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .imgwrap img{width:100%;display:block;min-height:120px}
 .windywrap{border-radius:10px;overflow:hidden;margin-bottom:6px;background:#0e1a2e}
 .windywrap iframe{width:100%;height:360px;display:block;border:0}
+.radarwrap{position:relative;border-radius:10px;overflow:hidden;margin-bottom:6px;background:#0e1a2e}
+#radarmap{width:100%;height:340px}
+.radarbar{position:absolute;left:0;right:0;bottom:0;z-index:500;display:flex;align-items:center;
+  gap:10px;padding:8px 12px;background:linear-gradient(0deg,rgba(4,10,20,.85),transparent);
+  pointer-events:none}
+.radarbar button{pointer-events:auto;background:var(--accent);color:#04101f;border:0;
+  border-radius:50%;width:34px;height:34px;font-size:14px;cursor:pointer;flex:none}
+.radarbar span{color:#dbe7f5;font-size:12.5px;font-weight:600;text-shadow:0 1px 3px #000}
+.leaflet-container{background:#0e1a2e;font-family:inherit}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .hourly{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
 .hr{flex:0 0 auto;width:64px;background:var(--card2);border-radius:10px;padding:8px 6px;text-align:center}
@@ -223,6 +234,20 @@ nav button.on{color:var(--rain)}
   <!-- MAPS -->
   <section class="tab" id="tab-maps">
     <div class="card">
+      <h2>Live rain radar (RainViewer)</h2>
+      <div class="radarwrap">
+        <div id="radarmap"></div>
+        <div class="radarbar">
+          <button id="radar-play" title="Play / pause">▶</button>
+          <span id="radar-time">–</span>
+        </div>
+      </div>
+      <p class="note" style="margin:6px 0 0">Animated radar + nowcast (past ~2 h → next ~30 min),
+        global mosaic that includes IMD radars. Centres on your selected location; ▶ to loop.
+        Blue→green→yellow→red = light→heavy rain.</p>
+    </div>
+
+    <div class="card">
       <h2>Windy — live layers (wind · rain · temp · clouds)</h2>
       <div class="windywrap"><iframe id="windy" title="Windy map" loading="lazy"
         frameborder="0"></iframe></div>
@@ -280,8 +305,9 @@ nav button.on{color:var(--rain)}
         gold-standard NWP that underpins most forecasts). It changes with the location you pick.
         IMD's own per-coordinate forecast unlocks with the api.imd.gov.in key. Badges show data
         age. Since mid-2026 IMD's simple JSON APIs answer only whitelisted IPs (HTTP 401), which
-        is why the observation relay exists. <b>Maps:</b> IMD radar &amp; rainfall map, plus a
-        <b>Windy</b> embed (animated wind / rain / temperature / cloud layers, multi-model).<br><br>
+        is why the observation relay exists. <b>Maps:</b> a <b>RainViewer</b> live animated radar
+        (global mosaic incl. IMD radars, past 2 h → nowcast), a <b>Windy</b> embed (animated wind /
+        rain / temperature / cloud layers, multi-model), plus IMD's radar still &amp; rainfall map.<br><br>
         A general-purpose weather tool for <b>any location in India</b> — useful for agriculture
         (rain, wind for spraying, temperature), field work, travel and everyday planning.<br><br>
         Official IMD channels for the same data:
@@ -328,6 +354,8 @@ nav button.on{color:var(--rain)}
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 'use strict';
 /* ================= config ================= */
@@ -875,6 +903,63 @@ function renderMaps(){
       `&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
     $('lnk-windy').href = `https://www.windy.com/?${loc.lat},${loc.lon},8`;
   }
+  radarRecenter(loc);
+}
+
+// ---- RainViewer animated radar (Leaflet + free RainViewer tiles, CORS-open) ----
+const RV = { map:null, cur:null, frames:[], pastLen:0, idx:0, timer:null, host:'', marker:null };
+function initRadar(){
+  if(RV.map) { setTimeout(()=>RV.map.invalidateSize(), 60); return; }
+  if(!window.L){ $('radar-time').textContent='map library unavailable (offline)'; return; }
+  const loc = activeLoc();
+  RV.map = L.map('radarmap', {zoomControl:true, attributionControl:false}).setView([loc.lat, loc.lon], 7);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    {subdomains:'abcd', maxZoom:12, detectRetina:true}).addTo(RV.map);
+  RV.marker = L.circleMarker([loc.lat, loc.lon],
+    {radius:6, color:'#4fa3ff', weight:2, fillColor:'#4fa3ff', fillOpacity:.9}).addTo(RV.map);
+  setTimeout(()=>RV.map.invalidateSize(), 60);
+  loadRadarFrames();
+}
+function loadRadarFrames(){
+  fetchJSON('https://api.rainviewer.com/public/weather-maps.json', 12000).then(d=>{
+    RV.host = d.host || 'https://tilecache.rainviewer.com';
+    const past = (d.radar&&d.radar.past)||[], now=(d.radar&&d.radar.nowcast)||[];
+    RV.pastLen = past.length; RV.frames = past.concat(now);
+    if(!RV.frames.length){ $('radar-time').textContent='no radar frames'; return; }
+    RV.idx = Math.max(0, past.length-1);      // start at "now"
+    setRadarFrame(RV.idx);
+    playRadar();
+    S.diag.radar = {ok:true, msg:'RainViewer — '+RV.frames.length+' frames'};
+  }).catch(e=>{
+    $('radar-time').textContent = 'radar unavailable';
+    S.diag.radar = {ok:false, msg:'RainViewer: '+String(e.message||e)};
+  });
+}
+function setRadarFrame(i){
+  if(!RV.frames.length || !RV.map) return;
+  RV.idx = ((i%RV.frames.length)+RV.frames.length)%RV.frames.length;
+  const f = RV.frames[RV.idx];
+  const url = `${RV.host}${f.path}/256/{z}/{x}/{y}/4/1_1.png`;
+  const nl = L.tileLayer(url, {opacity:0.72, maxZoom:12, zIndex:400});
+  nl.addTo(RV.map);
+  const old = RV.cur; RV.cur = nl;
+  nl.once('load', ()=>{ if(old && old!==RV.cur) RV.map.removeLayer(old); });
+  setTimeout(()=>{ if(old && old!==RV.cur) RV.map.removeLayer(old); }, 900);
+  const t = new Date(f.time*1000);
+  const future = f.time*1000 > Date.now();
+  $('radar-time').textContent = t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})
+    + (future ? ' · nowcast' : (RV.idx===RV.pastLen-1 ? ' · now' : ''));
+}
+function playRadar(){
+  if(RV.timer || RV.frames.length<2) return;
+  RV.timer = setInterval(()=>setRadarFrame(RV.idx+1), 700);
+  $('radar-play').textContent = '⏸';
+}
+function pauseRadar(){ if(RV.timer){ clearInterval(RV.timer); RV.timer=null; } $('radar-play').textContent='▶'; }
+function radarRecenter(loc){
+  if(!RV.map) return;
+  RV.map.setView([loc.lat, loc.lon], RV.map.getZoom());
+  if(RV.marker) RV.marker.setLatLng([loc.lat, loc.lon]);
 }
 
 function renderDiag(){
@@ -883,6 +968,7 @@ function renderDiag(){
     ['Stations (nationwide obs + warnings)','stations'],
     ['7-day + hourly forecast (Open-Meteo)','forecast'],
     ['Air quality (Open-Meteo)','aqi'],
+    ['Live radar (RainViewer)','radar'],
     ['Legacy current wx','current'],
     ['Legacy nowcast','nowcast'],
     ['Relay (GitHub copy)','relay']
@@ -901,10 +987,12 @@ document.querySelectorAll('nav button').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.id==='tab-'+b.dataset.tab));
-    if(b.dataset.tab==='maps') renderMaps();
+    if(b.dataset.tab==='maps'){ initRadar(); renderMaps(); }
+    else pauseRadar();   // stop the radar loop (save battery/data) when leaving Maps
   });
 });
 $('btn-refresh').addEventListener('click', refreshAll);
+$('radar-play').addEventListener('click', ()=>{ RV.timer ? pauseRadar() : playRadar(); });
 
 /* ---- location bar: type "lat, lon" (or drop a Google-Maps style pair) ---- */
 function applyLocation(text){
@@ -977,7 +1065,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))
 
 refreshAll();
 armTimer();
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAll(); });
+document.addEventListener('visibilitychange', ()=>{ document.hidden ? pauseRadar() : refreshAll(); });
 </script>
 </body>
 </html>
