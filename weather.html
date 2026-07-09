@@ -81,6 +81,21 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .imgwrap img{width:100%;display:block;min-height:120px}
 .windywrap{border-radius:10px;overflow:hidden;margin-bottom:6px;background:#0e1a2e}
 .windywrap iframe{width:100%;height:360px;display:block;border:0}
+.hourly{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.hr{flex:0 0 auto;width:64px;background:var(--card2);border-radius:10px;padding:8px 6px;text-align:center}
+.hr .t{font-size:11px;color:var(--dim)}
+.hr .i{font-size:20px;margin:3px 0}
+.hr .tp{font-size:13px;font-weight:600}
+.hr .rn{font-size:10.5px;color:var(--rain);margin-top:2px;min-height:13px}
+.hr .wd{font-size:10px;color:var(--dim);margin-top:1px}
+.aqi{display:flex;align-items:center;gap:14px}
+.aqi .dot{width:54px;height:54px;border-radius:50%;flex:none;display:flex;align-items:center;
+  justify-content:center;font-size:20px;font-weight:800;color:#04101f}
+.aqi .lbl{font-size:15px;font-weight:700}
+.aqi .sub{font-size:12px;color:var(--dim);margin-top:2px}
+.aqi .pm{display:flex;gap:14px;margin-top:6px;flex-wrap:wrap}
+.aqi .pm span{font-size:12px;color:var(--dim)}
+.aqi .pm b{color:var(--txt)}
 .imgcap{font-size:11px;color:var(--dim);margin-bottom:14px;display:flex;justify-content:space-between}
 .imgcap a{color:var(--accent);text-decoration:none}
 details{margin-top:10px}
@@ -163,10 +178,18 @@ nav button.on{color:var(--rain)}
       <h2>Today's outlook — <span id="fc-place">home</span></h2>
       <div id="todayfc" style="font-size:14px;line-height:1.5">–</div>
     </div>
+    <div class="card">
+      <h2>Air quality <span class="badge" id="src-aqi">…</span></h2>
+      <div id="aqibox"><p class="note">Loading…</p></div>
+    </div>
   </section>
 
   <!-- 7 DAY -->
   <section class="tab" id="tab-fc">
+    <div class="card">
+      <h2>Next 24 hours</h2>
+      <div id="hourly" class="hourly"><p class="note">Loading…</p></div>
+    </div>
     <div class="card">
       <h2>7-day forecast <span class="badge" id="src-forecast">…</span></h2>
       <div id="fclist"></div>
@@ -351,6 +374,7 @@ function endpoints(){
 
 /* ================= state ================= */
 const S = { relayDoc:null, stationsDoc:null, diag:{}, omCache:{}, omForecast:null,
+            aqiCache:{}, aqi:null,
             data:{current:null, forecast:null, nowcast:null},
             src:{current:null, forecast:null, nowcast:null} };
 
@@ -505,7 +529,7 @@ function renderAll(){
     ? 'Showing <b>home</b> (16.088°N, 78.100°E). Type any coordinate, tap a chip, or 📍.'
     : `Showing <b>${esc(loc.name || (loc.lat.toFixed(4)+', '+loc.lon.toFixed(4)))}</b> — nearest IMD stations. Clear the box + Go to return home.`;
   renderChips();
-  renderNow(); ensureForecast(); renderNowcast(); renderMaps(); renderDiag();
+  renderNow(); ensureForecast(); ensureAQI(); renderNowcast(); renderMaps(); renderDiag();
 }
 
 function renderChips(){
@@ -633,6 +657,7 @@ function ensureForecast(){
   S.omForecast = 'loading'; renderForecast();
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}`+
     `&daily=weathercode,precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min`+
+    `&hourly=temperature_2m,precipitation,precipitation_probability,weathercode,wind_speed_10m`+
     `&forecast_days=7&timezone=auto`;
   fetchJSON(url, 12000).then(d=>{
     S.omCache[key]=d;
@@ -672,6 +697,7 @@ function renderForecast(){
       `<tr><td>source</td><td>Open-Meteo /v1/forecast — ECMWF-IFS + GFS + ICON blend @ ${esc(loc.lat)}, ${esc(loc.lon)}</td></tr>`);
     for(let i=0;i<N;i++) raw.insertAdjacentHTML('beforeend',
       `<tr><td>${esc(dl.time[i])}</td><td>wmo ${esc(dl.weathercode[i])} · ${esc(dl.precipitation_sum[i])} mm · ${dl.precipitation_probability_max[i]??'–'}% · ${esc(dl.temperature_2m_min[i])}–${esc(dl.temperature_2m_max[i])} °C</td></tr>`);
+    renderHourly(F);
     return;
   }
 
@@ -698,6 +724,71 @@ function addDay(list, date, txt, mx, mn, icon, rainy){
        <div class="mid"><div class="d">${esc(date||'')}</div><div class="t">${esc(txt||'–')}</div></div>
        ${(mx!=null||mn!=null)?`<div class="temps"><b>${esc(mx??'–')}°</b><br>${esc(mn??'–')}°</div>`:''}
      </div>`);
+}
+
+// ---- Next-24 h strip from the same Open-Meteo response ----
+function renderHourly(F){
+  const box=$('hourly'); if(!box) return;
+  const h=F.hourly;
+  if(!h || !h.time){ box.innerHTML='<p class="note">Hourly data unavailable.</p>'; return; }
+  const now=Date.now();
+  let start=h.time.findIndex(t=>new Date(t).getTime()>=now-3600000);
+  if(start<0) start=0;
+  box.innerHTML='';
+  for(let i=start;i<Math.min(start+24,h.time.length);i++){
+    const w=wmo(h.weathercode[i]);
+    const hr=new Date(h.time[i]).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+    const mm=h.precipitation[i], pr=h.precipitation_probability?h.precipitation_probability[i]:null;
+    box.insertAdjacentHTML('beforeend',
+      `<div class="hr">
+         <div class="t">${esc(hr)}</div><div class="i">${w[1]}</div>
+         <div class="tp">${Math.round(h.temperature_2m[i])}°</div>
+         <div class="rn">${(mm>0||pr>=30)?((mm>0?mm+'mm':'')+(pr!=null?' '+pr+'%':'')).trim():''}</div>
+         <div class="wd">${Math.round(h.wind_speed_10m[i])} km/h</div>
+       </div>`);
+  }
+}
+
+// ---- Air quality (Open-Meteo Air-Quality API — free, per-coordinate, CORS-open) ----
+// US AQI bands: 0-50 good, 51-100 moderate, 101-150 sensitive, 151-200 unhealthy,
+// 201-300 very unhealthy, 301+ hazardous.
+function aqiBand(v){
+  if(v==null) return ['#7e93b0','—','No data'];
+  if(v<=50)  return ['#34d399','Good','Air quality is good'];
+  if(v<=100) return ['#a3e635','Moderate','Acceptable; unusually sensitive people take care'];
+  if(v<=150) return ['#fbbf24','Poor (sensitive)','Sensitive groups may be affected'];
+  if(v<=200) return ['#fb923c','Unhealthy','Everyone may feel effects'];
+  if(v<=300) return ['#f87171','Very unhealthy','Health alert'];
+  return ['#c084fc','Hazardous','Emergency conditions'];
+}
+function ensureAQI(){
+  const loc=activeLoc(), key=fcKey(loc);
+  if(S.aqiCache[key]){ S.aqi=S.aqiCache[key]; renderAQI(); return; }
+  S.aqi='loading'; renderAQI();
+  const url=`https://air-quality.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}`+
+    `&current=us_aqi,pm2_5,pm10&timezone=auto`;
+  fetchJSON(url,12000).then(d=>{
+    S.aqiCache[key]=d;
+    if(fcKey(activeLoc())===key){ S.aqi=d; S.diag.aqi={ok:true,msg:'Open-Meteo air-quality @ '+key}; renderAQI(); }
+  }).catch(e=>{
+    if(fcKey(activeLoc())===key){ S.aqi=null; S.diag.aqi={ok:false,msg:'AQI: '+String(e.message||e)}; renderAQI(); }
+  });
+}
+function renderAQI(){
+  const box=$('aqibox'), badge=$('src-aqi'); if(!box) return;
+  const A=S.aqi;
+  if(A==='loading'){ badge.className='badge'; badge.textContent='…'; box.innerHTML='<p class="note">Loading…</p>'; return; }
+  const cur=A&&A.current;
+  if(!cur || cur.us_aqi==null){ badge.className='badge fail'; badge.textContent='NO DATA';
+    box.innerHTML='<p class="note">Air-quality data not available for this point.</p>'; return; }
+  badge.className='badge live'; badge.textContent='Open-Meteo';
+  const [col,lbl,desc]=aqiBand(cur.us_aqi);
+  box.innerHTML=`<div class="aqi">
+     <div class="dot" style="background:${col}">${Math.round(cur.us_aqi)}</div>
+     <div><div class="lbl" style="color:${col}">${esc(lbl)}</div>
+       <div class="sub">US AQI · ${esc(desc)}</div>
+       <div class="pm">${cur.pm2_5!=null?`<span>PM2.5 <b>${esc(cur.pm2_5)}</b> µg/m³</span>`:''}${cur.pm10!=null?`<span>PM10 <b>${esc(cur.pm10)}</b> µg/m³</span>`:''}</div>
+     </div></div>`;
 }
 
 const WARN_COLOR = {2:['yellow','sev-yellow','Yellow — watch'],
@@ -768,7 +859,8 @@ function renderDiag(){
   const box = $('diag'); box.innerHTML='';
   const rows = [
     ['Stations (nationwide obs + warnings)','stations'],
-    ['7-day forecast (Open-Meteo)','forecast'],
+    ['7-day + hourly forecast (Open-Meteo)','forecast'],
+    ['Air quality (Open-Meteo)','aqi'],
     ['Legacy current wx','current'],
     ['Legacy nowcast','nowcast'],
     ['Relay (GitHub copy)','relay']
