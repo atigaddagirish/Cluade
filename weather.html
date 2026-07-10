@@ -98,6 +98,7 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .hr .t{font-size:11px;color:var(--dim)}
 .hr .i{font-size:20px;margin:3px 0}
 .hr .tp{font-size:13px;font-weight:600}
+.hr .fl{font-size:9.5px;color:var(--warn);margin-top:1px;min-height:12px}
 .hr .rn{font-size:10.5px;color:var(--rain);margin-top:2px;min-height:13px}
 .hr .wd{font-size:10px;color:var(--dim);margin-top:1px}
 .aqi{display:flex;align-items:center;gap:14px}
@@ -310,6 +311,12 @@ nav button.on{color:var(--rain)}
         rain / temperature / cloud layers, multi-model), plus IMD's radar still &amp; rainfall map.<br><br>
         A general-purpose weather tool for <b>any location in India</b> — useful for agriculture
         (rain, wind for spraying, temperature), field work, travel and everyday planning.<br><br>
+        <b>"Feels like"</b> uses the <b>Steadman Apparent Temperature</b> (Australian BOM) —
+        AT = T + 0.33e − 0.70·wind − 4, where e is the actual water-vapour pressure from humidity.
+        It's the best single measure because it blends heat, humidity and wind cooling in one
+        continuous formula (no crude switching between "heat index" and "wind chill"), and is
+        valid across India's hot-humid range. Current value is computed from the nearest IMD
+        station's temp/humidity/wind; hourly values from the Open-Meteo forecast.<br><br>
         Official IMD channels for the same data:
         <a href="https://mausam.imd.gov.in" target="_blank" rel="noopener">mausam.imd.gov.in</a> ·
         <a href="https://city.imd.gov.in" target="_blank" rel="noopener">city.imd.gov.in</a> ·
@@ -445,6 +452,19 @@ function nearestWith(rows, lat, lon, metricIdx){
   return best ? {row:best, dist:bd} : null;
 }
 const km = d => d<10 ? d.toFixed(1)+' km' : Math.round(d)+' km';
+
+// "Feels like" = Steadman Australian Apparent Temperature (BOM). Physically
+// based: combines dry-bulb temp, humidity (via actual vapour pressure) and
+// wind cooling in one continuous formula — the best general-purpose apparent
+// temperature (no threshold-switching between heat-index and wind-chill, and
+// valid across India's hot-humid range). AT = Ta + 0.33e − 0.70ws − 4.0,
+// e = (RH/100)·6.105·exp(17.27·Ta/(237.7+Ta)) hPa,  ws in m/s at 10 m.
+function feelsLike(Ta, RH, windKmph){
+  if(Ta==null || RH==null || !isFinite(Ta) || !isFinite(RH)) return null;
+  const ws = ((windKmph!=null && isFinite(windKmph)) ? windKmph : 0)/3.6;
+  const e = (RH/100)*6.105*Math.exp(17.27*Ta/(237.7+Ta));
+  return Ta + 0.33*e - 0.70*ws - 4.0;
+}
 
 function pick(obj, patterns, exclude){
   // find first key matching any regex in patterns (and not matching exclude)
@@ -625,6 +645,15 @@ function renderNow(){
 
     if(awsTemp) kv.insertAdjacentHTML('beforeend', cell('Temperature', awsTemp.row[4]+' °C',
       (awsTemp.row[2]||'AWS')+' · '+km(awsTemp.dist)));
+    if(awsTemp){
+      const fl = feelsLike(awsTemp.row[4], awsTemp.row[5], awsTemp.row[6]);   // same station temp/RH/wind
+      if(fl!=null){
+        const dTa = fl - awsTemp.row[4];
+        const tag = Math.abs(dTa)<0.5 ? 'same as actual' :
+          (dTa>0?`+${dTa.toFixed(1)}° warmer`:`${dTa.toFixed(1)}° cooler`);
+        kv.insertAdjacentHTML('beforeend', cell('Feels like', fl.toFixed(1)+' °C', tag));
+      }
+    }
     if(awsRH && awsRH.row[5]!=null)  kv.insertAdjacentHTML('beforeend', cell('Humidity', awsRH.row[5]+' %'));
     if(awsWind && awsWind.row[6]!=null) kv.insertAdjacentHTML('beforeend', cell('Wind', awsWind.row[6]+' km/h'));
     if(awsRain && awsRain.row[3]!=null && awsRain!==synopRain)
@@ -688,7 +717,7 @@ function ensureForecast(){
   S.omForecast = 'loading'; renderForecast();
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}`+
     `&daily=weathercode,precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min`+
-    `&hourly=temperature_2m,precipitation,precipitation_probability,weathercode,wind_speed_10m`+
+    `&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weathercode,wind_speed_10m`+
     `&forecast_days=7&timezone=auto`;
   fetchJSON(url, 12000).then(d=>{
     S.omCache[key]=d;
@@ -787,10 +816,13 @@ function renderHourly(F){
     const w=wmo(h.weathercode[i]);
     const hr=new Date(h.time[i]).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
     const mm=h.precipitation[i], pr=h.precipitation_probability?h.precipitation_probability[i]:null;
+    const rh=h.relative_humidity_2m?h.relative_humidity_2m[i]:null;
+    const fl=feelsLike(h.temperature_2m[i], rh, h.wind_speed_10m[i]);
     box.insertAdjacentHTML('beforeend',
       `<div class="hr">
          <div class="t">${esc(hr)}</div><div class="i">${w[1]}</div>
          <div class="tp">${Math.round(h.temperature_2m[i])}°</div>
+         <div class="fl">${fl!=null?'feels '+Math.round(fl)+'°':''}</div>
          <div class="rn">${(mm>0||pr>=30)?((mm>0?mm+'mm':'')+(pr!=null?' '+pr+'%':'')).trim():''}</div>
          <div class="wd">${Math.round(h.wind_speed_10m[i])} km/h</div>
        </div>`);
