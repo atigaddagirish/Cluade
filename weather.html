@@ -56,6 +56,9 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .badge.fail{color:var(--bad);border-color:var(--bad)}
 .rainhero{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .rainhero .big{font-size:52px;font-weight:800;color:var(--rain);line-height:1}
+.rainhero .big.warm{color:var(--warn)}
+.temphero{cursor:pointer;margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
+.temphero .sub::after{content:" ⇄";color:var(--accent)}
 .rainhero .unit{font-size:16px;color:var(--dim)}
 .rainhero .sub{width:100%;font-size:12.5px;color:var(--dim);margin-top:6px}
 .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -181,6 +184,10 @@ nav button.on{color:var(--rain)}
       <div class="rainhero">
         <span class="big" id="rain24">–</span><span class="unit">mm</span>
         <span class="sub" id="rainsub">Observation station: –</span>
+      </div>
+      <div class="rainhero temphero" id="temphero" style="display:none">
+        <span class="big warm" id="tempbig">–</span><span class="unit">°C</span>
+        <span class="sub" id="tempsub"></span>
       </div>
       <div class="kv" id="nowkv"></div>
       <details><summary>All reported fields (raw IMD data)</summary>
@@ -412,7 +419,7 @@ function endpoints(){
 
 /* ================= state ================= */
 const S = { relayDoc:null, stationsDoc:null, diag:{}, omCache:{}, omForecast:null,
-            aqiCache:{}, aqi:null, hourlyDay:0,
+            aqiCache:{}, aqi:null, hourlyDay:0, showFeels:true,
             data:{current:null, forecast:null, nowcast:null},
             src:{current:null, forecast:null, nowcast:null} };
 
@@ -617,6 +624,7 @@ function renderNow(){
   const loc = activeLoc();
   const kv = $('nowkv'), raw = $('nowraw');
   kv.innerHTML=''; raw.innerHTML='';
+  $('temphero').style.display='none';       // shown only when station temp is available
   const d = S.stationsDoc;
 
   // Preferred path: nationwide IMD station data → nearest station to active point.
@@ -643,16 +651,20 @@ function renderNow(){
     $('rain24').textContent = (rainVal==null) ? '–' : rainVal;
     $('rainsub').textContent = rainSrc || 'No station reporting rainfall near this point.';
 
-    if(awsTemp) kv.insertAdjacentHTML('beforeend', cell('Temperature', awsTemp.row[4]+' °C',
-      (awsTemp.row[2]||'AWS')+' · '+km(awsTemp.dist)));
+    // Big temperature hero — tap to toggle actual ⇄ feels-like (Steadman AT)
+    const temphero=$('temphero');
     if(awsTemp){
-      const fl = feelsLike(awsTemp.row[4], awsTemp.row[5], awsTemp.row[6]);   // same station temp/RH/wind
-      if(fl!=null){
-        const dTa = fl - awsTemp.row[4];
-        const tag = Math.abs(dTa)<0.5 ? 'same as actual' :
-          (dTa>0?`+${dTa.toFixed(1)}° warmer`:`${dTa.toFixed(1)}° cooler`);
-        kv.insertAdjacentHTML('beforeend', cell('Feels like', fl.toFixed(1)+' °C', tag));
-      }
+      const Ta=awsTemp.row[4], fl=feelsLike(Ta, awsTemp.row[5], awsTemp.row[6]);
+      const showFeels = S.showFeels && fl!=null;
+      const big = showFeels ? fl : Ta;
+      temphero.style.display='';
+      $('tempbig').textContent = (big==null?'–':(+big).toFixed(1));
+      $('tempbig').classList.toggle('warm', showFeels);
+      const other = showFeels ? `actual ${Ta} °C` : (fl!=null?`feels like ${fl.toFixed(1)} °C`:'no humidity → feels-like N/A');
+      $('tempsub').textContent = (showFeels?'Feels like':'Actual temp')+
+        ` · ${other} · ${(awsTemp.row[2]||'AWS')} ${km(awsTemp.dist)}`;
+    } else {
+      temphero.style.display='none';
     }
     if(awsRH && awsRH.row[5]!=null)  kv.insertAdjacentHTML('beforeend', cell('Humidity', awsRH.row[5]+' %'));
     if(awsWind && awsWind.row[6]!=null) kv.insertAdjacentHTML('beforeend', cell('Wind', awsWind.row[6]+' km/h'));
@@ -1025,6 +1037,7 @@ document.querySelectorAll('nav button').forEach(b=>{
 });
 $('btn-refresh').addEventListener('click', refreshAll);
 $('radar-play').addEventListener('click', ()=>{ RV.timer ? pauseRadar() : playRadar(); });
+$('temphero').addEventListener('click', ()=>{ S.showFeels = !S.showFeels; renderNow(); });
 
 /* ---- location bar: type "lat, lon" (or drop a Google-Maps style pair) ---- */
 function applyLocation(text){
