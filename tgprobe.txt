@@ -1,0 +1,10 @@
+[https://tgdps.telangana.gov.in/mandaldata.jsp?s1=4]
+   -> HTTP-FAIL ip=103.122.128.193: URLError: <urlopen error timed out>
+[https://tgdps.telangana.gov.in/mandaldataswm.jsp?s1=23]
+   -> HTTP-FAIL ip=103.122.128.193: URLError: <urlopen error timed out>
+[https://www.tsdps.telangana.gov.in/liverain.jsp]
+   -> HTTP-FAIL ip=103.122.128.193: URLError: <urlopen error timed out>
+[https://tsdps.telangana.gov.in/liverain.jsp]
+   -> HTTP-FAIL ip=103.122.128.193: URLError: <urlopen error timed out>
+[http://tgdps.telangana.gov.in/mandaldata.jsp?s1=4]
+   -> HTTP-FAIL ip=103.122.128.193: URLError: <urlopen error timed out>
