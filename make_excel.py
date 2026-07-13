@@ -227,7 +227,7 @@ put(125, "UR web crippling — INNER span = R_inner/P_int", "=IF(B123>0,B123/B12
 head(126, "11. DEFLECTION — L/" + "x limit")
 put(127, "k coeff: ss 5/384; 2-span 0.00542; 3+ 0.0069",
          '=IF(B15="2-span continuous",0.00542,IF(B15="3+ span continuous",0.0069,5/384))', "")  # B127
-put(128, "δ strong = k·w·(1000L)⁴/(E·Ixx)", "=B127*MAX(B22-B21,0)*(B14*1000)^4/(B13*B49)", "mm", "uplift combo; 1 kN/m=1 N/mm")  # B128
+put(128, "δ strong = k·w·(1000L)⁴/(E·Ixx)", "=B127*MAX(MAX(B22-B21,0),G22+B21)*(B14*1000)^4/(B13*B49)", "mm", "governing combo; 1 kN/m=1 N/mm")  # B128
 put(129, "δ weak = k·w_weak·(1000L)⁴/(E·Iyy)", "=B127*ABS(B23)*(B14*1000)^4/(B13*B50)", "mm")  # B129
 put(130, "δ resultant = √(δs²+δw²)", "=SQRT(B128^2+B129^2)", "mm")             # B130
 put(131, "δ allowable = 1000L/divisor", "=B14*1000/B20", "mm")                 # B131

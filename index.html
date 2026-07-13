@@ -1479,7 +1479,8 @@ function calculate(){
   const kd=spans==='c2'?0.00542:spans==='c3'?0.0069:5/384;
   const kdLabel=spans==='c2'?'0.00542 (2-span cont. ≈ wL⁴/185EI)':spans==='c3'?'0.0069 (3+ span cont., end span)':'5/384 (simply supported)';
   if(loadMode==='udl'){
-    const wn=+v('w_up'), ww=+v('w_weak');
+    // Deflection under the GOVERNING combo (larger of uplift / downward), not uplift alone.
+    const wn=Math.max(+v('w_up'),+v('w_grav')), ww=+v('w_weak');
     d_s=Math.abs(kd*wn*L**4/(E*p.Ixx));
     d_w=Math.abs(kd*ww*L**4/(E*p.Iyy));
     d_t=Math.sqrt(d_s*d_s+d_w*d_w);
@@ -1610,13 +1611,14 @@ function calculate(){
       <tr><td><b>Bending UR</b></td><td><b>${(urB_ss*100).toFixed(0)}%</b> ${cbadge(urB_ss)}</td><td><b>${(urB_ca*100).toFixed(0)}%</b> ${cbadge(urB_ca)}</td><td>f/0.6Fy</td></tr>
       <tr><td>Shear UR</td><td>${(urV_ss*100).toFixed(0)}% ${cbadge(urV_ss)}</td><td>${(urV_ca*100).toFixed(0)}% ${cbadge(urV_ca)}</td><td>V/Vcap</td></tr>
       <tr><td>Deflection δ</td>${cmpCell(d_ss,1,' mm')}${cmpCell(d_ca,1,' mm')}<td>5wL⁴/384EI vs wL⁴/8EI</td></tr>
-      <tr><td><b>Deflection UR</b></td><td><b>${(urD_ss*100).toFixed(0)}%</b> ${cbadge(urD_ss)}</td><td><b>${(urD_ca*100).toFixed(0)}%</b> ${cbadge(urD_ca)}</td><td>δ / (L/${defDiv})</td></tr>
+      <tr><td>Allowable δ</td>${cmpCell(dall_ss,1,' mm')}${cmpCell(dall_ca,1,' mm')}<td>L/${defDiv} vs Lₒ/${defDiv}</td></tr>
+      <tr><td><b>Deflection UR</b></td><td><b>${(urD_ss*100).toFixed(0)}%</b> ${cbadge(urD_ss)}</td><td><b>${(urD_ca*100).toFixed(0)}%</b> ${cbadge(urD_ca)}</td><td>δ / allow</td></tr>
       </tbody>
     </table>
-    <p class="hint">Governing load w=${wgov.toFixed(3)} kN/m (uplift). Simple span = purlin between rafters; Cantilever = overhang Lₒ${Lo>0?'':' (none entered → shown at L for reference)'} past the end rafter. Cantilever deflection limit uses Lₒ/${defDiv} (conservative; some specs allow 2Lₒ/${defDiv}).</p>`;
+    <p class="hint">Governing load w=${wgov.toFixed(3)} kN/m (larger of uplift / downward combo). <b>Simple Span</b> column = simply-supported idealisation (δ=5wL⁴/384EI=${d_ss.toFixed(1)} mm). The <b>Serviceability δ check</b> below reflects your selected support condition${spans==='ss'?` (simply supported → identical, ${d_t.toFixed(1)} mm)`:` (k=${kd.toFixed(5)} → ${d_t.toFixed(1)} mm; lower than ${d_ss.toFixed(1)} mm because continuity reduces deflection)`}${(+v('w_weak'))>0?'; serviceability also adds the weak-axis component':''}. Cantilever = overhang Lₒ${Lo>0?'':' (none entered → shown at L for reference)'}.</p>`;
 
   document.getElementById('ck-defl').innerHTML=
-    row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`,'δ=k·wL⁴/EI, k='+kd.toFixed(5)+' ('+(spans==='c2'?'2-span cont.':spans==='c3'?'3+ span cont.':'simple, 5/384')+');  allow=L/'+defDiv+';  UR=δ/allow');
+    row(`Serviceability δ (as-configured, L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm — governing combo w=${Math.max(+v('w_up'),+v('w_grav')).toFixed(3)} kN/m`,'δ=k·wL⁴/EI, k='+kd.toFixed(5)+' ('+(spans==='c2'?'2-span cont.':spans==='c3'?'3+ span cont.':'simple, 5/384')+'), governing combo;  allow=L/'+defDiv+';  UR=δ/allow');
 
   // ── FIX BOX ──
   const I_req=p.Ixx*UR.defl;
