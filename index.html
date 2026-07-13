@@ -110,6 +110,12 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
 .cn{flex:0 0 240px;font-size:12px;color:#555}
 .cn small{display:block;font-size:10px;color:#aaa;margin-top:1px}
 .cf{display:block;font-size:10px;color:#7a8aa0;font-family:ui-monospace,Menlo,Consolas,monospace;margin-top:2px;line-height:1.3}
+.cmp-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.cmp-tbl th,.cmp-tbl td{border:0.5px solid #e6e2db;padding:5px 8px;text-align:left}
+.cmp-tbl thead th{background:#f5f4f0;font-size:11px;color:#1e3a5f}
+.cmp-tbl th small{font-weight:400;color:#999;font-family:ui-monospace,monospace}
+.cmp-tbl td:nth-child(4){color:#999;font-size:10px;font-family:ui-monospace,monospace}
+.cmp-tbl tr td:nth-child(3){background:#fbf7f2}
 .bw{flex:1;min-width:50px;height:8px;background:#ebe8e2;border-radius:20px;overflow:hidden}
 .bf{height:100%;border-radius:20px;transition:width .3s}
 .uv{flex:0 0 44px;font-size:13px;font-weight:600;text-align:right}
@@ -387,6 +393,12 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
     </div>
     <div class="prop-chips" id="prop-chips"></div>
     <div class="prop-grid" id="sec-props"></div>
+  </div>
+
+  <!-- Simple span vs Cantilever comparison -->
+  <div class="card">
+    <div class="card-title">Configuration Check &mdash; Simple Span vs Cantilever</div>
+    <div id="span-cant-cmp"></div>
   </div>
 
   <!-- IS 801 checks -->
@@ -1547,6 +1559,38 @@ function calculate(){
     row('Combined bending + shear',UR.bs,'IS 801 Cl.6.4.3',`fbw ratio=${(f_strong_up/Fbw_wl).toFixed(3)}, fv ratio=${(fv_act/Fv_wl).toFixed(3)}`,'√((fbw/Fbw)² + (fv/Fv)²) ≤ 1')+
     webcripRow+
     (hasTor?row('Torsion (St-Venant)',UR.tor,'— not in IS 801',torNote,'τ=Mx·t/J,  J=Σ(L·t³)/3'):'');
+
+  // ── SIMPLE SPAN vs CANTILEVER comparison ──
+  // Governing load = uplift magnitude (per m). Fb=0.6Fy; Z governing = min(Ztop,Zbot).
+  const wgov=Math.max(Math.abs(w_net_val),w_grav_val,1e-9);      // kN/m
+  const Zg=Math.min(p.Ztop,p.Zbot);                               // mm³ (governing fibre)
+  const Lc=Lo>0?Lo:L;                                             // cantilever arm = overhang, else fall back to L
+  // Simple span (between rafters), UDL:
+  const M_ss=wgov*L*L/8/1e6, V_ss=wgov*L/2/1000, d_ss=5*wgov*L**4/(384*E*p.Ixx);
+  // Cantilever (overhang past end rafter), UDL over the arm:
+  const M_ca=wgov*Lc*Lc/2/1e6, V_ca=wgov*Lc/1000, d_ca=wgov*Lc**4/(8*E*p.Ixx);
+  const fb_ss=M_ss*1e6/Zg, fb_ca=M_ca*1e6/Zg, Fball=0.6*Fy;
+  const urB_ss=fb_ss/Fball, urB_ca=fb_ca/Fball;
+  const urV_ss=V_ss/Vcap, urV_ca=V_ca/Vcap;
+  const dall_ss=L/defDiv, dall_ca=Lc/defDiv;   // cantilever often uses 2Lc/limit; using Lc/limit (conservative)
+  const urD_ss=d_ss/dall_ss, urD_ca=d_ca/dall_ca;
+  const cbadge=u=>`<span class="st ${sc(u)}" style="flex:0 0 auto;min-width:52px">${sl(u)}</span>`;
+  const cmpCell=(v,u,unit)=>`<td>${isNaN(v)?'—':v.toFixed(u===undefined?2:u)}${unit||''}</td>`;
+  document.getElementById('span-cant-cmp').innerHTML=
+    `<table class="cmp-tbl">
+      <thead><tr><th>Quantity</th><th>Simple Span<br><small>M=wL²/8</small></th><th>Cantilever / Overhang<br><small>M=wL²/2</small></th><th>Formula</th></tr></thead>
+      <tbody>
+      <tr><td>Effective length</td>${cmpCell(L/1000,3,' m')}${cmpCell(Lc/1000,3,' m')}<td>span L vs overhang Lₒ</td></tr>
+      <tr><td>Moment M</td>${cmpCell(M_ss,3,' kNm')}${cmpCell(M_ca,3,' kNm')}<td>wL²/8 vs wL²/2</td></tr>
+      <tr><td>Shear V</td>${cmpCell(V_ss,3,' kN')}${cmpCell(V_ca,3,' kN')}<td>wL/2 vs wL</td></tr>
+      <tr><td>Bending stress f</td>${cmpCell(fb_ss,1,' MPa')}${cmpCell(fb_ca,1,' MPa')}<td>M/Z_gov, Fb=${Fball.toFixed(0)}</td></tr>
+      <tr><td><b>Bending UR</b></td><td><b>${(urB_ss*100).toFixed(0)}%</b> ${cbadge(urB_ss)}</td><td><b>${(urB_ca*100).toFixed(0)}%</b> ${cbadge(urB_ca)}</td><td>f/0.6Fy</td></tr>
+      <tr><td>Shear UR</td><td>${(urV_ss*100).toFixed(0)}% ${cbadge(urV_ss)}</td><td>${(urV_ca*100).toFixed(0)}% ${cbadge(urV_ca)}</td><td>V/Vcap</td></tr>
+      <tr><td>Deflection δ</td>${cmpCell(d_ss,1,' mm')}${cmpCell(d_ca,1,' mm')}<td>5wL⁴/384EI vs wL⁴/8EI</td></tr>
+      <tr><td><b>Deflection UR</b></td><td><b>${(urD_ss*100).toFixed(0)}%</b> ${cbadge(urD_ss)}</td><td><b>${(urD_ca*100).toFixed(0)}%</b> ${cbadge(urD_ca)}</td><td>δ / (L/${defDiv})</td></tr>
+      </tbody>
+    </table>
+    <p class="hint">Governing load w=${wgov.toFixed(3)} kN/m (uplift). Simple span = purlin between rafters; Cantilever = overhang Lₒ${Lo>0?'':' (none entered → shown at L for reference)'} past the end rafter. Cantilever deflection limit uses Lₒ/${defDiv} (conservative; some specs allow 2Lₒ/${defDiv}).</p>`;
 
   document.getElementById('ck-defl').innerHTML=
     row(`Resultant δ (L/${defDiv})`,UR.defl,'IS 801 / spec',isNaN(d_t)?`enter δ_max from STAAD or use Direct UDL`:`δ=${d_t.toFixed(1)} mm (=L/${(L/d_t).toFixed(0)}), allow=${d_a.toFixed(1)} mm`,'δ=k·wL⁴/EI, k='+kd.toFixed(5)+' ('+(spans==='c2'?'2-span cont.':spans==='c3'?'3+ span cont.':'simple, 5/384')+');  allow=L/'+defDiv+';  UR=δ/allow');
