@@ -316,9 +316,12 @@ body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:va
 
     <div id="panel-udl" style="display:none">
       <div class="g2">
-        <div class="field"><label>w_uplift net (kN/m) — strong axis</label><input id="w_up" type="number" value="0.981" step="0.001"></div>
-        <div class="field"><label>w_gravity (kN/m) — strong axis</label><input id="w_grav" type="number" value="0.147" step="0.001"></div>
+        <div class="field"><label>Dead load DL (kN/m) <span title="Self-weight + fixed loads. Resists uplift, adds to downward.">ⓘ</span></label><input id="DL" type="number" value="0.147" step="0.001" oninput="deriveCombos()"></div>
+        <div class="field"><label>Wind uplift WL↑ (kN/m) <span title="Gross suction (upward). Net uplift = WL↑ − DL.">ⓘ</span></label><input id="WLup" type="number" value="1.128" step="0.001" oninput="deriveCombos()"></div>
+        <div class="field"><label>Wind downward WL↓ (kN/m) <span title="Gross pressure (downward). Downward combo = WL↓ + DL.">ⓘ</span></label><input id="WLdn" type="number" value="0" step="0.001" oninput="deriveCombos()"></div>
         <div class="field"><label>w_weak (kN/m) — weak axis</label><input id="w_weak" type="number" value="0" step="0.001"></div>
+        <input id="w_up" type="hidden" value="0.981"><input id="w_grav" type="hidden" value="0.147">
+        <div class="field" style="grid-column:1/-1"><div id="combo-note" class="hint" style="margin:0"></div></div>
       </div>
       <p class="hint">Moments computed as wL&sup2;/8 (simply supported). +&frac13; for DL+WL applied automatically.</p>
     </div>
@@ -636,6 +639,25 @@ function setLoadMode(m){
   document.getElementById('panel-staad').style.display=m==='staad'?'block':'none';
   document.getElementById('lmb-udl').className='lmb'+(m==='udl'?' on':'');
   document.getElementById('lmb-staad').className='lmb'+(m==='staad'?' on':'');
+  if(m==='udl') deriveCombos();
+}
+
+// Derive the two design load combinations from DL and wind:
+//   Uplift  combo = WL↑ − DL   (net upward; DL resists → hogging: top tension, bottom comp)
+//   Downward combo = WL↓ + DL  (both downward → sagging: top comp, bottom tension)
+function deriveCombos(){
+  const el=id=>document.getElementById(id);
+  if(!el('DL'))return;
+  const DL=+el('DL').value||0, WLup=+el('WLup').value||0, WLdn=+el('WLdn').value||0;
+  const wUp=Math.max(WLup-DL,0);        // net uplift (0 if DL fully resists suction)
+  const wDn=WLdn+DL;                     // downward combination
+  el('w_up').value=wUp.toFixed(4);
+  el('w_grav').value=wDn.toFixed(4);
+  const note=el('combo-note');
+  if(note) note.innerHTML=
+    `<b>Uplift combo</b> = WL↑ − DL = ${WLup.toFixed(3)} − ${DL.toFixed(3)} = <b>${wUp.toFixed(3)} kN/m</b> (net upward → hogging)`+
+    ` &nbsp;|&nbsp; <b>Downward combo</b> = WL↓ + DL = ${WLdn.toFixed(3)} + ${DL.toFixed(3)} = <b>${wDn.toFixed(3)} kN/m</b> (→ sagging)`+
+    (WLup>0&&WLup<=DL?' &nbsp;⚠ DL ≥ WL↑ → no net uplift.':'');
 }
 
 // ── SESSION LOG ──────────────────────────────────────────────────────────────
@@ -833,7 +855,7 @@ function seedDefaults(){
   }
   const projs=loadAllProjects();
   if(!Object.keys(projs).length){
-    projs['Solar-3.1m']={L:3.1,N:50,defLim:'180',Lb:3100,Cb:1.0,loadMode:'udl',w_up:0.981,w_grav:0.147,w_weak:0};
+    projs['Solar-3.1m']={L:3.1,N:50,Lo:0,defLim:'180',Lb:3100,Cb:1.0,loadMode:'udl',DL:0.147,WLup:1.128,WLdn:0,w_weak:0};
     saveAllProjects(projs);
   }
 }
@@ -879,7 +901,7 @@ function loadProjectPreset(){
   const nf=f=>{ const el=document.getElementById(f); if(el&&p[f]!==undefined)el.value=p[f]; };
   ['L','N','Lo','defLim','Lb','Cb','spans'].forEach(nf);
   const lm=p.loadMode||'udl'; setLoadMode(lm);
-  if(lm==='udl'){ ['w_up','w_grav','w_weak'].forEach(nf); }
+  if(lm==='udl'){ ['DL','WLup','WLdn','w_weak'].forEach(nf); deriveCombos(); }
   else {
     ['munit','funit','s_Mz_up','s_My_up','s_Fx_up','s_Mz_gr','s_My_gr','s_Fx_gr','s_Fy','s_Mx','s_def'].forEach(nf);
     const sw=document.getElementById('s_wind');
@@ -895,7 +917,7 @@ function saveProjectPreset(){
   if(projs[name]&&!confirm(`Overwrite "${name}"?`))return;
   const lm=loadMode;
   const obj={L:+v('L'),N:+v('N'),Lo:+v('Lo'),defLim:v('defLim'),Lb:+v('Lb'),Cb:+v('Cb'),spans:v('spans'),loadMode:lm};
-  if(lm==='udl'){obj.w_up=+v('w_up');obj.w_grav=+v('w_grav');obj.w_weak=+v('w_weak');}
+  if(lm==='udl'){obj.DL=+v('DL');obj.WLup=+v('WLup');obj.WLdn=+v('WLdn');obj.w_weak=+v('w_weak');}
   else{
     ['munit','funit','s_Mz_up','s_My_up','s_Fx_up','s_Mz_gr','s_My_gr','s_Fx_gr','s_Fy','s_Mx','s_def'].forEach(f=>{obj[f]=v(f);});
     obj.s_wind=document.getElementById('s_wind').checked;
@@ -1308,6 +1330,7 @@ deflFormula,
 let lastResult=null;
 
 function calculate(){
+  if(loadMode==='udl') deriveCombos();   // refresh Uplift/Downward combos from DL & wind
   const g=geom(); const p=computeProps(g);
   const t=g.t, E=200000, Fy=+v('grade');
   const L=+v('L')*1000, N=+v('N'), defDiv=+v('defLim'), Lb=+v('Lb'), Cb=+v('Cb');
@@ -1532,8 +1555,8 @@ function calculate(){
     row('Lip provides min stiffener I',UR.lip,'IS 801 Cl.5.2.2.1',`Is=${Is.toFixed(1)} mm⁴ vs Imin=${Imin.toFixed(1)} mm⁴`,'Is=Lp³·t·sin²β/12; Imin=max(1.83t⁴√((w/t)²−4000/Fy), 9.2t⁴); UR=Imin/Is');
 
   document.getElementById('ck-flex').innerHTML=
-    row('Biaxial — uplift (DL+WL)',UR.biaxial,'IS 801 Cl.6.1.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}`,'UR=f_bz/Fbz + f_by/Fby;  f=M/Z,  Fb=0.6Fy')+
-    row('Gravity bending (top comp.)',UR.grav,'IS 801 Cl.6.1.1',`f_top=${f_top_grav.toFixed(1)} MPa, Fb=${Fb.toFixed(0)} MPa`,'f_top=M_grav/Ztop;  UR=f_top/Fb,  Fb=0.6Fy')+
+    row('Uplift combo (WL↑ − DL)',UR.biaxial,'IS 801 Cl.6.1.1',`${r_s.toFixed(3)}+${r_w.toFixed(3)}=${(r_s+r_w).toFixed(3)}; hogging → top tens/bot comp`,'UR=f_bz/Fbz + f_by/Fby;  f=M/Z,  Fb=0.6Fy')+
+    row('Downward combo (WL↓ + DL)',UR.grav,'IS 801 Cl.6.1.1',`f_top=${f_top_grav.toFixed(1)} MPa (top comp.), Fb=${Fb.toFixed(0)} MPa`,'f_top=M_down/Ztop;  UR=f_top/Fb,  Fb=0.6Fy')+
     (hasAxial?row('Axial + bending (combined)',UR.axial,'IS 801 Cl.6.7.2',axialNote,'fa/Fa + fbz/Fbz + fby/Fby ≤ 1'):'');
 
   document.getElementById('ck-ltb').innerHTML=
@@ -1680,6 +1703,7 @@ seedDefaults();
 refreshSectionDropdown();
 refreshProjectDropdown();
 drawDiagram();
+deriveCombos();
 calculate();
 
 if('serviceWorker' in navigator){

@@ -68,8 +68,10 @@ put(17, "Moment gradient Cb", 1.0, "", "Cb=1 with axial (Cl.6.7)", inp=True)  # 
 put(18, "Bearing length N", 50, "mm", inp=True)                  # B18
 put(19, "Inner bend radius r", 2, "mm", inp=True)                # B19
 put(20, "Deflection limit divisor (L/x)", 180, "", inp=True)     # B20
-put(21, "w net uplift (working)", 0.981, "kN/m", "WL−DL, service", inp=True)  # B21
-put(22, "w gravity (working)", 0.147, "kN/m", inp=True)          # B22
+put(21, "Dead load DL", 0.147, "kN/m", "resists uplift, adds to downward", inp=True)  # B21 (now DL)
+put(22, "Wind uplift WL↑ (gross)", 1.128, "kN/m", "suction, upward", inp=True)  # B22 (now WL up)
+ws.cell(22, 6, "Wind down WL↓").font = LBL
+c=ws.cell(22, 7, 0); c.fill=INP; c.border=BOX; c.font=VAL   # G22 = WL downward input
 put(23, "w weak-axis", 0.0, "kN/m", inp=True)                    # B23
 put(24, "Wind +33% allowable increase", 0, "", "REMOVED per project practice — allowables at 0.6Fy", inp=True)  # B24 (kept at 0)
 put(25, "Overhang Lo (m)", 0, "m", "cantilever past end rafter; 0=none", inp=True)  # B25
@@ -133,8 +135,8 @@ put(59, "r_ycf = √(Iycf/Acf)", "=SQRT(B58/B57)", "mm", "target 55.0")         
 
 # ── LOADS & BENDING ──
 head(61, "5. MOMENTS & BENDING — Cl.6.1.1")
-put(62, "M uplift = w·L²/8", "=B21*B14^2/8", "kN·m", "wL²/8: exact 2-span support M, conservative 3+")  # B62
-put(63, "M gravity = w·L²/8", "=B22*B14^2/8", "kN·m")                          # B63
+put(62, "M uplift = w·L²/8", "=MAX(B22-B21,0)*B14^2/8", "kN·m", "UPLIFT combo (WL↑−DL); wL²/8")  # B62
+put(63, "M downward = (WL↓+DL)·L²/8", "=(G22+B21)*B14^2/8", "kN·m", "DOWNWARD combo")  # B63
 put(64, "M weak = w·L²/8", "=B23*B14^2/8", "kN·m")                             # B64
 put(65, "Fb = 0.6·Fy", "=0.6*B12", "MPa", "Cl.6.1.1")                          # B65
 put(66, "Fb design (no wind increase)", "=B65", "MPa")                            # B66
@@ -216,8 +218,8 @@ put(120, "P_end = 70t²[98+4.2(N/t)−0.022(N/t)(h/t)−0.011(h/t)]·st·rf ×2 
 put(121, "P_int = 70t²[305+2.3(N/t)−0.009(N/t)(h/t)−0.5(h/t)]·st·rf ×2 webs",
          "=MAX(0,70*B114^2*(305+2.3*(B18/B11)-0.009*(B18/B11)*B105-0.5*B105)*E117*B119)*2*9.80665/1000",
          "kN")                                                                  # B121
-put(122, "R_overhang (gravity)", '=IF(B25>0,B22*(B25+B14)^2/(2*B14),IF(B15="2-span continuous",0.375,IF(B15="3+ span continuous",0.4,0.5))*B22*B14)', "kN", "Lo>0: w(Lo+L)²/2L (cantilever end)")  # B122
-put(123, "R_inner span (gravity)", '=IF(B15="2-span continuous",1.25,IF(B15="3+ span continuous",1.1,0))*B22*B14', "kN")  # B123
+put(122, "R_overhang (gravity)", '=IF(B25>0,(G22+B21)*(B25+B14)^2/(2*B14),IF(B15="2-span continuous",0.375,IF(B15="3+ span continuous",0.4,0.5))*(G22+B21)*B14)', "kN", "Lo>0: w(Lo+L)²/2L (cantilever end)")  # B122
+put(123, "R_inner span (gravity)", '=IF(B15="2-span continuous",1.25,IF(B15="3+ span continuous",1.1,0))*(G22+B21)*B14', "kN")  # B123
 put(124, "UR web crippling — OVERHANG = R_overhang/P_cant", "=B122/B120", "", "cantilever end (Cl.6.5)")  # B124
 put(125, "UR web crippling — INNER span = R_inner/P_int", "=IF(B123>0,B123/B121,0)", "", "inner support (Cl.6.5)")  # B125
 
@@ -225,7 +227,7 @@ put(125, "UR web crippling — INNER span = R_inner/P_int", "=IF(B123>0,B123/B12
 head(126, "11. DEFLECTION — L/" + "x limit")
 put(127, "k coeff: ss 5/384; 2-span 0.00542; 3+ 0.0069",
          '=IF(B15="2-span continuous",0.00542,IF(B15="3+ span continuous",0.0069,5/384))', "")  # B127
-put(128, "δ strong = k·w·(1000L)⁴/(E·Ixx)", "=B127*ABS(B21)*(B14*1000)^4/(B13*B49)", "mm", "1 kN/m = 1 N/mm")  # B128
+put(128, "δ strong = k·w·(1000L)⁴/(E·Ixx)", "=B127*MAX(B22-B21,0)*(B14*1000)^4/(B13*B49)", "mm", "uplift combo; 1 kN/m=1 N/mm")  # B128
 put(129, "δ weak = k·w_weak·(1000L)⁴/(E·Iyy)", "=B127*ABS(B23)*(B14*1000)^4/(B13*B50)", "mm")  # B129
 put(130, "δ resultant = √(δs²+δw²)", "=SQRT(B128^2+B129^2)", "mm")             # B130
 put(131, "δ allowable = 1000L/divisor", "=B14*1000/B20", "mm")                 # B131
