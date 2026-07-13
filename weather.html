@@ -7,6 +7,8 @@
 <title>Weather Watch — IMD + Windy</title>
 <link rel="manifest" href="weather.webmanifest">
 <link rel="icon" href="weather-icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 :root{
   --bg:#0b1424; --card:#122036; --card2:#0e1a2e; --line:#1e3350;
@@ -54,6 +56,9 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .badge.fail{color:var(--bad);border-color:var(--bad)}
 .rainhero{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .rainhero .big{font-size:52px;font-weight:800;color:var(--rain);line-height:1}
+.rainhero .big.warm{color:var(--warn)}
+.temphero{cursor:pointer;margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
+.temphero .sub::after{content:" ⇄";color:var(--accent)}
 .rainhero .unit{font-size:16px;color:var(--dim)}
 .rainhero .sub{width:100%;font-size:12.5px;color:var(--dim);margin-top:6px}
 .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -81,6 +86,32 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .imgwrap img{width:100%;display:block;min-height:120px}
 .windywrap{border-radius:10px;overflow:hidden;margin-bottom:6px;background:#0e1a2e}
 .windywrap iframe{width:100%;height:360px;display:block;border:0}
+.radarwrap{position:relative;border-radius:10px;overflow:hidden;margin-bottom:6px;background:#0e1a2e}
+#radarmap{width:100%;height:340px}
+.radarbar{position:absolute;left:0;right:0;bottom:0;z-index:500;display:flex;align-items:center;
+  gap:10px;padding:8px 12px;background:linear-gradient(0deg,rgba(4,10,20,.85),transparent);
+  pointer-events:none}
+.radarbar button{pointer-events:auto;background:var(--accent);color:#04101f;border:0;
+  border-radius:50%;width:34px;height:34px;font-size:14px;cursor:pointer;flex:none}
+.radarbar span{color:#dbe7f5;font-size:12.5px;font-weight:600;text-shadow:0 1px 3px #000}
+.leaflet-container{background:#0e1a2e;font-family:inherit}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.hourly{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.hr{flex:0 0 auto;width:64px;background:var(--card2);border-radius:10px;padding:8px 6px;text-align:center}
+.hr .t{font-size:11px;color:var(--dim)}
+.hr .i{font-size:20px;margin:3px 0}
+.hr .tp{font-size:13px;font-weight:600}
+.hr .fl{font-size:9.5px;color:var(--warn);margin-top:1px;min-height:12px}
+.hr .rn{font-size:10.5px;color:var(--rain);margin-top:2px;min-height:13px}
+.hr .wd{font-size:10px;color:var(--dim);margin-top:1px}
+.aqi{display:flex;align-items:center;gap:14px}
+.aqi .dot{width:54px;height:54px;border-radius:50%;flex:none;display:flex;align-items:center;
+  justify-content:center;font-size:20px;font-weight:800;color:#04101f}
+.aqi .lbl{font-size:15px;font-weight:700}
+.aqi .sub{font-size:12px;color:var(--dim);margin-top:2px}
+.aqi .pm{display:flex;gap:14px;margin-top:6px;flex-wrap:wrap}
+.aqi .pm span{font-size:12px;color:var(--dim)}
+.aqi .pm b{color:var(--txt)}
 .imgcap{font-size:11px;color:var(--dim);margin-bottom:14px;display:flex;justify-content:space-between}
 .imgcap a{color:var(--accent);text-decoration:none}
 details{margin-top:10px}
@@ -154,6 +185,10 @@ nav button.on{color:var(--rain)}
         <span class="big" id="rain24">–</span><span class="unit">mm</span>
         <span class="sub" id="rainsub">Observation station: –</span>
       </div>
+      <div class="rainhero temphero" id="temphero" style="display:none">
+        <span class="big warm" id="tempbig">–</span><span class="unit">°C</span>
+        <span class="sub" id="tempsub"></span>
+      </div>
       <div class="kv" id="nowkv"></div>
       <details><summary>All reported fields (raw IMD data)</summary>
         <table class="raw" id="nowraw"></table>
@@ -163,10 +198,19 @@ nav button.on{color:var(--rain)}
       <h2>Today's outlook — <span id="fc-place">home</span></h2>
       <div id="todayfc" style="font-size:14px;line-height:1.5">–</div>
     </div>
+    <div class="card">
+      <h2>Air quality <span class="badge" id="src-aqi">…</span></h2>
+      <div id="aqibox"><p class="note">Loading…</p></div>
+    </div>
   </section>
 
   <!-- 7 DAY -->
   <section class="tab" id="tab-fc">
+    <div class="card">
+      <h2>Hourly forecast</h2>
+      <div id="hourly-days" class="chips"></div>
+      <div id="hourly" class="hourly"><p class="note">Loading…</p></div>
+    </div>
     <div class="card">
       <h2>7-day forecast <span class="badge" id="src-forecast">…</span></h2>
       <div id="fclist"></div>
@@ -197,6 +241,20 @@ nav button.on{color:var(--rain)}
 
   <!-- MAPS -->
   <section class="tab" id="tab-maps">
+    <div class="card">
+      <h2>Live rain radar (RainViewer)</h2>
+      <div class="radarwrap">
+        <div id="radarmap"></div>
+        <div class="radarbar">
+          <button id="radar-play" title="Play / pause">▶</button>
+          <span id="radar-time">–</span>
+        </div>
+      </div>
+      <p class="note" style="margin:6px 0 0">Animated radar + nowcast (past ~2 h → next ~30 min),
+        global mosaic that includes IMD radars. Centres on your selected location; ▶ to loop.
+        Blue→green→yellow→red = light→heavy rain.</p>
+    </div>
+
     <div class="card">
       <h2>Windy — live layers (wind · rain · temp · clouds)</h2>
       <div class="windywrap"><iframe id="windy" title="Windy map" loading="lazy"
@@ -255,10 +313,17 @@ nav button.on{color:var(--rain)}
         gold-standard NWP that underpins most forecasts). It changes with the location you pick.
         IMD's own per-coordinate forecast unlocks with the api.imd.gov.in key. Badges show data
         age. Since mid-2026 IMD's simple JSON APIs answer only whitelisted IPs (HTTP 401), which
-        is why the observation relay exists. <b>Maps:</b> IMD radar &amp; rainfall map, plus a
-        <b>Windy</b> embed (animated wind / rain / temperature / cloud layers, multi-model).<br><br>
+        is why the observation relay exists. <b>Maps:</b> a <b>RainViewer</b> live animated radar
+        (global mosaic incl. IMD radars, past 2 h → nowcast), a <b>Windy</b> embed (animated wind /
+        rain / temperature / cloud layers, multi-model), plus IMD's radar still &amp; rainfall map.<br><br>
         A general-purpose weather tool for <b>any location in India</b> — useful for agriculture
         (rain, wind for spraying, temperature), field work, travel and everyday planning.<br><br>
+        <b>"Feels like"</b> uses the <b>Steadman Apparent Temperature</b> (Australian BOM) —
+        AT = T + 0.33e − 0.70·wind − 4, where e is the actual water-vapour pressure from humidity.
+        It's the best single measure because it blends heat, humidity and wind cooling in one
+        continuous formula (no crude switching between "heat index" and "wind chill"), and is
+        valid across India's hot-humid range. Current value is computed from the nearest IMD
+        station's temp/humidity/wind; hourly values from the Open-Meteo forecast.<br><br>
         Official IMD channels for the same data:
         <a href="https://mausam.imd.gov.in" target="_blank" rel="noopener">mausam.imd.gov.in</a> ·
         <a href="https://city.imd.gov.in" target="_blank" rel="noopener">city.imd.gov.in</a> ·
@@ -303,6 +368,8 @@ nav button.on{color:var(--rain)}
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 'use strict';
 /* ================= config ================= */
@@ -326,7 +393,8 @@ const IMG_IR  = 'https://mausam.imd.gov.in/Satellite/3Dasiasec_ir1.jpg';
 const DEFAULT_PRESETS = [
   {name:'Home town', lat:16.089037, lon:78.098962},
   {name:'Manikonda', lat:17.400695, lon:78.365313},
-  {name:'Nagole',    lat:17.381586, lon:78.566168}
+  {name:'Nagole',    lat:17.381586, lon:78.566168},
+  {name:'Office',    lat:17.444606, lon:78.465291}
 ];
 function presets(){
   try{ const p=JSON.parse(localStorage.getItem('rw-presets')); if(Array.isArray(p)&&p.length) return p; }catch(e){}
@@ -351,6 +419,7 @@ function endpoints(){
 
 /* ================= state ================= */
 const S = { relayDoc:null, stationsDoc:null, diag:{}, omCache:{}, omForecast:null,
+            aqiCache:{}, aqi:null, hourlyDay:0, showFeels:true,
             data:{current:null, forecast:null, nowcast:null},
             src:{current:null, forecast:null, nowcast:null} };
 
@@ -390,6 +459,19 @@ function nearestWith(rows, lat, lon, metricIdx){
   return best ? {row:best, dist:bd} : null;
 }
 const km = d => d<10 ? d.toFixed(1)+' km' : Math.round(d)+' km';
+
+// "Feels like" = Steadman Australian Apparent Temperature (BOM). Physically
+// based: combines dry-bulb temp, humidity (via actual vapour pressure) and
+// wind cooling in one continuous formula — the best general-purpose apparent
+// temperature (no threshold-switching between heat-index and wind-chill, and
+// valid across India's hot-humid range). AT = Ta + 0.33e − 0.70ws − 4.0,
+// e = (RH/100)·6.105·exp(17.27·Ta/(237.7+Ta)) hPa,  ws in m/s at 10 m.
+function feelsLike(Ta, RH, windKmph){
+  if(Ta==null || RH==null || !isFinite(Ta) || !isFinite(RH)) return null;
+  const ws = ((windKmph!=null && isFinite(windKmph)) ? windKmph : 0)/3.6;
+  const e = (RH/100)*6.105*Math.exp(17.27*Ta/(237.7+Ta));
+  return Ta + 0.33*e - 0.70*ws - 4.0;
+}
 
 function pick(obj, patterns, exclude){
   // find first key matching any regex in patterns (and not matching exclude)
@@ -505,7 +587,7 @@ function renderAll(){
     ? 'Showing <b>home</b> (16.088°N, 78.100°E). Type any coordinate, tap a chip, or 📍.'
     : `Showing <b>${esc(loc.name || (loc.lat.toFixed(4)+', '+loc.lon.toFixed(4)))}</b> — nearest IMD stations. Clear the box + Go to return home.`;
   renderChips();
-  renderNow(); ensureForecast(); renderNowcast(); renderMaps(); renderDiag();
+  renderNow(); ensureForecast(); ensureAQI(); renderNowcast(); renderMaps(); renderDiag();
 }
 
 function renderChips(){
@@ -542,6 +624,7 @@ function renderNow(){
   const loc = activeLoc();
   const kv = $('nowkv'), raw = $('nowraw');
   kv.innerHTML=''; raw.innerHTML='';
+  $('temphero').style.display='none';       // shown only when station temp is available
   const d = S.stationsDoc;
 
   // Preferred path: nationwide IMD station data → nearest station to active point.
@@ -568,8 +651,21 @@ function renderNow(){
     $('rain24').textContent = (rainVal==null) ? '–' : rainVal;
     $('rainsub').textContent = rainSrc || 'No station reporting rainfall near this point.';
 
-    if(awsTemp) kv.insertAdjacentHTML('beforeend', cell('Temperature', awsTemp.row[4]+' °C',
-      (awsTemp.row[2]||'AWS')+' · '+km(awsTemp.dist)));
+    // Big temperature hero — tap to toggle actual ⇄ feels-like (Steadman AT)
+    const temphero=$('temphero');
+    if(awsTemp){
+      const Ta=awsTemp.row[4], fl=feelsLike(Ta, awsTemp.row[5], awsTemp.row[6]);
+      const showFeels = S.showFeels && fl!=null;
+      const big = showFeels ? fl : Ta;
+      temphero.style.display='';
+      $('tempbig').textContent = (big==null?'–':(+big).toFixed(1));
+      $('tempbig').classList.toggle('warm', showFeels);
+      const other = showFeels ? `actual ${Ta} °C` : (fl!=null?`feels like ${fl.toFixed(1)} °C`:'no humidity → feels-like N/A');
+      $('tempsub').textContent = (showFeels?'Feels like':'Actual temp')+
+        ` · ${other} · ${(awsTemp.row[2]||'AWS')} ${km(awsTemp.dist)}`;
+    } else {
+      temphero.style.display='none';
+    }
     if(awsRH && awsRH.row[5]!=null)  kv.insertAdjacentHTML('beforeend', cell('Humidity', awsRH.row[5]+' %'));
     if(awsWind && awsWind.row[6]!=null) kv.insertAdjacentHTML('beforeend', cell('Wind', awsWind.row[6]+' km/h'));
     if(awsRain && awsRain.row[3]!=null && awsRain!==synopRain)
@@ -625,6 +721,10 @@ const WMO = {
   95:['Thunderstorm','⛈️',1],96:['Thunderstorm + hail','⛈️',1],99:['Thunderstorm + hail','⛈️',1]
 };
 const wmo = c => WMO[c] || ['—','🌡️',0];
+// Night variants for the clear/low-cloud codes (rain/snow/thunder icons read
+// the same day or night). isDay: 1=day, 0=night (from Open-Meteo is_day).
+const NIGHT_ICON = {0:'🌙', 1:'🌙', 2:'☁️', 3:'☁️', 45:'🌫️', 48:'🌫️'};
+const hIcon = (code, isDay) => (isDay===0 && NIGHT_ICON[code]!==undefined) ? NIGHT_ICON[code] : wmo(code)[1];
 const fcKey = loc => (+loc.lat).toFixed(3)+','+(+loc.lon).toFixed(3);
 
 function ensureForecast(){
@@ -633,6 +733,7 @@ function ensureForecast(){
   S.omForecast = 'loading'; renderForecast();
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}`+
     `&daily=weathercode,precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min`+
+    `&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weathercode,wind_speed_10m,is_day`+
     `&forecast_days=7&timezone=auto`;
   fetchJSON(url, 12000).then(d=>{
     S.omCache[key]=d;
@@ -672,6 +773,7 @@ function renderForecast(){
       `<tr><td>source</td><td>Open-Meteo /v1/forecast — ECMWF-IFS + GFS + ICON blend @ ${esc(loc.lat)}, ${esc(loc.lon)}</td></tr>`);
     for(let i=0;i<N;i++) raw.insertAdjacentHTML('beforeend',
       `<tr><td>${esc(dl.time[i])}</td><td>wmo ${esc(dl.weathercode[i])} · ${esc(dl.precipitation_sum[i])} mm · ${dl.precipitation_probability_max[i]??'–'}% · ${esc(dl.temperature_2m_min[i])}–${esc(dl.temperature_2m_max[i])} °C</td></tr>`);
+    renderHourlyDays(F); renderHourly(F);
     return;
   }
 
@@ -698,6 +800,94 @@ function addDay(list, date, txt, mx, mn, icon, rainy){
        <div class="mid"><div class="d">${esc(date||'')}</div><div class="t">${esc(txt||'–')}</div></div>
        ${(mx!=null||mn!=null)?`<div class="temps"><b>${esc(mx??'–')}°</b><br>${esc(mn??'–')}°</div>`:''}
      </div>`);
+}
+
+// ---- Hourly forecast, selectable by day (Today + next 2), same Open-Meteo response ----
+function renderHourlyDays(F){
+  const box=$('hourly-days'); if(!box || !F.daily) return;
+  box.innerHTML='';
+  const days=Math.min(3, F.daily.time.length);
+  if(S.hourlyDay>=days) S.hourlyDay=0;
+  for(let i=0;i<days;i++){
+    const d=new Date(F.daily.time[i]+'T00:00');
+    const label = i===0 ? 'Today' : d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+    const btn=document.createElement('button');
+    btn.className='chip'+(S.hourlyDay===i?' on':'');
+    btn.textContent=label;
+    btn.addEventListener('click',()=>{ S.hourlyDay=i; renderHourlyDays(F); renderHourly(F); });
+    box.appendChild(btn);
+  }
+}
+function renderHourly(F){
+  const box=$('hourly'); if(!box) return;
+  const h=F.hourly;
+  if(!h || !h.time){ box.innerHTML='<p class="note">Hourly data unavailable.</p>'; return; }
+  const dayIdx=Math.min(S.hourlyDay||0, F.daily.time.length-1);
+  const date=F.daily.time[dayIdx];       // YYYY-MM-DD for the selected day
+  const now=Date.now();
+  box.innerHTML=''; let count=0;
+  for(let i=0;i<h.time.length;i++){
+    if(!h.time[i].startsWith(date)) continue;
+    if(dayIdx===0 && new Date(h.time[i]).getTime() < now-3600000) continue;  // today: from current hour
+    const isDay = h.is_day ? h.is_day[i] : 1;
+    const ic = hIcon(h.weathercode[i], isDay);
+    const hr=new Date(h.time[i]).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+    const mm=h.precipitation[i], pr=h.precipitation_probability?h.precipitation_probability[i]:null;
+    const rh=h.relative_humidity_2m?h.relative_humidity_2m[i]:null;
+    const fl=feelsLike(h.temperature_2m[i], rh, h.wind_speed_10m[i]);
+    box.insertAdjacentHTML('beforeend',
+      `<div class="hr">
+         <div class="t">${esc(hr)}</div><div class="i">${ic}</div>
+         <div class="tp">${Math.round(h.temperature_2m[i])}°</div>
+         <div class="fl">${fl!=null?'feels '+Math.round(fl)+'°':''}</div>
+         <div class="rn">${(mm>0||pr>=30)?((mm>0?mm+'mm':'')+(pr!=null?' '+pr+'%':'')).trim():''}</div>
+         <div class="wd">${Math.round(h.wind_speed_10m[i])} km/h</div>
+       </div>`);
+    count++;
+  }
+  if(!count) box.innerHTML='<p class="note">No further hourly data for this day.</p>';
+}
+
+// ---- Air quality (Open-Meteo Air-Quality API — free, per-coordinate, CORS-open) ----
+// US AQI bands: 0-50 good, 51-100 moderate, 101-150 sensitive, 151-200 unhealthy,
+// 201-300 very unhealthy, 301+ hazardous.
+function aqiBand(v){
+  if(v==null) return ['#7e93b0','—','No data'];
+  if(v<=50)  return ['#34d399','Good','Air quality is good'];
+  if(v<=100) return ['#a3e635','Moderate','Acceptable; unusually sensitive people take care'];
+  if(v<=150) return ['#fbbf24','Poor (sensitive)','Sensitive groups may be affected'];
+  if(v<=200) return ['#fb923c','Unhealthy','Everyone may feel effects'];
+  if(v<=300) return ['#f87171','Very unhealthy','Health alert'];
+  return ['#c084fc','Hazardous','Emergency conditions'];
+}
+function ensureAQI(){
+  const loc=activeLoc(), key=fcKey(loc);
+  if(S.aqiCache[key]){ S.aqi=S.aqiCache[key]; renderAQI(); return; }
+  S.aqi='loading'; renderAQI();
+  const url=`https://air-quality.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}`+
+    `&current=us_aqi,pm2_5,pm10&timezone=auto`;
+  fetchJSON(url,12000).then(d=>{
+    S.aqiCache[key]=d;
+    if(fcKey(activeLoc())===key){ S.aqi=d; S.diag.aqi={ok:true,msg:'Open-Meteo air-quality @ '+key}; renderAQI(); }
+  }).catch(e=>{
+    if(fcKey(activeLoc())===key){ S.aqi=null; S.diag.aqi={ok:false,msg:'AQI: '+String(e.message||e)}; renderAQI(); }
+  });
+}
+function renderAQI(){
+  const box=$('aqibox'), badge=$('src-aqi'); if(!box) return;
+  const A=S.aqi;
+  if(A==='loading'){ badge.className='badge'; badge.textContent='…'; box.innerHTML='<p class="note">Loading…</p>'; return; }
+  const cur=A&&A.current;
+  if(!cur || cur.us_aqi==null){ badge.className='badge fail'; badge.textContent='NO DATA';
+    box.innerHTML='<p class="note">Air-quality data not available for this point.</p>'; return; }
+  badge.className='badge live'; badge.textContent='Open-Meteo';
+  const [col,lbl,desc]=aqiBand(cur.us_aqi);
+  box.innerHTML=`<div class="aqi">
+     <div class="dot" style="background:${col}">${Math.round(cur.us_aqi)}</div>
+     <div><div class="lbl" style="color:${col}">${esc(lbl)}</div>
+       <div class="sub">US AQI · ${esc(desc)}</div>
+       <div class="pm">${cur.pm2_5!=null?`<span>PM2.5 <b>${esc(cur.pm2_5)}</b> µg/m³</span>`:''}${cur.pm10!=null?`<span>PM10 <b>${esc(cur.pm10)}</b> µg/m³</span>`:''}</div>
+     </div></div>`;
 }
 
 const WARN_COLOR = {2:['yellow','sev-yellow','Yellow — watch'],
@@ -762,13 +952,72 @@ function renderMaps(){
       `&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`;
     $('lnk-windy').href = `https://www.windy.com/?${loc.lat},${loc.lon},8`;
   }
+  radarRecenter(loc);
+}
+
+// ---- RainViewer animated radar (Leaflet + free RainViewer tiles, CORS-open) ----
+const RV = { map:null, cur:null, frames:[], pastLen:0, idx:0, timer:null, host:'', marker:null };
+function initRadar(){
+  if(RV.map) { setTimeout(()=>RV.map.invalidateSize(), 60); return; }
+  if(!window.L){ $('radar-time').textContent='map library unavailable (offline)'; return; }
+  const loc = activeLoc();
+  RV.map = L.map('radarmap', {zoomControl:true, attributionControl:false}).setView([loc.lat, loc.lon], 7);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    {subdomains:'abcd', maxZoom:12, detectRetina:true}).addTo(RV.map);
+  RV.marker = L.circleMarker([loc.lat, loc.lon],
+    {radius:6, color:'#4fa3ff', weight:2, fillColor:'#4fa3ff', fillOpacity:.9}).addTo(RV.map);
+  setTimeout(()=>RV.map.invalidateSize(), 60);
+  loadRadarFrames();
+}
+function loadRadarFrames(){
+  fetchJSON('https://api.rainviewer.com/public/weather-maps.json', 12000).then(d=>{
+    RV.host = d.host || 'https://tilecache.rainviewer.com';
+    const past = (d.radar&&d.radar.past)||[], now=(d.radar&&d.radar.nowcast)||[];
+    RV.pastLen = past.length; RV.frames = past.concat(now);
+    if(!RV.frames.length){ $('radar-time').textContent='no radar frames'; return; }
+    RV.idx = Math.max(0, past.length-1);      // start at "now"
+    setRadarFrame(RV.idx);
+    playRadar();
+    S.diag.radar = {ok:true, msg:'RainViewer — '+RV.frames.length+' frames'};
+  }).catch(e=>{
+    $('radar-time').textContent = 'radar unavailable';
+    S.diag.radar = {ok:false, msg:'RainViewer: '+String(e.message||e)};
+  });
+}
+function setRadarFrame(i){
+  if(!RV.frames.length || !RV.map) return;
+  RV.idx = ((i%RV.frames.length)+RV.frames.length)%RV.frames.length;
+  const f = RV.frames[RV.idx];
+  const url = `${RV.host}${f.path}/256/{z}/{x}/{y}/4/1_1.png`;
+  const nl = L.tileLayer(url, {opacity:0.72, maxZoom:12, zIndex:400});
+  nl.addTo(RV.map);
+  const old = RV.cur; RV.cur = nl;
+  nl.once('load', ()=>{ if(old && old!==RV.cur) RV.map.removeLayer(old); });
+  setTimeout(()=>{ if(old && old!==RV.cur) RV.map.removeLayer(old); }, 900);
+  const t = new Date(f.time*1000);
+  const future = f.time*1000 > Date.now();
+  $('radar-time').textContent = t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})
+    + (future ? ' · nowcast' : (RV.idx===RV.pastLen-1 ? ' · now' : ''));
+}
+function playRadar(){
+  if(RV.timer || RV.frames.length<2) return;
+  RV.timer = setInterval(()=>setRadarFrame(RV.idx+1), 700);
+  $('radar-play').textContent = '⏸';
+}
+function pauseRadar(){ if(RV.timer){ clearInterval(RV.timer); RV.timer=null; } $('radar-play').textContent='▶'; }
+function radarRecenter(loc){
+  if(!RV.map) return;
+  RV.map.setView([loc.lat, loc.lon], RV.map.getZoom());
+  if(RV.marker) RV.marker.setLatLng([loc.lat, loc.lon]);
 }
 
 function renderDiag(){
   const box = $('diag'); box.innerHTML='';
   const rows = [
     ['Stations (nationwide obs + warnings)','stations'],
-    ['7-day forecast (Open-Meteo)','forecast'],
+    ['7-day + hourly forecast (Open-Meteo)','forecast'],
+    ['Air quality (Open-Meteo)','aqi'],
+    ['Live radar (RainViewer)','radar'],
     ['Legacy current wx','current'],
     ['Legacy nowcast','nowcast'],
     ['Relay (GitHub copy)','relay']
@@ -787,10 +1036,13 @@ document.querySelectorAll('nav button').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.id==='tab-'+b.dataset.tab));
-    if(b.dataset.tab==='maps') renderMaps();
+    if(b.dataset.tab==='maps'){ initRadar(); renderMaps(); }
+    else pauseRadar();   // stop the radar loop (save battery/data) when leaving Maps
   });
 });
 $('btn-refresh').addEventListener('click', refreshAll);
+$('radar-play').addEventListener('click', ()=>{ RV.timer ? pauseRadar() : playRadar(); });
+$('temphero').addEventListener('click', ()=>{ S.showFeels = !S.showFeels; renderNow(); });
 
 /* ---- location bar: type "lat, lon" (or drop a Google-Maps style pair) ---- */
 function applyLocation(text){
@@ -863,7 +1115,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http'))
 
 refreshAll();
 armTimer();
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAll(); });
+document.addEventListener('visibilitychange', ()=>{ document.hidden ? pauseRadar() : refreshAll(); });
 </script>
 </body>
 </html>
