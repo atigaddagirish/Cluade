@@ -108,8 +108,8 @@ def resolve_chat_id(tok):
 
 
 def send_telegram(text):
-    tok = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-    chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    tok = "".join(os.environ.get("TELEGRAM_BOT_TOKEN", "").split())   # tokens have no spaces; kill stray paste whitespace
+    chat = "".join(os.environ.get("TELEGRAM_CHAT_ID", "").split())
     if not tok:
         return False
     if not chat:                                   # only the token secret is needed
