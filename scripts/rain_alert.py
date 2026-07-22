@@ -7,11 +7,15 @@ free Open-Meteo forecast (ECMWF/GFS), which is reachable from cloud IPs (unlike
 IMD/Telangana). Only sends a message when rain crosses the threshold, so it does
 not spam — set ALERT_ALWAYS=1 to also get an "all clear" note.
 
+Tuned for a BIKE rider carrying a laptop: sensitive thresholds (a drizzle can
+wet the bag), a lead-time hint ("dry until ~HH:MM — leave before then"), and a
+clear protect-the-bag verdict.
+
 Secrets/env:
-  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID   (required to actually send)
-  ALERT_MODE = morning | evening | auto   (auto picks by current IST hour)
-  RAIN_MM = 0.3     precip threshold (mm within a window hour)
-  RAIN_PROB = 50    probability threshold (%)
+  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID  (Telegram) and/or NTFY_TOPIC (ntfy push)
+  ALERT_MODE = morning | evening | auto  (auto picks by current IST hour)
+  WET_MM=0.2  WET_PROB=40    "carry a cover" bar
+  HEAVY_MM=2.0 HEAVY_PROB=70 "protect the bag / rethink" bar
 """
 import json
 import os
@@ -29,13 +33,25 @@ try:
 except Exception:  # noqa: BLE001
     pass
 
-# trip windows in IST (start_hour, start_min) .. covers departure + ~50 min travel
+# Trip windows in IST, widened for buffer (leave a bit early/late + ~50 min ride).
 WINDOWS = {
-    "morning": ("09:30", "10:30", "Manikonda → Office"),
-    "evening": ("18:30", "19:30", "Office → Manikonda"),
+    "morning": ("09:15", "10:45", "Manikonda → Office"),
+    "evening": ("18:15", "19:45", "Office → Manikonda"),
 }
-RAIN_MM = float(os.environ.get("RAIN_MM", "0.3"))
-RAIN_PROB = float(os.environ.get("RAIN_PROB", "50"))
+# Thresholds tuned for a BIKE rider carrying a laptop → be sensitive (even a
+# drizzle can wet the bag). WET = worth a rain cover; HEAVY = protect it / rethink.
+WET_MM = float(os.environ.get("WET_MM", "0.2"))
+WET_PROB = float(os.environ.get("WET_PROB", "40"))
+HVY_MM = float(os.environ.get("HEAVY_MM", "2.0"))
+HVY_PROB = float(os.environ.get("HEAVY_PROB", "70"))
+
+
+def is_wet(mm, pr):
+    return mm >= WET_MM or pr >= WET_PROB
+
+
+def is_heavy(mm, pr):
+    return mm >= HVY_MM or pr >= HVY_PROB
 
 
 def get(url):
@@ -46,28 +62,33 @@ def get(url):
 def forecast(lat, lon):
     url = ("https://api.open-meteo.com/v1/forecast?"
            f"latitude={lat}&longitude={lon}&timezone=Asia%2FKolkata"
-           "&hourly=precipitation,precipitation_probability,weathercode&forecast_days=2")
+           "&hourly=precipitation,precipitation_probability,weathercode"
+           "&minutely_15=precipitation&forecast_days=2")
     return get(url)
 
 
-def window_rain(fc, start, end):
-    """Max precip (mm) and probability (%) over today's [start,end] IST hours."""
-    h = fc["hourly"]
+def window_series(fc, start, end):
+    """Return [(hh:mm, mm, prob%), …] over today's [start,end] IST, at 15-min
+    resolution when available (minutely_15 precip + that hour's probability),
+    else hourly."""
     today = datetime.now(IST).strftime("%Y-%m-%d")
-    best_mm = best_pr = 0.0
-    hrs = []
-    for i, t in enumerate(h["time"]):
-        if not t.startswith(today):
-            continue
-        hh = t[11:16]
-        if start <= hh <= end:
-            mm = h["precipitation"][i] or 0
-            pr = h["precipitation_probability"][i] or 0
-            best_mm = max(best_mm, mm)
-            best_pr = max(best_pr, pr)
-            if mm >= 0.1 or pr >= 30:
-                hrs.append(f"{hh} {mm}mm/{pr}%")
-    return best_mm, best_pr, hrs
+    h = fc.get("hourly", {})
+    hour_pr, hour_mm = {}, {}
+    for i, t in enumerate(h.get("time", [])):
+        if t.startswith(today):
+            hour_pr[t[11:13]] = h["precipitation_probability"][i] or 0
+            hour_mm[t[11:13]] = h["precipitation"][i] or 0
+    out = []
+    m = fc.get("minutely_15") or {}
+    if m.get("time"):
+        for i, t in enumerate(m["time"]):
+            if t.startswith(today) and start <= t[11:16] <= end:
+                out.append((t[11:16], m["precipitation"][i] or 0, hour_pr.get(t[11:13], 0)))
+    else:
+        for i, t in enumerate(h.get("time", [])):
+            if t.startswith(today) and start <= t[11:16] <= end:
+                out.append((t[11:16], h["precipitation"][i] or 0, h["precipitation_probability"][i] or 0))
+    return out
 
 
 import re
@@ -144,26 +165,49 @@ def main():
         mode = "morning" if datetime.now(IST).hour < 14 else "evening"
     start, end, route = WINDOWS.get(mode, WINDOWS["morning"])
 
-    lines, rainy = [], False
+    lines = []
+    overall = "dry"          # dry < wet < heavy
+    first_wet = None         # earliest time rain crosses the wet bar (any location)
     for name, (lat, lon) in LOCS.items():
         try:
-            mm, pr, hrs = window_rain(forecast(lat, lon), start, end)
+            series = window_series(forecast(lat, lon), start, end)
         except Exception as e:  # noqa: BLE001
             print(f"{name}: forecast failed: {e}", file=sys.stderr)
             continue
-        wet = mm >= RAIN_MM or pr >= RAIN_PROB
-        rainy = rainy or wet
-        icon = "🌧️" if wet else "🙂"
-        detail = ("; ".join(hrs)) if hrs else "dry"
-        lines.append(f"{icon} <b>{name}</b>: peak {mm}mm, {int(pr)}% — {detail}")
+        peak_mm = max((mm for _, mm, _ in series), default=0.0)
+        peak_pr = max((pr for _, _, pr in series), default=0.0)
+        wet_hits = [hm for hm, mm, pr in series if is_wet(mm, pr)]
+        level = ("heavy" if any(is_heavy(mm, pr) for _, mm, pr in series)
+                 else "wet" if wet_hits else "dry")
+        if level == "heavy" or (level == "wet" and overall != "heavy"):
+            overall = level if level == "heavy" else ("wet" if overall == "dry" else overall)
+        if wet_hits:
+            t0 = wet_hits[0]
+            first_wet = t0 if first_wet is None else min(first_wet, t0)
+        icon = {"heavy": "🔴", "wet": "🟠", "dry": "🟢"}[level]
+        when = f", from ~{wet_hits[0]}" if wet_hits else ""
+        tail = "dry" if level == "dry" else f"{round(peak_mm, 1)}mm / {int(peak_pr)}%{when}"
+        lines.append(f"{icon} <b>{name}</b>: {tail}")
 
-    header = f"☔ <b>Commute rain check</b> ({route}, {start}–{end} IST)"
+    header = f"🏍️ <b>Bike commute — {route}</b> ({start}–{end} IST)"
     body = header + "\n" + "\n".join(lines)
-    if rainy:
-        body += "\n\n⚠️ Rain likely on this trip — carry rain gear / plan buffer."
+
+    # lead-time hint
+    if first_wet and first_wet > start:
+        body += f"\n\n🕒 Dry until ~{first_wet} — leave before then to beat it."
+    elif first_wet:
+        body += f"\n\n🕒 Rain around from the start of your window (~{first_wet})."
+
+    if overall == "heavy":
+        body += ("\n🔴 <b>Protect the bag</b> — rain likely on the ride. Use a waterproof "
+                 "cover / line the bag, or take a cab / wait it out.")
+        notify(body, True)
+    elif overall == "wet":
+        body += ("\n🟠 <b>Rain possible</b> — carry a rain cover for the laptop bag "
+                 "and keep an eye on the sky.")
         notify(body, True)
     elif os.environ.get("ALERT_ALWAYS") == "1":
-        body += "\n\n✅ Looks dry for your commute."
+        body += "\n🟢 <b>Looks dry</b> — good to ride."
         notify(body, False)
     else:
         print("no rain over threshold; not sending.\n" + body, file=sys.stderr)
