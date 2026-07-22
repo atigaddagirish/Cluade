@@ -1,0 +1,31 @@
+# Commute rain alerts — sends a Telegram message before each trip if rain is
+# likely at Manikonda / Office. Needs repo secrets TELEGRAM_BOT_TOKEN and
+# TELEGRAM_CHAT_ID (see scripts/rain_alert.py header + README). Without them the
+# job runs but only logs what it *would* send.
+#
+# Times: GitHub cron is UTC and best-effort (can slip a few min). Morning check
+# ~08:45 IST (before the 09:30 departure); evening ~17:45 IST (before 18:30).
+name: Commute rain alert
+
+on:
+  schedule:
+    - cron: "15 3 * * *"    # 08:45 IST — morning (Manikonda → Office)
+    - cron: "15 12 * * *"   # 17:45 IST — evening (Office → Manikonda)
+  workflow_dispatch:        # run manually to test
+
+permissions:
+  contents: read
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check commute rain and notify
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ALERT_MODE: auto        # picks morning/evening by current IST hour
+          # ALERT_ALWAYS: "1"     # uncomment to also get an "all clear" message
+        run: python3 scripts/rain_alert.py
