@@ -70,11 +70,30 @@ def window_rain(fc, start, end):
     return best_mm, best_pr, hrs
 
 
+import re
+
+
+def send_ntfy(text, rainy):
+    """Push via ntfy.sh — no account/token; user just subscribes to the topic."""
+    topic = os.environ.get("NTFY_TOPIC", "").strip()
+    if not topic:
+        return False
+    body = re.sub(r"<[^>]+>", "", text).encode("utf-8")   # ntfy body is plain text
+    req = urllib.request.Request(f"https://ntfy.sh/{topic}", data=body, headers={
+        "Title": "Commute rain alert",
+        "Priority": "high" if rainy else "default",
+        "Tags": "umbrella,rain_cloud" if rainy else "sunny",
+    })
+    with urllib.request.urlopen(req, timeout=30) as r:
+        ok = r.status < 300
+    print("ntfy sent:", ok, file=sys.stderr)
+    return ok
+
+
 def send_telegram(text):
     tok = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     if not tok or not chat:
-        print("no TELEGRAM_BOT_TOKEN/CHAT_ID set — would have sent:\n" + text, file=sys.stderr)
         return False
     url = f"https://api.telegram.org/bot{tok}/sendMessage"
     data = urllib.parse.urlencode({"chat_id": chat, "text": text,
@@ -83,6 +102,15 @@ def send_telegram(text):
         ok = json.loads(r.read()).get("ok", False)
     print("telegram sent:", ok, file=sys.stderr)
     return ok
+
+
+def notify(text, rainy):
+    sent = False
+    sent = send_ntfy(text, rainy) or sent
+    sent = send_telegram(text) or sent
+    if not sent:
+        print("no NTFY_TOPIC / TELEGRAM secrets set — would have sent:\n" + text, file=sys.stderr)
+    return sent
 
 
 def main():
@@ -108,10 +136,10 @@ def main():
     body = header + "\n" + "\n".join(lines)
     if rainy:
         body += "\n\n⚠️ Rain likely on this trip — carry rain gear / plan buffer."
-        send_telegram(body)
+        notify(body, True)
     elif os.environ.get("ALERT_ALWAYS") == "1":
         body += "\n\n✅ Looks dry for your commute."
-        send_telegram(body)
+        notify(body, False)
     else:
         print("no rain over threshold; not sending.\n" + body, file=sys.stderr)
     return 0
