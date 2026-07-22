@@ -101,6 +101,10 @@ main{padding:12px;max-width:640px;margin:0 auto}
 .hr .t{font-size:11px;color:var(--dim)}
 .hr .i{font-size:20px;margin:3px 0}
 .hr .tp{font-size:13px;font-weight:600}
+.nowcast{display:flex;align-items:flex-end;gap:3px;height:52px}
+.nowcast .b{flex:1;background:var(--rain);border-radius:2px 2px 0 0;min-height:3px;opacity:.9}
+.nowcast .b.dry{background:var(--line);opacity:.6}
+.nowaxis{display:flex;justify-content:space-between;font-size:9.5px;color:var(--dim);margin-top:3px}
 .hr .fl{font-size:9.5px;color:var(--warn);margin-top:1px;min-height:12px}
 .hr .rn{font-size:10.5px;color:var(--rain);margin-top:2px;min-height:13px}
 .hr .wd{font-size:10px;color:var(--dim);margin-top:1px}
@@ -193,6 +197,12 @@ nav button.on{color:var(--rain)}
       <details><summary>All reported fields (raw IMD data)</summary>
         <table class="raw" id="nowraw"></table>
       </details>
+    </div>
+    <div class="card">
+      <h2>Rain — next 2 hours <span class="badge" id="src-nowrain">…</span></h2>
+      <div id="rainnowsum" class="note" style="margin-bottom:6px">–</div>
+      <div id="rainnow" class="nowcast"></div>
+      <div id="rainnowaxis" class="nowaxis"></div>
     </div>
     <div class="card">
       <h2>Today's outlook — <span id="fc-place">home</span></h2>
@@ -734,6 +744,7 @@ function ensureForecast(){
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}`+
     `&daily=weathercode,precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min`+
     `&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weathercode,wind_speed_10m,is_day`+
+    `&minutely_15=precipitation&forecast_minutely_15=12`+
     `&forecast_days=7&timezone=auto`;
   fetchJSON(url, 12000).then(d=>{
     S.omCache[key]=d;
@@ -773,7 +784,7 @@ function renderForecast(){
       `<tr><td>source</td><td>Open-Meteo /v1/forecast — ECMWF-IFS + GFS + ICON blend @ ${esc(loc.lat)}, ${esc(loc.lon)}</td></tr>`);
     for(let i=0;i<N;i++) raw.insertAdjacentHTML('beforeend',
       `<tr><td>${esc(dl.time[i])}</td><td>wmo ${esc(dl.weathercode[i])} · ${esc(dl.precipitation_sum[i])} mm · ${dl.precipitation_probability_max[i]??'–'}% · ${esc(dl.temperature_2m_min[i])}–${esc(dl.temperature_2m_max[i])} °C</td></tr>`);
-    renderHourlyDays(F); renderHourly(F);
+    renderHourlyDays(F); renderHourly(F); renderRainNowcast(F);
     return;
   }
 
@@ -800,6 +811,40 @@ function addDay(list, date, txt, mx, mn, icon, rainy){
        <div class="mid"><div class="d">${esc(date||'')}</div><div class="t">${esc(txt||'–')}</div></div>
        ${(mx!=null||mn!=null)?`<div class="temps"><b>${esc(mx??'–')}°</b><br>${esc(mn??'–')}°</div>`:''}
      </div>`);
+}
+
+// ---- Rain nowcast: next 2 h in 15-min steps (Open-Meteo minutely_15) ----
+function renderRainNowcast(F){
+  const box=$('rainnow'), axis=$('rainnowaxis'), sum=$('rainnowsum'), badge=$('src-nowrain');
+  if(!box) return;
+  const m=F.minutely_15;
+  if(!m || !m.time || !m.precipitation){
+    badge.className='badge fail'; badge.textContent='N/A';
+    box.innerHTML=''; axis.innerHTML=''; sum.textContent='Short-range nowcast not available here.'; return;
+  }
+  const now=Date.now();
+  let s=m.time.findIndex(t=>new Date(t).getTime()>=now-450000);   // from ~now
+  if(s<0) s=0;
+  const idx=[]; for(let i=s;i<Math.min(s+8,m.time.length);i++) idx.push(i);   // 8×15min = 2h
+  const vals=idx.map(i=>+m.precipitation[i]||0);
+  const total=Math.round(vals.reduce((a,b)=>a+b,0)*10)/10;
+  const peak=Math.max(0,...vals);
+  badge.className='badge live'; badge.textContent='15-min';
+  const firstWet=idx.find((i,k)=>vals[k]>=0.1);
+  sum.innerHTML = total<=0
+    ? '✅ No rain expected in the next 2 hours.'
+    : `🌧️ <b>${total} mm</b> expected in the next 2 h`+
+      (firstWet!=null?` · starts ~${new Date(m.time[firstWet]).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`:'');
+  const scale=Math.max(peak,1);
+  box.innerHTML='';
+  idx.forEach((i,k)=>{
+    const h=Math.round((vals[k]/scale)*49)+3;
+    box.insertAdjacentHTML('beforeend',
+      `<div class="b${vals[k]<0.1?' dry':''}" style="height:${h}px" title="${new Date(m.time[i]).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}: ${vals[k]} mm"></div>`);
+  });
+  axis.innerHTML = idx.length
+    ? `<span>${new Date(m.time[idx[0]]).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>`+
+      `<span>+1 h</span><span>+2 h</span>` : '';
 }
 
 // ---- Hourly forecast, selectable by day (Today + next 2), same Open-Meteo response ----
