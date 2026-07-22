@@ -90,10 +90,35 @@ def send_ntfy(text, rainy):
     return ok
 
 
+def resolve_chat_id(tok):
+    """If TELEGRAM_CHAT_ID isn't set, find it from the bot's recent chats
+    (the user just has to have messaged the bot once)."""
+    try:
+        with urllib.request.urlopen(
+                f"https://api.telegram.org/bot{tok}/getUpdates", timeout=20) as r:
+            d = json.loads(r.read())
+        for u in reversed(d.get("result", [])):
+            m = u.get("message") or u.get("edited_message") or u.get("channel_post") or {}
+            cid = (m.get("chat") or {}).get("id")
+            if cid is not None:
+                return str(cid)
+    except Exception as e:  # noqa: BLE001
+        print("chat-id auto-resolve failed:", e, file=sys.stderr)
+    return ""
+
+
 def send_telegram(text):
     tok = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
-    if not tok or not chat:
+    if not tok:
+        return False
+    if not chat:                                   # only the token secret is needed
+        chat = resolve_chat_id(tok)
+        if chat:
+            print(f"auto-resolved TELEGRAM_CHAT_ID={chat} — add it as a secret to make it permanent",
+                  file=sys.stderr)
+    if not chat:
+        print("have token but no chat id (message the bot, then retry)", file=sys.stderr)
         return False
     url = f"https://api.telegram.org/bot{tok}/sendMessage"
     data = urllib.parse.urlencode({"chat_id": chat, "text": text,
