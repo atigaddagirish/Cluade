@@ -11,7 +11,12 @@ on:
   schedule:
     - cron: "15 3 * * *"    # 08:45 IST — morning (Manikonda → Office)
     - cron: "15 12 * * *"   # 17:45 IST — evening (Office → Manikonda)
-  workflow_dispatch:        # run manually to test
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Send a test notification regardless of rain"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -24,8 +29,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check commute rain and notify
         env:
+          # ntfy: zero-setup push. Subscribe to this exact topic in the free
+          # "ntfy" app to get the alerts. A secret NTFY_TOPIC overrides it.
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC != '' && secrets.NTFY_TOPIC || 'wwrain-98cfa8f8dd' }}
+          # optional Telegram (leave unset if using ntfy)
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ALERT_MODE: auto        # picks morning/evening by current IST hour
-          # ALERT_ALWAYS: "1"     # uncomment to also get an "all clear" message
+          # a manual run with test=true always sends (so you can verify delivery)
+          ALERT_ALWAYS: ${{ (github.event_name == 'workflow_dispatch' && inputs.test) && '1' || '' }}
         run: python3 scripts/rain_alert.py
