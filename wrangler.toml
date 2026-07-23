@@ -1,0 +1,11 @@
+name = "commute-rain-alert"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Punctual cron triggers (UTC). These fire on time, unlike GitHub Actions.
+#   0 2  * * *  -> 07:30 IST  morning early heads-up
+#   15 3 * * *  -> 08:45 IST  morning final go/no-go
+#   15 11 * * * -> 16:45 IST  evening early heads-up
+#   15 12 * * * -> 17:45 IST  evening final go/no-go
+[triggers]
+crons = ["0 2 * * *", "15 3 * * *", "15 11 * * *", "15 12 * * *"]

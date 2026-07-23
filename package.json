@@ -1,0 +1,6 @@
+{
+  "name": "commute-rain-alert",
+  "private": true,
+  "scripts": { "deploy": "wrangler deploy" },
+  "devDependencies": { "wrangler": "^3" }
+}
