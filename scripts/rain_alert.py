@@ -189,7 +189,8 @@ def main():
         tail = "dry" if level == "dry" else f"{round(peak_mm, 1)}mm / {int(peak_pr)}%{when}"
         lines.append(f"{icon} <b>{name}</b>: {tail}")
 
-    header = f"🏍️ <b>Bike commute — {route}</b> ({start}–{end} IST)"
+    tag = " · early heads-up" if os.environ.get("ALERT_STAGE") == "early" else ""
+    header = f"🏍️ <b>Bike commute — {route}</b> ({start}–{end} IST{tag})"
     body = header + "\n" + "\n".join(lines)
 
     # lead-time hint

@@ -3,14 +3,17 @@
 # TELEGRAM_CHAT_ID (see scripts/rain_alert.py header + README). Without them the
 # job runs but only logs what it *would* send.
 #
-# Times: GitHub cron is UTC and best-effort (can slip a few min). Morning check
-# ~08:45 IST (before the 09:30 departure); evening ~17:45 IST (before 18:30).
+# Times: GitHub cron is UTC and best-effort (can slip a few min). Two checks per
+# commute: an EARLY heads-up (only pings if rain is coming) and a FINAL go/no-go
+# near departure (always pings — 🟢 good-to-ride on dry days).
 name: Commute rain alert
 
 on:
   schedule:
-    - cron: "15 3 * * *"    # 08:45 IST — morning (Manikonda → Office)
-    - cron: "15 12 * * *"   # 17:45 IST — evening (Office → Manikonda)
+    - cron: "0 2 * * *"     # 07:30 IST — morning early heads-up
+    - cron: "15 3 * * *"    # 08:45 IST — morning FINAL (Manikonda → Office)
+    - cron: "15 11 * * *"   # 16:45 IST — evening early heads-up
+    - cron: "15 12 * * *"   # 17:45 IST — evening FINAL (Office → Manikonda)
   workflow_dispatch:
     inputs:
       test:
@@ -36,6 +39,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ALERT_MODE: auto        # picks morning/evening by current IST hour
-          # a manual run with test=true always sends (so you can verify delivery)
-          ALERT_ALWAYS: ${{ (github.event_name == 'workflow_dispatch' && inputs.test) && '1' || '' }}
+          # FINAL checks (08:45 / 17:45 IST) always send a go/no-go; EARLY checks
+          # (07:30 / 16:45) only ping if rain is coming. Manual test always sends.
+          ALERT_ALWAYS: ${{ ((github.event_name == 'workflow_dispatch' && inputs.test) || github.event.schedule == '15 3 * * *' || github.event.schedule == '15 12 * * *') && '1' || '' }}
+          ALERT_STAGE: ${{ (github.event.schedule == '0 2 * * *' || github.event.schedule == '15 11 * * *') && 'early' || 'final' }}
         run: python3 scripts/rain_alert.py
