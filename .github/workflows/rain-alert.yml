@@ -3,17 +3,19 @@
 # TELEGRAM_CHAT_ID (see scripts/rain_alert.py header + README). Without them the
 # job runs but only logs what it *would* send.
 #
-# Times: GitHub cron is UTC and best-effort (can slip a few min). Two checks per
-# commute: an EARLY heads-up (only pings if rain is coming) and a FINAL go/no-go
-# near departure (always pings — 🟢 good-to-ride on dry days).
+# SCHEDULING MOVED TO CLOUDFLARE WORKERS (cloudflare-rain-alert/) because GitHub
+# Actions cron fires hours late — the Worker's Cron Triggers are punctual. The
+# schedule here is DISABLED to avoid duplicate/late messages; this workflow is
+# kept only for manual test runs (Actions → Run workflow). To re-enable the
+# GitHub schedule as a backup, uncomment the `schedule:` block below.
 name: Commute rain alert
 
 on:
-  schedule:
-    - cron: "0 2 * * *"     # 07:30 IST — morning early heads-up
-    - cron: "15 3 * * *"    # 08:45 IST — morning FINAL (Manikonda → Office)
-    - cron: "15 11 * * *"   # 16:45 IST — evening early heads-up
-    - cron: "15 12 * * *"   # 17:45 IST — evening FINAL (Office → Manikonda)
+  # schedule:   # DISABLED — Cloudflare Worker handles the real schedule now
+  #   - cron: "0 2 * * *"     # 07:30 IST — morning early heads-up
+  #   - cron: "15 3 * * *"    # 08:45 IST — morning FINAL (Manikonda → Office)
+  #   - cron: "15 11 * * *"   # 16:45 IST — evening early heads-up
+  #   - cron: "15 12 * * *"   # 17:45 IST — evening FINAL (Office → Manikonda)
   workflow_dispatch:
     inputs:
       test:
