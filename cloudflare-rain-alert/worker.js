@@ -66,7 +66,11 @@ async function buildMessage(mode, stage) {
   const [start, end, route] = WINDOWS[mode];
   const lines = [];
   let overall = "dry", firstWet = null;
-  for (const [name, [lat, lon]] of Object.entries(LOCS)) {
+  const order = route.split("→").map(s => s.trim());   // list in travel order (origin first)
+  for (const name of order) {
+    const loc = LOCS[name];
+    if (!loc) continue;
+    const [lat, lon] = loc;
     let series;
     try { series = windowSeries(await forecast(lat, lon), start, end); }
     catch (e) { continue; }
