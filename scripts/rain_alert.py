@@ -168,7 +168,11 @@ def main():
     lines = []
     overall = "dry"          # dry < wet < heavy
     first_wet = None         # earliest time rain crosses the wet bar (any location)
-    for name, (lat, lon) in LOCS.items():
+    order = [s.strip() for s in route.split("→")]   # list in travel order (origin first)
+    for name in order:
+        if name not in LOCS:
+            continue
+        lat, lon = LOCS[name]
         try:
             series = window_series(forecast(lat, lon), start, end)
         except Exception as e:  # noqa: BLE001
