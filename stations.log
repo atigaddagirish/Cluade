@@ -1,1 +1,1 @@
-wrote /tmp/pub/stations.json ok={'aws': 2071, 'synop': 410, 'warnings': 302} warnings=302 bytes=123131
+wrote /tmp/pub/stations.json ok={'aws': 'FAIL URLError: <urlopen error [Errno 111] Connection refused>', 'synop': 'FAIL URLError: <urlopen error [Errno 111] Connection refused>', 'warnings': 'FAIL URLError: <urlopen error [Errno 111] Connection refused>'} warnings=0 bytes=638
