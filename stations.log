@@ -1,1 +1,1 @@
-wrote /tmp/pub/stations.json ok={'aws': 2071, 'synop': 410, 'warnings': 115} warnings=115 bytes=115083
+wrote /tmp/pub/stations.json ok={'aws': 2071, 'synop': 410, 'warnings': 103} warnings=103 bytes=114571
