@@ -1,0 +1,80 @@
+{
+ "fetched_utc": "2026-10-17T21:21:17Z",
+ "site": {
+  "lat": 16.08790535475237,
+  "lon": 78.09998163768542,
+  "note": "Jogulamba Gadwal (TG); nearest IMD station Kurnool 43213"
+ },
+ "attribution": "Data (c) India Meteorological Department, Ministry of Earth Sciences, Govt. of India",
+ "sources": {
+  "current": {
+   "url": "https://city.imd.gov.in/citywx/citywxnew.php?id=43213",
+   "ok": true,
+   "data": [
+    {
+     "Station Name": "Kurnool",
+     "Date of Observation": "Oct 17, 2026",
+     "Past 24 hrs Rainfall (mm)": "0.2",
+     "Maximum Temp (C)": "36.5",
+     "Minimum Temp (C)": "26.2",
+     "Relative Humidity at 0830 IST (%)": "77",
+     "Relative Humidity at 1730 IST (%)": "61",
+     "Sunset (IST)": "17:56",
+     "Sunrise (IST)": "06:10",
+     "Todays Forecast": "Generally cloudy sky with one or two spells of rain or thundershowers",
+     "Source": "IMD public city weather page (citywxnew.php)"
+    }
+   ],
+   "via": "public city page (HTML)"
+  },
+  "forecast": {
+   "url": "https://city.imd.gov.in/citywx/citywxnew.php?id=43213",
+   "ok": true,
+   "data": [
+    {
+     "Date": "17-Oct",
+     "Min_Temp_C": "25.0",
+     "Max_Temp_C": "36.0",
+     "Weather_Forecast": "Generally cloudy sky with one or two spells of rain or thundershowers"
+    },
+    {
+     "Date": "18-Oct",
+     "Min_Temp_C": "24.0",
+     "Max_Temp_C": "35.0",
+     "Weather_Forecast": "Generally cloudy sky with one or two spells of rain or thundershowers"
+    },
+    {
+     "Date": "19-Oct",
+     "Min_Temp_C": "24.0",
+     "Max_Temp_C": "34.0",
+     "Weather_Forecast": "Generally cloudy sky with Light rain"
+    },
+    {
+     "Date": "20-Oct",
+     "Min_Temp_C": "24.0",
+     "Max_Temp_C": "34.0",
+     "Weather_Forecast": "Generally cloudy sky with Light rain"
+    },
+    {
+     "Date": "21-Oct",
+     "Min_Temp_C": "25.0",
+     "Max_Temp_C": "33.0",
+     "Weather_Forecast": "Partly cloudy sky in the morning hours becoming generally cloudy sky towards evening or night with possibility of rain or thundershowers accompanied with squall"
+    },
+    {
+     "Date": "22-Oct",
+     "Min_Temp_C": "25.0",
+     "Max_Temp_C": "33.0",
+     "Weather_Forecast": "Partly cloudy sky in the morning hours becoming generally cloudy sky towards evening or night with possibility of rain or thundershowers accompanied with squall"
+    }
+   ],
+   "via": "public city page (HTML)"
+  },
+  "nowcast": {
+   "url": "https://mausam.imd.gov.in/api/nowcastapi.php?id=43213",
+   "ok": false,
+   "error": "JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+  }
+ },
+ "any_ok": true
+}
