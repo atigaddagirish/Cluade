@@ -1007,8 +1007,10 @@ function initRadar(){
   if(!window.L){ $('radar-time').textContent='map library unavailable (offline)'; return; }
   const loc = activeLoc();
   RV.map = L.map('radarmap', {zoomControl:true, attributionControl:false}).setView([loc.lat, loc.lon], 7);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    {subdomains:'abcd', maxZoom:12, detectRetina:true}).addTo(RV.map);
+  // Esri World Dark Gray canvas — free, no API key (CARTO's free basemap CDN now
+  // watermarks "API KEY REQUIRED"). Esri tiles use {z}/{y}/{x} order, no retina suffix.
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    {maxZoom:12, attribution:'Tiles © Esri'}).addTo(RV.map);
   RV.marker = L.circleMarker([loc.lat, loc.lon],
     {radius:6, color:'#4fa3ff', weight:2, fillColor:'#4fa3ff', fillOpacity:.9}).addTo(RV.map);
   setTimeout(()=>RV.map.invalidateSize(), 60);
