@@ -1,0 +1,27 @@
+{
+ "fetched_utc": "2026-11-07T15:32:55Z",
+ "site": {
+  "lat": 16.08790535475237,
+  "lon": 78.09998163768542,
+  "note": "Jogulamba Gadwal (TG); nearest IMD station Kurnool 43213"
+ },
+ "attribution": "Data (c) India Meteorological Department, Ministry of Earth Sciences, Govt. of India",
+ "sources": {
+  "current": {
+   "url": "https://mausam.imd.gov.in/api/current_wx_api.php?id=43213",
+   "ok": false,
+   "error": "HTTPError: HTTP Error 401: Unauthorized"
+  },
+  "forecast": {
+   "url": "https://city.imd.gov.in/api/cityweather.php?id=43213",
+   "ok": false,
+   "error": "TimeoutError: The read operation timed out"
+  },
+  "nowcast": {
+   "url": "https://mausam.imd.gov.in/api/nowcastapi.php?id=43213",
+   "ok": false,
+   "error": "HTTPError: HTTP Error 401: Unauthorized"
+  }
+ },
+ "any_ok": false
+}
