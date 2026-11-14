@@ -1,0 +1,86 @@
+{
+ "fetched_utc": "2026-11-14T14:53:51Z",
+ "site": {
+  "lat": 16.08790535475237,
+  "lon": 78.09998163768542,
+  "note": "Jogulamba Gadwal (TG); nearest IMD station Kurnool 43213"
+ },
+ "attribution": "Data (c) India Meteorological Department, Ministry of Earth Sciences, Govt. of India",
+ "sources": {
+  "current": {
+   "url": "https://city.imd.gov.in/citywx/citywxnew.php?id=43213",
+   "ok": true,
+   "data": [
+    {
+     "Station Name": "Kurnool",
+     "Date of Observation": "Nov 14, 2026",
+     "Past 24 hrs Rainfall (mm)": "NIL",
+     "Maximum Temp (C)": "34.1",
+     "Minimum Temp (C)": "22.1",
+     "Relative Humidity at 0830 IST (%)": "74",
+     "Relative Humidity at 1730 IST (%)": "35",
+     "Sunset (IST)": "17:44",
+     "Sunrise (IST)": "06:20",
+     "Todays Forecast": "Partly cloudy sky with haze",
+     "Source": "IMD public city weather page (citywxnew.php)"
+    }
+   ],
+   "via": "public city page (HTML)"
+  },
+  "forecast": {
+   "url": "https://city.imd.gov.in/citywx/citywxnew.php?id=43213",
+   "ok": true,
+   "data": [
+    {
+     "Date": "14-Nov",
+     "Min_Temp_C": "22.0",
+     "Max_Temp_C": "34.0",
+     "Weather_Forecast": "Partly cloudy sky with haze"
+    },
+    {
+     "Date": "15-Nov",
+     "Min_Temp_C": "22.0",
+     "Max_Temp_C": "34.0",
+     "Weather_Forecast": "Partly cloudy sky with haze"
+    },
+    {
+     "Date": "16-Nov",
+     "Min_Temp_C": "22.0",
+     "Max_Temp_C": "33.0",
+     "Weather_Forecast": "Partly cloudy sky with haze"
+    },
+    {
+     "Date": "17-Nov",
+     "Min_Temp_C": "21.0",
+     "Max_Temp_C": "33.0",
+     "Weather_Forecast": "Partly cloudy sky with haze"
+    },
+    {
+     "Date": "18-Nov",
+     "Min_Temp_C": "21.0",
+     "Max_Temp_C": "32.0",
+     "Weather_Forecast": "Partly cloudy sky with haze"
+    },
+    {
+     "Date": "19-Nov",
+     "Min_Temp_C": "21.0",
+     "Max_Temp_C": "32.0",
+     "Weather_Forecast": "Partly cloudy sky with haze"
+    },
+    {
+     "Date": "20-Nov",
+     "Min_Temp_C": "21.0",
+     "Max_Temp_C": "32.0",
+     "Weather_Forecast": "Thunderstorm with rain"
+    }
+   ],
+   "via": "public city page (HTML)"
+  },
+  "nowcast": {
+   "url": "https://mausam.imd.gov.in/api/nowcastapi.php?id=43213",
+   "ok": false,
+   "error": "HTTPError: HTTP Error 401: Unauthorized"
+  }
+ },
+ "any_ok": true
+}
