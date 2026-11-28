@@ -1,0 +1,86 @@
+{
+ "fetched_utc": "2026-11-28T13:58:45Z",
+ "site": {
+  "lat": 16.08790535475237,
+  "lon": 78.09998163768542,
+  "note": "Jogulamba Gadwal (TG); nearest IMD station Kurnool 43213"
+ },
+ "attribution": "Data (c) India Meteorological Department, Ministry of Earth Sciences, Govt. of India",
+ "sources": {
+  "current": {
+   "url": "https://city.imd.gov.in/citywx/citywxnew.php?id=43213",
+   "ok": true,
+   "data": [
+    {
+     "Station Name": "Kurnool",
+     "Date of Observation": "Nov 28, 2026",
+     "Past 24 hrs Rainfall (mm)": "NIL",
+     "Maximum Temp (C)": "34.1",
+     "Minimum Temp (C)": "23.8",
+     "Relative Humidity at 0830 IST (%)": "80",
+     "Relative Humidity at 1730 IST (%)": "42",
+     "Sunset (IST)": "17:44",
+     "Sunrise (IST)": "06:27",
+     "Todays Forecast": "Fog or Mist would occur in early morning",
+     "Source": "IMD public city weather page (citywxnew.php)"
+    }
+   ],
+   "via": "public city page (HTML)"
+  },
+  "forecast": {
+   "url": "https://city.imd.gov.in/citywx/citywxnew.php?id=43213",
+   "ok": true,
+   "data": [
+    {
+     "Date": "28-Nov",
+     "Min_Temp_C": "23.4",
+     "Max_Temp_C": "34.0",
+     "Weather_Forecast": "Fog or Mist would occur in early morning"
+    },
+    {
+     "Date": "29-Nov",
+     "Min_Temp_C": "23.1",
+     "Max_Temp_C": "34.0",
+     "Weather_Forecast": "Fog or Mist would occur in early morning"
+    },
+    {
+     "Date": "30-Nov",
+     "Min_Temp_C": "24.0",
+     "Max_Temp_C": "34.0",
+     "Weather_Forecast": "Fog or Mist would occur in early morning"
+    },
+    {
+     "Date": "01-Dec",
+     "Min_Temp_C": "24.0",
+     "Max_Temp_C": "34.3",
+     "Weather_Forecast": "Fog or Mist would occur in early morning"
+    },
+    {
+     "Date": "02-Dec",
+     "Min_Temp_C": "23.0",
+     "Max_Temp_C": "34.3",
+     "Weather_Forecast": "Fog or Mist would occur in early morning"
+    },
+    {
+     "Date": "03-Dec",
+     "Min_Temp_C": "23.0",
+     "Max_Temp_C": "34.1",
+     "Weather_Forecast": "Partly cloudy sky with one or two spells of rain or thundershowers"
+    },
+    {
+     "Date": "04-Dec",
+     "Min_Temp_C": "23.0",
+     "Max_Temp_C": "33.3",
+     "Weather_Forecast": "Partly cloudy sky with one or two spells of rain or thundershowers"
+    }
+   ],
+   "via": "public city page (HTML)"
+  },
+  "nowcast": {
+   "url": "https://mausam.imd.gov.in/api/nowcastapi.php?id=43213",
+   "ok": false,
+   "error": "HTTPError: HTTP Error 401: Unauthorized"
+  }
+ },
+ "any_ok": true
+}
